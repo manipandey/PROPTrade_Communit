@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+:root {
+  --background: #030303;
+  --foreground: #fafafa;
+  --muted: #a1a1aa;
+  --muted-foreground: #71717a;
+  --accent: #22c55e;
+  --accent-glow: rgba(34, 197, 94, 0.12);
+  --card-bg: rgba(10, 10, 10, 0.75);
+  --card-border: rgba(39, 39, 42, 0.7);
+  --glow-color: rgba(34, 197, 94, 0.4);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-green: #22c55e;
+  --color-brand-green-glow: var(--accent-glow);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-neon-emerald: #10b981;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom premium scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 9999px;
+  border: 1px solid #18181b;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #22c55e;
+}
+
+/* Custom premium glow effects */
+.glow-accent {
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+.glow-accent-strong {
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.25);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(12, 12, 14, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(63, 63, 70, 0.3);
+}
+
+.glass-panel:hover {
+  border-color: rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.05);
+  transition: all 0.3s ease;
+}
+
+/* Pulse animation for active trades */
+@keyframes neon-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.95);
+  }
+}
+
+.pulse-indicator {
+  animation: neon-pulse 2s infinite ease-in-out;
+}
+
+/* Marquee animation for ticker tape */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 45s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
