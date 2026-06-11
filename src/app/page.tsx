@@ -19,6 +19,28 @@ import AuthModal from '@/components/AuthModal';
 import AdSlot from '@/components/AdSlot';
 import AdminPanel from '@/components/AdminPanel';
 
+export interface MarketItem {
+  name: string;
+  symbol: string;
+  priceValue: number;
+  changeValue: number;
+  icon: string;
+  category: string;
+}
+
+const ALL_AVAILABLE_MARKETS: MarketItem[] = [
+  { name: 'NASDAQ 100', symbol: 'NAS100',  priceValue: 18940.20, changeValue: 0.82,  icon: '📈', category: 'Indices' },
+  { name: 'XAUUSD', symbol: 'XAUUSD',  priceValue: 2428.50,  changeValue: -0.15, icon: '🪙', category: 'Commodities' },
+  { name: 'EUR/USD',    symbol: 'EURUSD',   priceValue: 1.0842,    changeValue: 0.24,  icon: '💱', category: 'Forex' },
+  { name: 'S&P 500',    symbol: 'SPX500',   priceValue: 5431.10,   changeValue: 0.45,  icon: '📊', category: 'Indices' },
+  { name: 'US30 (Dow)',  symbol: 'US30',     priceValue: 39820.00,  changeValue: -0.08, icon: '🏢', category: 'Indices' },
+  { name: 'Bitcoin',    symbol: 'BTCUSD',   priceValue: 67250.00,  changeValue: 2.10,  icon: '🪙', category: 'Crypto' },
+  { name: 'Ethereum',   symbol: 'ETHUSD',   priceValue: 3512.40,   changeValue: 1.45,  icon: '💎', category: 'Crypto' },
+  { name: 'GBP/USD',    symbol: 'GBPUSD',   priceValue: 1.2715,    changeValue: -0.04, icon: '💱', category: 'Forex' },
+  { name: 'USD/JPY',    symbol: 'USDJPY',   priceValue: 156.82,    changeValue: 0.12,  icon: '💴', category: 'Forex' },
+  { name: 'Crude Oil',  symbol: 'USOIL',    priceValue: 78.45,     changeValue: -1.20, icon: '🛢️', category: 'Commodities' },
+];
+
 type Theme = 'dark' | 'light';
 
 export default function Home() {
@@ -29,8 +51,87 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState<{
     username: string; loggedIn: boolean; avatar: string; isDemo?: boolean
   } | null>(null);
+  const [markets, setMarkets] = useState<MarketItem[]>(ALL_AVAILABLE_MARKETS);
+  const [watchlist, setWatchlist] = useState<string[]>(['NAS100', 'XAUUSD', 'EURUSD', 'BTCUSD']);
 
-  // Load user and theme on mount — syncing from external localStorage store
+  // Fetch real-time market data from APIs
+  useEffect(() => {
+    const fetchLivePrices = async () => {
+      try {
+        const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]');
+        const cryptoData = await cryptoRes.json();
+        
+        const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
+        const forexData = await forexRes.json();
+        
+        if (forexData?.result === 'success' && forexData.rates) {
+          const rates = forexData.rates;
+          
+          setMarkets((prev) =>
+            prev.map((m) => {
+              let livePrice = m.priceValue;
+              let liveChange = m.changeValue;
+              
+              if (m.symbol === 'BTCUSD') {
+                const btc = cryptoData.find((item: any) => item.symbol === 'BTCUSDT');
+                if (btc) {
+                  livePrice = parseFloat(btc.lastPrice);
+                  liveChange = parseFloat(btc.priceChangePercent);
+                }
+              } else if (m.symbol === 'ETHUSD') {
+                const eth = cryptoData.find((item: any) => item.symbol === 'ETHUSDT');
+                if (eth) {
+                  livePrice = parseFloat(eth.lastPrice);
+                  liveChange = parseFloat(eth.priceChangePercent);
+                }
+              } else if (m.symbol === 'XAUUSD' && rates.XAU) {
+                livePrice = 1 / rates.XAU;
+              } else if (m.symbol === 'EURUSD' && rates.EUR) {
+                livePrice = 1 / rates.EUR;
+              } else if (m.symbol === 'GBPUSD' && rates.GBP) {
+                livePrice = 1 / rates.GBP;
+              } else if (m.symbol === 'USDJPY' && rates.JPY) {
+                livePrice = rates.JPY;
+              }
+              
+              return {
+                ...m,
+                priceValue: livePrice,
+                changeValue: liveChange,
+              };
+            })
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching live market data:', error);
+      }
+    };
+
+    fetchLivePrices();
+    const interval = setInterval(fetchLivePrices, 20000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update markets in real-time (micro-movements for tick animation)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMarkets((prev) =>
+        prev.map((m) => {
+          const move = (Math.random() - 0.48) * 0.05;
+          const nextPrice = m.priceValue * (1 + move / 100);
+          const nextChange = m.changeValue + move;
+          return {
+            ...m,
+            priceValue: nextPrice,
+            changeValue: nextChange,
+          };
+        })
+      );
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load user, theme, and watchlist on mount — syncing from external localStorage store
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     const user = db.getCurrentUser();
@@ -38,8 +139,32 @@ export default function Home() {
     document.documentElement.setAttribute('data-theme', stored);
     setCurrentUser(user);
     setTheme(stored);
+
+    const saved = localStorage.getItem('propnepal_watchlist');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setWatchlist(parsed);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
+
+  const handleToggleWatchlist = (symbol: string) => {
+    let next: string[];
+    if (watchlist.includes(symbol)) {
+      if (watchlist.length <= 1) return; // keep at least 1 item
+      next = watchlist.filter(s => s !== symbol);
+    } else {
+      next = [...watchlist, symbol];
+    }
+    setWatchlist(next);
+    localStorage.setItem('propnepal_watchlist', JSON.stringify(next));
+  };
 
   const handleToggleTheme = () => {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
@@ -85,7 +210,7 @@ export default function Home() {
       {/* Main Area (right of sidebar) */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Top Bar */}
-        <Topbar theme={theme} />
+        <Topbar theme={theme} markets={markets} watchlist={watchlist} />
 
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg)' }}>
@@ -120,7 +245,13 @@ export default function Home() {
                 {/* Right Panel */}
                 <div className="hidden xl:block">
                   <div className="sticky top-6 space-y-4">
-                    <RightPanel onNavigate={handleSetActiveTab} />
+                    <RightPanel
+                      onNavigate={handleSetActiveTab}
+                      markets={markets}
+                      watchlist={watchlist}
+                      onToggleWatchlist={handleToggleWatchlist}
+                      theme={theme}
+                    />
                     <AdSlot variant="sidebar" />
                   </div>
                 </div>

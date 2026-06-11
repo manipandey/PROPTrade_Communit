@@ -22,7 +22,7 @@ interface TickerItem {
 export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, setActiveTab }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tickerData, setTickerData] = useState<TickerItem[]>([
-    { symbol: 'XAUUSD (Gold)', priceValue: 2428.50, changeValue: 1.24 },
+    { symbol: 'XAUUSD', priceValue: 2428.50, changeValue: 1.24 },
     { symbol: 'EURUSD', priceValue: 1.0832, changeValue: 0.08 },
     { symbol: 'US30 (Dow)', priceValue: 39820, changeValue: -0.15 },
     { symbol: 'BTCUSD', priceValue: 67250, changeValue: 2.10 },
@@ -30,12 +30,12 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
     { symbol: 'GBPUSD', priceValue: 1.2715, changeValue: -0.04 }
   ]);
 
-  // Simulate updating ticker prices in real-time
+  // Simulate updating ticker prices in real-time (micro-movements)
   useEffect(() => {
     const interval = setInterval(() => {
       setTickerData((prev) =>
         prev.map((item) => {
-          const percentChange = (Math.random() - 0.48) * 0.1; // slight bias towards green
+          const percentChange = (Math.random() - 0.48) * 0.05;
           const nextPrice = item.priceValue * (1 + percentChange / 100);
           const nextChange = item.changeValue + percentChange;
 
@@ -48,6 +48,56 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
       );
     }, 4000);
 
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch real-time live prices
+  useEffect(() => {
+    const fetchLivePrices = async () => {
+      try {
+        const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT"]');
+        const cryptoData = await cryptoRes.json();
+        
+        const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
+        const forexData = await forexRes.json();
+        
+        if (forexData?.result === 'success' && forexData.rates) {
+          const rates = forexData.rates;
+          
+          setTickerData((prev) =>
+            prev.map((item) => {
+              let livePrice = item.priceValue;
+              let liveChange = item.changeValue;
+              
+              if (item.symbol === 'BTCUSD') {
+                const btc = cryptoData.find((it: any) => it.symbol === 'BTCUSDT');
+                if (btc) {
+                  livePrice = parseFloat(btc.lastPrice);
+                  liveChange = parseFloat(btc.priceChangePercent);
+                }
+              } else if (item.symbol === 'XAUUSD' && rates.XAU) {
+                livePrice = 1 / rates.XAU;
+              } else if (item.symbol === 'EURUSD' && rates.EUR) {
+                livePrice = 1 / rates.EUR;
+              } else if (item.symbol === 'GBPUSD' && rates.GBP) {
+                livePrice = 1 / rates.GBP;
+              }
+              
+              return {
+                ...item,
+                priceValue: livePrice,
+                changeValue: liveChange,
+              };
+            })
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching live header prices:', error);
+      }
+    };
+
+    fetchLivePrices();
+    const interval = setInterval(fetchLivePrices, 20000);
     return () => clearInterval(interval);
   }, []);
 

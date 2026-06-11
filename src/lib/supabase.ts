@@ -13,6 +13,8 @@ export interface Post {
   createdAt: string;
   userVoted?: 'up' | 'down' | null;
   imageUrl?: string;
+  reactions?: Record<string, number>;
+  userReactions?: Record<string, boolean>;
 }
 
 export interface Comment {
@@ -99,8 +101,32 @@ export interface CourseModule {
   lessons: Lesson[];
 }
 
+export interface PremiumStrategy {
+  id: string;
+  title: string;
+  description: string;
+  asset: string;
+  timeframe: string;
+  winRate: string;
+  riskReward: string;
+  content: string;
+  previewText: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  createdAt: string;
+}
+
+export interface PremiumAccess {
+  username: string;
+  esewaTransactionId: string;
+  status: 'pending' | 'verified' | 'rejected';
+  requestedAt: string;
+  verifiedAt?: string;
+}
+
 export type Emotion = 'calm' | 'confident' | 'anxious' | 'fomo' | 'revenge' | 'frustrated' | 'neutral';
 export type SetupType = 'Supply Zone' | 'Demand Zone' | 'FVG Fill' | 'Breakout' | 'Breakdown' | 'Scalp' | 'Trend Follow' | 'Mean Reversion' | 'News Trade' | 'Liquidity Sweep' | 'Order Block' | 'Other';
+export type TradingSession = 'Asian' | 'London' | 'New York';
 
 export const EMOTIONS: { value: Emotion; label: string; emoji: string; color: string }[] = [
   { value: 'calm', label: 'Calm', emoji: '😌', color: 'text-sky-400' },
@@ -117,6 +143,8 @@ export const SETUP_TYPES: SetupType[] = [
   'Scalp', 'Trend Follow', 'Mean Reversion', 'News Trade',
   'Liquidity Sweep', 'Order Block', 'Other'
 ];
+
+export const TRADING_SESSIONS: TradingSession[] = ['Asian', 'London', 'New York'];
 
 export interface JournalEntry {
   id: string;
@@ -135,6 +163,11 @@ export interface JournalEntry {
   riskReward?: number;    // Risk-to-reward ratio (e.g. 3.0)
   imageUrl?: string;      // Screenshot URL or uploaded image base64
   accountId?: string;     // Associated trading account
+  session?: TradingSession; // Associated trading session
+  newsChecked?: boolean;
+  riskSet?: boolean;
+  mindsetReady?: boolean;
+  sentiment?: 'Bullish' | 'Bearish' | 'Neutral';
 }
 
 export interface JournalSettings {
@@ -382,6 +415,48 @@ const initialModules: CourseModule[] = [
   }
 ];
 
+const initialPremiumStrategies: PremiumStrategy[] = [
+  {
+    id: 'strat-1',
+    title: 'XAUUSD London Session Liquidity Sweep',
+    description: 'A high-probability gold scalping strategy targeting Asian session liquidity pools during London open. Designed for FTMO/FundedNext evaluation accounts.',
+    asset: 'XAUUSD',
+    timeframe: 'M15',
+    winRate: '76%',
+    riskReward: '1:3',
+    previewText: 'This strategy exploits the predictable pattern of London session sweeping Asian highs/lows on Gold. Combined with FVG confirmations and order block entries, it consistently delivers 1:3+ R:R setups during the first 90 minutes of London open.',
+    content: 'FULL STRATEGY BREAKDOWN:\n\n1. PRE-SESSION ANALYSIS (6:00-7:30 AM GMT)\n• Mark Asian session high and low on M15 chart\n• Identify any FVG (Fair Value Gap) left by the Asian session\n• Note the prevailing daily bias from H4 structure\n\n2. ENTRY RULES\n• Wait for price to sweep Asian high/low (grab liquidity)\n• After the sweep, look for a displacement candle (strong rejection)\n• Enter on the next candle\'s retracement into the created FVG\n• Stop loss: 2-3 pips beyond the sweep wick\n\n3. TAKE PROFIT MANAGEMENT\n• TP1: Opposite Asian session level (1:2 R:R typically)\n• TP2: Previous day high/low (1:3+ R:R)\n• Move SL to breakeven after TP1 is hit\n\n4. RISK RULES\n• Max 0.5% risk per trade for evaluation accounts\n• Max 2 trades per session\n• No trading on NFP, FOMC, or CPI days\n\n5. EVALUATION ACCOUNT TIPS\n• This setup alone can clear Phase 1 profit targets in 8-12 trading days\n• Focus only on London session for consistency\n• Journal every trade with emotion tags',
+    imageUrl: '/feed-images/trading-chart-gold.png',
+    createdAt: '2026-05-15T08:00:00Z'
+  },
+  {
+    id: 'strat-2',
+    title: 'NAS100 NY Open Breakout Sniper',
+    description: 'A momentum-based NAS100 strategy for the New York opening bell. Targets the first clean breakout with institutional confirmation via order flow.',
+    asset: 'NAS100',
+    timeframe: 'M5',
+    winRate: '71%',
+    riskReward: '1:2.5',
+    previewText: 'The New York open on NAS100 is the most volatile and predictable window for breakout setups. This strategy waits for the initial fake-out, then enters on the true directional move with a tight stop and aggressive trailing take-profit system.',
+    content: 'FULL STRATEGY BREAKDOWN:\n\n1. PRE-MARKET ANALYSIS (1:00-2:00 PM GMT)\n• Identify the pre-market range (last 2 hours before NY open)\n• Mark the high and low of this consolidation zone\n• Check if there is a clear daily bias from the overnight session\n\n2. ENTRY RULES\n• Wait for the 9:30 AM ET candle (NY open)\n• Look for an initial fake breakout of the range (the \'judas swing\')\n• After the fake-out reverses, enter on the M5 body close back inside the range\n• Stop loss: Beyond the fake-out wick\n\n3. TAKE PROFIT MANAGEMENT\n• TP1: Opposite side of the range (1:1.5 R:R)\n• TP2: Previous day high/low extension (1:2.5 R:R)\n• Trail stop using M5 swing structure after TP1\n\n4. RISK MANAGEMENT\n• Max 0.75% risk per trade\n• Only 1 entry per session\n• Avoid trading during FOMC meeting days\n\n5. PROP FIRM NOTES\n• Works exceptionally well on equity-based drawdown accounts\n• Quick scalp nature prevents overnight holding violations\n• Average 3-5 setups per week',
+    imageUrl: '/feed-images/nepse-chart.png',
+    createdAt: '2026-05-20T10:00:00Z'
+  },
+  {
+    id: 'strat-3',
+    title: 'EURUSD H1 Swing — Smart Money Confluence',
+    description: 'A swing trading strategy for EURUSD combining weekly order blocks, daily FVGs, and H1 market structure shifts for high-conviction entries.',
+    asset: 'EURUSD',
+    timeframe: 'H1',
+    winRate: '68%',
+    riskReward: '1:4',
+    previewText: 'This longer-term strategy focuses on confluence-based entries where weekly order blocks align with daily FVGs and H1 structure shifts. Ideal for traders who prefer fewer but higher quality setups with massive R:R potential.',
+    content: 'FULL STRATEGY BREAKDOWN:\n\n1. WEEKLY ANALYSIS (Sunday)\n• Identify the weekly order block (last up/down candle before a major move)\n• Mark weekly imbalances and liquidity pools\n• Determine the weekly bias (bullish/bearish)\n\n2. DAILY REFINEMENT\n• Look for daily FVGs that align with the weekly OB zone\n• Mark daily highs/lows that act as liquidity targets\n\n3. H1 ENTRY CRITERIA\n• Wait for price to enter the daily FVG + weekly OB confluence zone\n• Look for H1 Market Structure Shift (MSS) — break of the most recent swing\n• Enter on the H1 pullback after the MSS\n• Stop loss: Below the weekly OB low (typically 25-35 pips)\n\n4. TAKE PROFIT\n• TP1: Daily opposite liquidity level (1:2 R:R)\n• TP2: Weekly liquidity target (1:4 R:R)\n• Partial close at TP1, trail remainder\n\n5. RISK & POSITION MANAGEMENT\n• Max 1% risk per setup\n• Average hold time: 2-4 days\n• Max 2 concurrent positions\n• Check for high-impact news before entry\n\n6. PROP FIRM COMPATIBILITY\n• Use FTMO Swing account (allows weekend holding)\n• 1-2 winning trades per week is enough for evaluation targets\n• Extremely low trade count keeps emotional discipline high',
+    imageUrl: '/feed-images/payout-confirmation.png',
+    createdAt: '2026-06-01T14:00:00Z'
+  }
+];
+
 const initialAds: Ad[] = [
   {
     id: 'ad-propnepal',
@@ -407,46 +482,46 @@ const initialAds: Ad[] = [
 // Demo journal entries — only loaded for quick-login demo accounts
 const demoJournals: Record<string, JournalEntry[]> = {
   FTMO_Champ: [
-    { id: 'j-d1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2415.50, exitPrice: 2427.80, pnl: 2460.00, notes: 'Broke out of Asian range. Golden cross on 15m.', emotion: 'confident', setup: 'Breakout', author: 'FTMO_Champ', accountId: 'acc-d2' },
-    { id: 'j-d2', date: '2026-05-19', asset: 'EURUSD', direction: 'SELL', lots: 1.50, entryPrice: 1.08520, exitPrice: 1.08220, pnl: 450.00, notes: 'Fakeout at 1.0860 psychological level.', emotion: 'calm', setup: 'Supply Zone', author: 'FTMO_Champ', accountId: 'acc-d2' },
-    { id: 'j-d3', date: '2026-05-18', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39800, exitPrice: 39550, pnl: -125.00, notes: 'Impulse buy on US Open. Violated plan.', emotion: 'fomo', setup: 'Scalp', author: 'FTMO_Champ', accountId: 'acc-d1' },
-    { id: 'j-d4', date: '2026-05-17', asset: 'GBPUSD', direction: 'BUY', lots: 1.00, entryPrice: 1.27100, exitPrice: 1.27450, pnl: 350.00, notes: 'Clean demand zone bounce on H1.', emotion: 'calm', setup: 'Demand Zone', author: 'FTMO_Champ', accountId: 'acc-d2' },
-    { id: 'j-d5', date: '2026-05-16', asset: 'XAUUSD', direction: 'SELL', lots: 1.50, entryPrice: 2405.00, exitPrice: 2412.50, pnl: -1125.00, notes: 'Revenge trade after missing earlier entry.', emotion: 'revenge', setup: 'Supply Zone', author: 'FTMO_Champ', accountId: 'acc-d1' },
-    { id: 'j-d6', date: '2026-05-15', asset: 'NAS100', direction: 'BUY', lots: 0.30, entryPrice: 18950, exitPrice: 19080, pnl: 390.00, notes: 'FVG fill on 15m, clean trend follow.', emotion: 'confident', setup: 'FVG Fill', author: 'FTMO_Champ', accountId: 'acc-d2' },
+    { id: 'j-d1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2415.50, exitPrice: 2427.80, pnl: 2460.00, notes: 'Broke out of Asian range. Golden cross on 15m.', emotion: 'confident', setup: 'Breakout', author: 'FTMO_Champ', accountId: 'acc-d2', session: 'Asian' },
+    { id: 'j-d2', date: '2026-05-19', asset: 'EURUSD', direction: 'SELL', lots: 1.50, entryPrice: 1.08520, exitPrice: 1.08220, pnl: 450.00, notes: 'Fakeout at 1.0860 psychological level.', emotion: 'calm', setup: 'Supply Zone', author: 'FTMO_Champ', accountId: 'acc-d2', session: 'London' },
+    { id: 'j-d3', date: '2026-05-18', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39800, exitPrice: 39550, pnl: -125.00, notes: 'Impulse buy on US Open. Violated plan.', emotion: 'fomo', setup: 'Scalp', author: 'FTMO_Champ', accountId: 'acc-d1', session: 'New York' },
+    { id: 'j-d4', date: '2026-05-17', asset: 'GBPUSD', direction: 'BUY', lots: 1.00, entryPrice: 1.27100, exitPrice: 1.27450, pnl: 350.00, notes: 'Clean demand zone bounce on H1.', emotion: 'calm', setup: 'Demand Zone', author: 'FTMO_Champ', accountId: 'acc-d2', session: 'London' },
+    { id: 'j-d5', date: '2026-05-16', asset: 'XAUUSD', direction: 'SELL', lots: 1.50, entryPrice: 2405.00, exitPrice: 2412.50, pnl: -1125.00, notes: 'Revenge trade after missing earlier entry.', emotion: 'revenge', setup: 'Supply Zone', author: 'FTMO_Champ', accountId: 'acc-d1', session: 'New York' },
+    { id: 'j-d6', date: '2026-05-15', asset: 'NAS100', direction: 'BUY', lots: 0.30, entryPrice: 18950, exitPrice: 19080, pnl: 390.00, notes: 'FVG fill on 15m, clean trend follow.', emotion: 'confident', setup: 'FVG Fill', author: 'FTMO_Champ', accountId: 'acc-d2', session: 'London' },
   ],
   GoldHunter: [
-    { id: 'j-g1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 3.00, entryPrice: 2390.00, exitPrice: 2418.50, pnl: 8550.00, notes: 'Massive run on gold. Held through pullback.', emotion: 'confident', setup: 'Trend Follow', author: 'GoldHunter', accountId: 'acc-g1' },
-    { id: 'j-g2', date: '2026-05-19', asset: 'XAUUSD', direction: 'SELL', lots: 1.00, entryPrice: 2425.00, exitPrice: 2420.00, pnl: 500.00, notes: 'Quick scalp at resistance.', emotion: 'calm', setup: 'Scalp', author: 'GoldHunter', accountId: 'acc-g1' },
-    { id: 'j-g3', date: '2026-05-18', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2400.00, exitPrice: 2395.00, pnl: -1000.00, notes: 'Got stopped on news spike. Anxious entry.', emotion: 'anxious', setup: 'News Trade', author: 'GoldHunter', accountId: 'acc-g1' },
+    { id: 'j-g1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 3.00, entryPrice: 2390.00, exitPrice: 2418.50, pnl: 8550.00, notes: 'Massive run on gold. Held through pullback.', emotion: 'confident', setup: 'Trend Follow', author: 'GoldHunter', accountId: 'acc-g1', session: 'London' },
+    { id: 'j-g2', date: '2026-05-19', asset: 'XAUUSD', direction: 'SELL', lots: 1.00, entryPrice: 2425.00, exitPrice: 2420.00, pnl: 500.00, notes: 'Quick scalp at resistance.', emotion: 'calm', setup: 'Scalp', author: 'GoldHunter', accountId: 'acc-g1', session: 'New York' },
+    { id: 'j-g3', date: '2026-05-18', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2400.00, exitPrice: 2395.00, pnl: -1000.00, notes: 'Got stopped on news spike. Anxious entry.', emotion: 'anxious', setup: 'News Trade', author: 'GoldHunter', accountId: 'acc-g1', session: 'London' },
   ],
   NepaliScalper: [
-    { id: 'j-n1', date: '2026-05-20', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39750, exitPrice: 39820, pnl: 350.00, notes: 'NY open liquidity sweep.', emotion: 'calm', setup: 'Liquidity Sweep', author: 'NepaliScalper', accountId: 'acc-n1' },
-    { id: 'j-n2', date: '2026-05-19', asset: 'NAS100', direction: 'SELL', lots: 0.30, entryPrice: 19100, exitPrice: 19050, pnl: 150.00, notes: 'Order block rejection on 5m.', emotion: 'neutral', setup: 'Order Block', author: 'NepaliScalper', accountId: 'acc-n1' },
+    { id: 'j-n1', date: '2026-05-20', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39750, exitPrice: 39820, pnl: 350.00, notes: 'NY open liquidity sweep.', emotion: 'calm', setup: 'Liquidity Sweep', author: 'NepaliScalper', accountId: 'acc-n1', session: 'New York' },
+    { id: 'j-n2', date: '2026-05-19', asset: 'NAS100', direction: 'SELL', lots: 0.30, entryPrice: 19100, exitPrice: 19050, pnl: 150.00, notes: 'Order block rejection on 5m.', emotion: 'neutral', setup: 'Order Block', author: 'NepaliScalper', accountId: 'acc-n1', session: 'London' },
   ],
   PrabeshFX: [
-    { id: 'j-p1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2415.50, exitPrice: 2427.80, pnl: 2460.00, notes: 'Broke out of Asian range. Golden cross on 15m.', emotion: 'confident', setup: 'Breakout', author: 'PrabeshFX', accountId: 'acc-p1' },
-    { id: 'j-p2', date: '2026-05-19', asset: 'XAUUSD', direction: 'BUY', lots: 1.50, entryPrice: 2400.00, exitPrice: 2430.00, pnl: 4500.00, notes: 'Supply to demand flip.', emotion: 'confident', setup: 'Demand Zone', author: 'PrabeshFX', accountId: 'acc-p1' },
-    { id: 'j-p3', date: '2026-05-18', asset: 'GBPUSD', direction: 'SELL', lots: 1.00, entryPrice: 1.27500, exitPrice: 1.28700, pnl: -1200.00, notes: 'ECB news spike stopped me out.', emotion: 'anxious', setup: 'News Trade', author: 'PrabeshFX', accountId: 'acc-p1' },
-    { id: 'j-p4', date: '2026-05-17', asset: 'GBPUSD', direction: 'BUY', lots: 2.00, entryPrice: 1.27100, exitPrice: 1.28920, pnl: 3640.00, notes: 'Held through demand block bounce.', emotion: 'calm', setup: 'Demand Zone', author: 'PrabeshFX', accountId: 'acc-p1' },
-    { id: 'j-p5', date: '2026-05-16', asset: 'XAUUSD', direction: 'BUY', lots: 1.50, entryPrice: 2410.00, exitPrice: 2423.33, pnl: 2000.00, notes: 'H4 block test.', emotion: 'confident', setup: 'Order Block', author: 'PrabeshFX', accountId: 'acc-p1' }
+    { id: 'j-p1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2415.50, exitPrice: 2427.80, pnl: 2460.00, notes: 'Broke out of Asian range. Golden cross on 15m.', emotion: 'confident', setup: 'Breakout', author: 'PrabeshFX', accountId: 'acc-p1', session: 'Asian' },
+    { id: 'j-p2', date: '2026-05-19', asset: 'XAUUSD', direction: 'BUY', lots: 1.50, entryPrice: 2400.00, exitPrice: 2430.00, pnl: 4500.00, notes: 'Supply to demand flip.', emotion: 'confident', setup: 'Demand Zone', author: 'PrabeshFX', accountId: 'acc-p1', session: 'London' },
+    { id: 'j-p3', date: '2026-05-18', asset: 'GBPUSD', direction: 'SELL', lots: 1.00, entryPrice: 1.27500, exitPrice: 1.28700, pnl: -1200.00, notes: 'ECB news spike stopped me out.', emotion: 'anxious', setup: 'News Trade', author: 'PrabeshFX', accountId: 'acc-p1', session: 'New York' },
+    { id: 'j-p4', date: '2026-05-17', asset: 'GBPUSD', direction: 'BUY', lots: 2.00, entryPrice: 1.27100, exitPrice: 1.28920, pnl: 3640.00, notes: 'Held through demand block bounce.', emotion: 'calm', setup: 'Demand Zone', author: 'PrabeshFX', accountId: 'acc-p1', session: 'London' },
+    { id: 'j-p5', date: '2026-05-16', asset: 'XAUUSD', direction: 'BUY', lots: 1.50, entryPrice: 2410.00, exitPrice: 2423.33, pnl: 2000.00, notes: 'H4 block test.', emotion: 'confident', setup: 'Order Block', author: 'PrabeshFX', accountId: 'acc-p1', session: 'Asian' }
   ],
   SandhyaScalps: [
-    { id: 'j-s1', date: '2026-05-20', asset: 'US30', direction: 'BUY', lots: 1.00, entryPrice: 39750, exitPrice: 39790, pnl: 4000.00, notes: 'US Open scalp sweep.', emotion: 'confident', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1' },
-    { id: 'j-s2', date: '2026-05-19', asset: 'NAS100', direction: 'SELL', lots: 0.50, entryPrice: 19100, exitPrice: 19038, pnl: 3100.00, notes: '5m order block rejection.', emotion: 'calm', setup: 'Order Block', author: 'SandhyaScalps', accountId: 'acc-s1' },
-    { id: 'j-s3', date: '2026-05-18', asset: 'US30', direction: 'BUY', lots: 0.80, entryPrice: 39800, exitPrice: 39775, pnl: -2000.00, notes: 'Impulse buy. High volatility sweep.', emotion: 'fomo', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1' },
-    { id: 'j-s4', date: '2026-05-17', asset: 'NAS100', direction: 'BUY', lots: 0.60, entryPrice: 18950, exitPrice: 19025, pnl: 4500.00, notes: 'FVG fill trend continuation.', emotion: 'confident', setup: 'FVG Fill', author: 'SandhyaScalps', accountId: 'acc-s1' },
-    { id: 'j-s5', date: '2026-05-16', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39700, exitPrice: 39734, pnl: 1700.00, notes: 'NY Session close.', emotion: 'neutral', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1' },
-    { id: 'j-s6', date: '2026-05-15', asset: 'NAS100', direction: 'BUY', lots: 0.40, entryPrice: 18900, exitPrice: 18962.50, pnl: 2500.00, notes: 'Support zone double bottom.', emotion: 'calm', setup: 'Demand Zone', author: 'SandhyaScalps', accountId: 'acc-s1' }
+    { id: 'j-s1', date: '2026-05-20', asset: 'US30', direction: 'BUY', lots: 1.00, entryPrice: 39750, exitPrice: 39790, pnl: 4000.00, notes: 'US Open scalp sweep.', emotion: 'confident', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1', session: 'New York' },
+    { id: 'j-s2', date: '2026-05-19', asset: 'NAS100', direction: 'SELL', lots: 0.50, entryPrice: 19100, exitPrice: 19038, pnl: 3100.00, notes: '5m order block rejection.', emotion: 'calm', setup: 'Order Block', author: 'SandhyaScalps', accountId: 'acc-s1', session: 'London' },
+    { id: 'j-s3', date: '2026-05-18', asset: 'US30', direction: 'BUY', lots: 0.80, entryPrice: 39800, exitPrice: 39775, pnl: -2000.00, notes: 'Impulse buy. High volatility sweep.', emotion: 'fomo', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1', session: 'New York' },
+    { id: 'j-s4', date: '2026-05-17', asset: 'NAS100', direction: 'BUY', lots: 0.60, entryPrice: 18950, exitPrice: 19025, pnl: 4500.00, notes: 'FVG fill trend continuation.', emotion: 'confident', setup: 'FVG Fill', author: 'SandhyaScalps', accountId: 'acc-s1', session: 'London' },
+    { id: 'j-s5', date: '2026-05-16', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39700, exitPrice: 39734, pnl: 1700.00, notes: 'NY Session close.', emotion: 'neutral', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1', session: 'New York' },
+    { id: 'j-s6', date: '2026-05-15', asset: 'NAS100', direction: 'BUY', lots: 0.40, entryPrice: 18900, exitPrice: 18962.50, pnl: 2500.00, notes: 'Support zone double bottom.', emotion: 'calm', setup: 'Demand Zone', author: 'SandhyaScalps', accountId: 'acc-s1', session: 'Asian' }
   ],
   RohanPips: [
-    { id: 'j-r1', date: '2026-05-20', asset: 'EURUSD', direction: 'SELL', lots: 2.00, entryPrice: 1.08700, exitPrice: 1.08775, pnl: -1500.00, notes: 'Stopped out. Over-leveraged on CPI.', emotion: 'anxious', setup: 'News Trade', author: 'RohanPips', accountId: 'acc-r1' },
-    { id: 'j-r2', date: '2026-05-19', asset: 'GBPUSD', direction: 'BUY', lots: 1.50, entryPrice: 1.27000, exitPrice: 1.27233, pnl: 3500.00, notes: 'Macro trend alignment.', emotion: 'calm', setup: 'Trend Follow', author: 'RohanPips', accountId: 'acc-r1' },
-    { id: 'j-r3', date: '2026-05-18', asset: 'EURUSD', direction: 'BUY', lots: 2.50, entryPrice: 1.08200, exitPrice: 1.08284, pnl: 2100.00, notes: 'H4 demand zone bounce.', emotion: 'confident', setup: 'Demand Zone', author: 'RohanPips', accountId: 'acc-r1' },
-    { id: 'j-r4', date: '2026-05-17', asset: 'EURUSD', direction: 'BUY', lots: 2.00, entryPrice: 1.08100, exitPrice: 1.08205, pnl: 2100.00, notes: 'Order block test.', emotion: 'calm', setup: 'Order Block', author: 'RohanPips', accountId: 'acc-r1' }
+    { id: 'j-r1', date: '2026-05-20', asset: 'EURUSD', direction: 'SELL', lots: 2.00, entryPrice: 1.08700, exitPrice: 1.08775, pnl: -1500.00, notes: 'Stopped out. Over-leveraged on CPI.', emotion: 'anxious', setup: 'News Trade', author: 'RohanPips', accountId: 'acc-r1', session: 'New York' },
+    { id: 'j-r2', date: '2026-05-19', asset: 'GBPUSD', direction: 'BUY', lots: 1.50, entryPrice: 1.27000, exitPrice: 1.27233, pnl: 3500.00, notes: 'Macro trend alignment.', emotion: 'calm', setup: 'Trend Follow', author: 'RohanPips', accountId: 'acc-r1', session: 'London' },
+    { id: 'j-r3', date: '2026-05-18', asset: 'EURUSD', direction: 'BUY', lots: 2.50, entryPrice: 1.08200, exitPrice: 1.08284, pnl: 2100.00, notes: 'H4 demand zone bounce.', emotion: 'confident', setup: 'Demand Zone', author: 'RohanPips', accountId: 'acc-r1', session: 'London' },
+    { id: 'j-r4', date: '2026-05-17', asset: 'EURUSD', direction: 'BUY', lots: 2.00, entryPrice: 1.08100, exitPrice: 1.08205, pnl: 2100.00, notes: 'Order block test.', emotion: 'calm', setup: 'Order Block', author: 'RohanPips', accountId: 'acc-r1', session: 'Asian' }
   ]
 };
 
-const DATA_VERSION = 'v5_admin_media_upgrade';
+const DATA_VERSION = 'v6_trading_sessions_upgrade';
 
 export class MockSupabaseEngine {
   constructor() {
@@ -825,6 +900,67 @@ export class MockSupabaseEngine {
 
   saveAcademyModules(modules: CourseModule[]): void {
     this.setStorage('propnepal_academy_modules', modules);
+  }
+
+  // --- Premium Strategies ---
+  getPremiumStrategies(): PremiumStrategy[] {
+    return this.getStorage<PremiumStrategy[]>('propnepal_premium_strategies', initialPremiumStrategies);
+  }
+
+  savePremiumStrategies(strategies: PremiumStrategy[]): void {
+    this.setStorage('propnepal_premium_strategies', strategies);
+  }
+
+  // --- Premium Access / eSewa Payment ---
+  getPremiumAccessList(): PremiumAccess[] {
+    return this.getStorage<PremiumAccess[]>('propnepal_premium_access', []);
+  }
+
+  savePremiumAccessList(list: PremiumAccess[]): void {
+    this.setStorage('propnepal_premium_access', list);
+  }
+
+  requestPremiumAccess(username: string, esewaTransactionId: string): void {
+    const list = this.getPremiumAccessList();
+    // Remove any previous pending/rejected request for this user
+    const filtered = list.filter(a => !(a.username === username && a.status !== 'verified'));
+    filtered.push({
+      username,
+      esewaTransactionId,
+      status: 'pending',
+      requestedAt: new Date().toISOString()
+    });
+    this.savePremiumAccessList(filtered);
+  }
+
+  verifyPremiumAccess(username: string): void {
+    const list = this.getPremiumAccessList();
+    const updated = list.map(a =>
+      a.username === username && a.status === 'pending'
+        ? { ...a, status: 'verified' as const, verifiedAt: new Date().toISOString() }
+        : a
+    );
+    this.savePremiumAccessList(updated);
+  }
+
+  rejectPremiumAccess(username: string): void {
+    const list = this.getPremiumAccessList();
+    const updated = list.map(a =>
+      a.username === username && a.status === 'pending'
+        ? { ...a, status: 'rejected' as const }
+        : a
+    );
+    this.savePremiumAccessList(updated);
+  }
+
+  hasVerifiedAccess(username: string): boolean {
+    const list = this.getPremiumAccessList();
+    return list.some(a => a.username === username && a.status === 'verified');
+  }
+
+  getUserAccessStatus(username: string): PremiumAccess | undefined {
+    const list = this.getPremiumAccessList();
+    return list.find(a => a.username === username);
   }
 
   adminUpdateProfile(updated: TraderProfile): void {

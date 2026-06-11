@@ -2,9 +2,18 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Search, Flame, Clock, MessageSquare, ArrowUp, ArrowDown, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link } from 'lucide-react';
+import { Search, Flame, Clock, MessageSquare, ArrowUp, ArrowDown, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link, Smile } from 'lucide-react';
 import { db, Post, Comment } from '@/lib/supabase';
 import AdSlot from './AdSlot';
+
+const REACTION_TYPES = [
+  { key: 'rocket', emoji: '🚀', label: 'To The Moon' },
+  { key: 'bear',   emoji: '🐻', label: 'Bear Trap' },
+  { key: 'whale',  emoji: '🐋', label: 'Whale Play' },
+  { key: 'rekt',   emoji: '💀', label: 'Margin Called' },
+  { key: 'bag',    emoji: '💸', label: 'Secured Bag' },
+  { key: 'hot',    emoji: '🔥', label: 'Hot Setup' },
+];
 
 interface CommunityFeedProps {
   currentUser: { username: string; loggedIn: boolean; avatar: string } | null;
@@ -70,42 +79,46 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
 
   const categories = ['All', 'FTMO', 'FundedNext', 'Local Market', 'Payouts', 'Trading Journals', 'General'];
 
-  // Handle Voting
-  const handleVote = (postId: string, direction: 'up' | 'down') => {
+  // Handle Emoji Reacting
+  const handleReact = (postId: string, reactionKey: string) => {
+    if (!currentUser || !currentUser.loggedIn) {
+      onOpenAuth();
+      return;
+    }
+
     const updatedPosts = posts.map((post) => {
       if (post.id !== postId) return post;
-      
-      let upvoteDiff = 0;
-      let currentVote = post.userVoted;
 
-      if (direction === 'up') {
-        if (currentVote === 'up') {
-          upvoteDiff = -1;
-          currentVote = null;
-        } else if (currentVote === 'down') {
-          upvoteDiff = 2;
-          currentVote = 'up';
-        } else {
-          upvoteDiff = 1;
-          currentVote = 'up';
-        }
-      } else {
-        if (currentVote === 'down') {
-          upvoteDiff = 1;
-          currentVote = null;
-        } else if (currentVote === 'up') {
-          upvoteDiff = -2;
-          currentVote = 'down';
-        } else {
-          upvoteDiff = -1;
-          currentVote = 'down';
-        }
-      }
+      const currentReactions = post.reactions || {
+        rocket: post.upvotes || 0,
+        bear: 0,
+        whale: 0,
+        rekt: 0,
+        bag: 0,
+        hot: 0,
+      };
+
+      const currentUserReactions = post.userReactions || {};
+      const hasReacted = currentUserReactions[reactionKey] || false;
+
+      const nextReactions = {
+        ...currentReactions,
+        [reactionKey]: Math.max(0, (currentReactions[reactionKey] || 0) + (hasReacted ? -1 : 1))
+      };
+
+      const nextUserReactions = {
+        ...currentUserReactions,
+        [reactionKey]: !hasReacted
+      };
+
+      // Recalculate upvotes sum to maintain sorting stability
+      const totalReactions = Object.values(nextReactions).reduce((sum, val) => sum + val, 0);
 
       return {
         ...post,
-        upvotes: post.upvotes + upvoteDiff,
-        userVoted: currentVote
+        reactions: nextReactions,
+        userReactions: nextUserReactions,
+        upvotes: totalReactions
       };
     });
 
@@ -510,36 +523,9 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                 <div
                   className="rounded-xl border border-border-theme bg-bg-card transition-all duration-300 hover:border-border-hover hover:shadow-[0_0_15px_rgba(34,197,94,0.02)]"
                 >
-                <div className="p-5 flex gap-4">
-                  {/* Voting Column */}
-                  <div className="flex flex-col items-center gap-1.5 pt-0.5">
-                    <button
-                      onClick={() => handleVote(post.id, 'up')}
-                      className={`rounded p-1 transition-colors hover:bg-bg-hover ${
-                        post.userVoted === 'up' ? 'text-brand-green bg-brand-green/10' : 'text-text-secondary'
-                      }`}
-                      title="Upvote"
-                    >
-                      <ArrowUp className="h-4 w-4 stroke-[2.5]" />
-                    </button>
-                    <span className={`text-xs font-mono font-bold ${
-                      post.userVoted === 'up' ? 'text-brand-green' : post.userVoted === 'down' ? 'text-red-500' : 'text-text-primary'
-                    }`}>
-                      {post.upvotes}
-                    </span>
-                    <button
-                      onClick={() => handleVote(post.id, 'down')}
-                      className={`rounded p-1 transition-colors hover:bg-bg-hover ${
-                        post.userVoted === 'down' ? 'text-red-500 bg-red-950/20' : 'text-text-secondary'
-                      }`}
-                      title="Downvote"
-                    >
-                      <ArrowDown className="h-4 w-4 stroke-[2.5]" />
-                    </button>
-                  </div>
-
+                <div className="p-5 flex flex-col gap-3">
                   {/* Main Thread Content */}
-                  <div className="flex-1 space-y-2.5">
+                  <div className="space-y-2.5">
                     {/* Header */}
                     <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-text-secondary font-mono">
                       <span className="text-text-muted">u/{post.author}</span>
@@ -607,26 +593,128 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                       ))}
                     </div>
 
-                    {/* Footer Actions */}
-                    <div className="flex items-center gap-4 pt-3 border-t border-border-theme text-[10px] font-bold uppercase tracking-widest text-text-secondary">
-                      <button
-                        onClick={() => setExpandedPostId(isExpanded ? null : post.id)}
-                        className="inline-flex items-center gap-1.5 hover:text-text-primary transition-colors"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5 text-brand-green" />
-                        <span>{post.comments.length} Comments</span>
-                      </button>
+                    {/* Reactions & Footer Actions */}
+                    <div className="pt-3 border-t border-border-theme space-y-3">
+                      {/* Active Reactions List */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {REACTION_TYPES.map((type) => {
+                          const postReactions = post.reactions || {
+                            rocket: post.upvotes || 0,
+                            bear: 0,
+                            whale: 0,
+                            rekt: 0,
+                            bag: 0,
+                            hot: 0,
+                          };
+                          const currentUserReactions = post.userReactions || {};
+                          const count = postReactions[type.key] || 0;
+                          const active = currentUserReactions[type.key] || false;
+                          if (count === 0 && !active) return null;
 
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(window.location.href);
-                          alert('Link copied to clipboard!');
-                        }}
-                        className="inline-flex items-center gap-1.5 hover:text-text-primary transition-colors"
-                      >
-                        <Share2 className="h-3.5 w-3.5" />
-                        <span>Share</span>
-                      </button>
+                          return (
+                            <button
+                              key={type.key}
+                              onClick={() => handleReact(post.id, type.key)}
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border transition-all text-[10px] font-bold"
+                              style={{
+                                backgroundColor: active ? 'rgba(22, 163, 74, 0.15)' : 'var(--bg-input)',
+                                borderColor: active ? 'var(--accent)' : 'var(--border)',
+                                color: active ? 'var(--text-primary)' : 'var(--text-secondary)'
+                              }}
+                              title={type.label}
+                            >
+                              <span>{type.emoji}</span>
+                              <span className="font-mono text-[9px]">{count}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Action buttons (Facebook Style) */}
+                      <div className="flex items-center justify-between border-t border-border-theme pt-2 mt-3 select-none">
+                        {/* React Popover Button */}
+                        <div className="relative group flex-1 flex justify-center">
+                          {(() => {
+                            const currentUserReactions = post.userReactions || {};
+                            const activeReactionKey = Object.keys(currentUserReactions).find(key => currentUserReactions[key]);
+                            const activeReaction = activeReactionKey 
+                              ? REACTION_TYPES.find(r => r.key === activeReactionKey)
+                              : null;
+                            const defaultReaction = REACTION_TYPES.find(r => r.key === 'rocket')!;
+
+                            const handleClick = () => {
+                              if (activeReaction) {
+                                handleReact(post.id, activeReaction.key);
+                              } else {
+                                handleReact(post.id, defaultReaction.key);
+                              }
+                            };
+
+                            return (
+                              <button
+                                onClick={handleClick}
+                                className={`w-full py-2 flex items-center justify-center gap-2 hover:bg-bg-hover rounded-lg transition-all text-xs font-bold ${
+                                  activeReaction ? 'text-brand-green' : 'text-text-secondary hover:text-text-primary'
+                                }`}
+                              >
+                                {activeReaction ? (
+                                  <>
+                                    <span className="text-sm">{activeReaction.emoji}</span>
+                                    <span>{activeReaction.label}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-sm">🚀</span>
+                                    <span>To The Moon</span>
+                                  </>
+                                )}
+                              </button>
+                            );
+                          })()}
+                          
+                          {/* Hover Emoji Selector */}
+                          <div 
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 flex items-center gap-2 bg-bg-card border border-border-theme p-2 rounded-xl shadow-2xl z-20 after:absolute after:h-4 after:w-full after:top-full after:left-0" 
+                            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
+                          >
+                            {REACTION_TYPES.map((type) => {
+                              const currentUserReactions = post.userReactions || {};
+                              const active = currentUserReactions[type.key] || false;
+                              return (
+                                <button
+                                  key={type.key}
+                                  type="button"
+                                  onClick={() => handleReact(post.id, type.key)}
+                                  className="p-1.5 rounded-lg hover:bg-bg-hover transition-all text-xl hover:scale-135 hover:-translate-y-1 transform active:scale-95 duration-150"
+                                  title={type.label}
+                                  style={{ backgroundColor: active ? 'rgba(22, 163, 74, 0.15)' : 'transparent' }}
+                                >
+                                  {type.emoji}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => setExpandedPostId(isExpanded ? null : post.id)}
+                          className="flex-1 py-2 flex items-center justify-center gap-2 hover:bg-bg-hover rounded-lg transition-all text-xs font-bold text-text-secondary hover:text-text-primary"
+                        >
+                          <MessageSquare className="h-4 w-4 text-brand-green" />
+                          <span>Comment ({post.comments.length})</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(window.location.origin + '?post=' + post.id);
+                            alert('Link copied to clipboard!');
+                          }}
+                          className="flex-1 py-2 flex items-center justify-center gap-2 hover:bg-bg-hover rounded-lg transition-all text-xs font-bold text-text-secondary hover:text-text-primary"
+                        >
+                          <Share2 className="h-4 w-4 text-brand-green" />
+                          <span>Share</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

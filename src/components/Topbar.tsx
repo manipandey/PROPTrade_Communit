@@ -1,47 +1,32 @@
-// src/components/Topbar.tsx
-'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Search, Bell, Settings } from 'lucide-react';
+import { MarketItem } from '@/app/page';
 
 interface TopbarProps {
   theme?: 'dark' | 'light';
+  markets: MarketItem[];
+  watchlist: string[];
 }
 
-const TICKER_GROUPS = {
-  all: [
-    { proName: 'FOREXCOM:SPXUSD', title: 'S&P 500' },
-    { proName: 'FOREXCOM:NSXUSD', title: 'NASDAQ 100' },
-    { proName: 'FX_IDC:EURUSD', title: 'EUR/USD' },
-    { proName: 'OANDA:XAUUSD', title: 'Gold' },
-    { proName: 'BITSTAMP:BTCUSD', title: 'Bitcoin' }
-  ],
-  forex: [
-    { proName: 'FX_IDC:EURUSD', title: 'EUR/USD' },
-    { proName: 'FX_IDC:GBPUSD', title: 'GBP/USD' },
-    { proName: 'FX_IDC:USDJPY', title: 'USD/JPY' },
-    { proName: 'FX_IDC:AUDUSD', title: 'AUD/USD' },
-    { proName: 'FX_IDC:USDCAD', title: 'USD/CAD' }
-  ],
-  crypto: [
-    { proName: 'BITSTAMP:BTCUSD', title: 'Bitcoin' },
-    { proName: 'BITSTAMP:ETHUSD', title: 'Ethereum' },
-    { proName: 'COINBASE:SOLUSD', title: 'Solana' },
-    { proName: 'COINBASE:ADAUSD', title: 'Cardano' }
-  ],
-  indices: [
-    { proName: 'FOREXCOM:SPXUSD', title: 'S&P 500' },
-    { proName: 'FOREXCOM:DJI', title: 'Dow Jones 30' },
-    { proName: 'OANDA:XAUUSD', title: 'Gold' },
-    { proName: 'OANDA:BCOUSD', title: 'Brent Crude' }
-  ]
+const mapToTradingViewSymbol = (sym: string): string => {
+  const map: Record<string, string> = {
+    'NAS100': 'FOREXCOM:NSXUSD',
+    'XAUUSD': 'OANDA:XAUUSD',
+    'EURUSD': 'FX_IDC:EURUSD',
+    'SPX500': 'FOREXCOM:SPXUSD',
+    'US30': 'FOREXCOM:DJI',
+    'BTCUSD': 'BITSTAMP:BTCUSD',
+    'ETHUSD': 'BITSTAMP:ETHUSD',
+    'GBPUSD': 'FX_IDC:GBPUSD',
+    'USDJPY': 'FX_IDC:USDJPY',
+    'USOIL': 'OANDA:BCOUSD'
+  };
+  return map[sym] || sym;
 };
 
-export default function Topbar({ theme = 'dark' }: TopbarProps) {
-  const [category, setCategory] = useState<'all' | 'forex' | 'crypto' | 'indices'>('all');
+export default function Topbar({ theme = 'dark', markets, watchlist }: TopbarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Dynamic widget insertion
   useEffect(() => {
     if (!containerRef.current) return;
     
@@ -52,12 +37,21 @@ export default function Topbar({ theme = 'dark' }: TopbarProps) {
     widget.className = 'tradingview-widget-container__widget';
     containerRef.current.appendChild(widget);
 
+    // Map watchlist symbols to TradingView titles/proNames
+    const symbolsConfig = watchlist.map((sym) => {
+      const proName = mapToTradingViewSymbol(sym);
+      return {
+        proName,
+        title: sym
+      };
+    });
+
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
     script.type = 'text/javascript';
     script.async = true;
     script.innerHTML = JSON.stringify({
-      symbols: TICKER_GROUPS[category],
+      symbols: symbolsConfig,
       showSymbolLogo: true,
       colorTheme: theme === 'light' ? 'light' : 'dark',
       isTransparent: true,
@@ -66,7 +60,7 @@ export default function Topbar({ theme = 'dark' }: TopbarProps) {
     });
 
     containerRef.current.appendChild(script);
-  }, [category, theme]);
+  }, [watchlist, theme]);
 
   return (
     <div
@@ -77,25 +71,16 @@ export default function Topbar({ theme = 'dark' }: TopbarProps) {
         transition: 'background-color 0.2s ease',
       }}
     >
-      {/* Ticker Selector Dropdown */}
+      {/* Watchlist Tape Label */}
       <div className="flex items-center gap-1.5 flex-shrink-0 select-none">
-        <select
-          id="topbar-ticker-selector"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as 'all' | 'forex' | 'crypto' | 'indices')}
-          className="rounded border bg-bg-card px-2 py-1 text-[10px] font-bold text-text-secondary focus:border-brand-green focus:outline-none transition-all uppercase tracking-wider cursor-pointer"
-          style={{ borderColor: 'var(--border)' }}
-        >
-          <option value="all">All Markets</option>
-          <option value="forex">Forex</option>
-          <option value="crypto">Crypto</option>
-          <option value="indices">Indices</option>
-        </select>
+        <span className="text-[10px] font-black uppercase tracking-wider text-text-muted">
+          Watchlist Tape
+        </span>
       </div>
 
       <span style={{ color: 'var(--border)' }} className="text-[14px] flex-shrink-0 select-none">|</span>
 
-      {/* Live TradingView Ticker Tape Container */}
+      {/* Live Custom Ticker Tape Container */}
       <div className="flex-1 min-w-0 overflow-hidden relative h-full flex items-center">
         <div ref={containerRef} className="tradingview-widget-container w-full"></div>
       </div>

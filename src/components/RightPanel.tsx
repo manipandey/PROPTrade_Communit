@@ -1,7 +1,7 @@
 // src/components/RightPanel.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, TrendingDown, Trophy, Users, Settings, Check } from 'lucide-react';
 
 interface MarketItem {
@@ -13,9 +13,25 @@ interface MarketItem {
   category: string;
 }
 
+const mapToTradingViewSymbol = (sym: string): string => {
+  const map: Record<string, string> = {
+    'NAS100': 'FOREXCOM:NSXUSD',
+    'XAUUSD': 'OANDA:XAUUSD',
+    'EURUSD': 'FX_IDC:EURUSD',
+    'SPX500': 'FOREXCOM:SPXUSD',
+    'US30': 'FOREXCOM:DJI',
+    'BTCUSD': 'BITSTAMP:BTCUSD',
+    'ETHUSD': 'BITSTAMP:ETHUSD',
+    'GBPUSD': 'FX_IDC:GBPUSD',
+    'USDJPY': 'FX_IDC:USDJPY',
+    'USOIL': 'OANDA:BCOUSD'
+  };
+  return map[sym] || sym;
+};
+
 const ALL_AVAILABLE_MARKETS: MarketItem[] = [
   { name: 'NASDAQ 100', symbol: 'NAS100',  priceValue: 18940.20, changeValue: 0.82,  icon: '📈', category: 'Indices' },
-  { name: 'Gold (XAU)', symbol: 'XAUUSD',  priceValue: 2428.50,  changeValue: -0.15, icon: '🪙', category: 'Commodities' },
+  { name: 'XAUUSD', symbol: 'XAUUSD',  priceValue: 2428.50,  changeValue: -0.15, icon: '🪙', category: 'Commodities' },
   { name: 'EUR/USD',    symbol: 'EURUSD',   priceValue: 1.0842,    changeValue: 0.24,  icon: '💱', category: 'Forex' },
   { name: 'S&P 500',    symbol: 'SPX500',   priceValue: 5431.10,   changeValue: 0.45,  icon: '📊', category: 'Indices' },
   { name: 'US30 (Dow)',  symbol: 'US30',     priceValue: 39820.00,  changeValue: -0.08, icon: '🏢', category: 'Indices' },
@@ -33,67 +49,64 @@ const TOP_TRADERS = [
 ];
 
 interface RightPanelProps {
-  onNavigate?: (tab: string) => void;
+  onNavigate?: (tab: string, subTab?: string) => void;
+  markets: MarketItem[];
+  watchlist: string[];
+  onToggleWatchlist: (symbol: string) => void;
+  theme?: 'dark' | 'light';
 }
 
-export default function RightPanel({ onNavigate }: RightPanelProps) {
-  const [markets, setMarkets] = useState<MarketItem[]>(ALL_AVAILABLE_MARKETS);
-  const [watchlist, setWatchlist] = useState<string[]>(['NAS100', 'XAUUSD', 'EURUSD', 'BTCUSD']);
+export default function RightPanel({ onNavigate, markets, watchlist, onToggleWatchlist, theme = 'dark' }: RightPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const widgetContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load watchlist on mount
+  // Dynamic widget insertion for TradingView Watchlist
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('propnepal_watchlist');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setWatchlist(parsed);
-          }
-        } catch (e) {
-          // ignore
+    if (isEditing || !widgetContainerRef.current) return;
+    
+    // Clear previous widget
+    widgetContainerRef.current.innerHTML = '';
+
+    const widget = document.createElement('div');
+    widget.className = 'tradingview-widget-container__widget';
+    widgetContainerRef.current.appendChild(widget);
+
+    // Map watchlist symbols to TradingView titles/proNames
+    const symbolsConfig = watchlist.map((sym) => {
+      const proName = mapToTradingViewSymbol(sym);
+      return {
+        s: proName,
+        d: sym
+      };
+    });
+
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js';
+    script.type = 'text/javascript';
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      title: 'Watchlist',
+      tabs: [
+        {
+          title: 'Watchlist',
+          symbols: symbolsConfig
         }
-      }
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+      ],
+      showChart: false,
+      locale: 'en',
+      width: '100%',
+      height: 380,
+      colorTheme: theme === 'light' ? 'light' : 'dark',
+      isTransparent: true,
+      plotLineColorGrowing: 'rgba(34, 197, 94, 1)',
+      plotLineColorFalling: 'rgba(239, 68, 68, 1)',
+      gridLineColor: 'rgba(240, 243, 250, 0.06)',
+      scaleLineColor: 'rgba(240, 243, 250, 0.06)',
+      symbolActiveColor: 'rgba(33, 150, 243, 0.12)'
+    });
 
-  // Update markets in real-time
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMarkets((prev) =>
-        prev.map((m) => {
-          const move = (Math.random() - 0.48) * 0.08;
-          const nextPrice = m.priceValue * (1 + move / 100);
-          const nextChange = m.changeValue + move;
-          return {
-            ...m,
-            priceValue: nextPrice,
-            changeValue: nextChange,
-          };
-        })
-      );
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Toggle watchlist symbol
-  const handleToggleWatchlist = (symbol: string) => {
-    let next: string[];
-    if (watchlist.includes(symbol)) {
-      if (watchlist.length <= 1) return; // keep at least 1 item
-      next = watchlist.filter(s => s !== symbol);
-    } else {
-      next = [...watchlist, symbol];
-    }
-    setWatchlist(next);
-    localStorage.setItem('propnepal_watchlist', JSON.stringify(next));
-  };
-
-  // Filter markets to show only watchlist
-  const activeMarkets = markets.filter(m => watchlist.includes(m.symbol));
+    widgetContainerRef.current.appendChild(script);
+  }, [watchlist, theme, isEditing]);
 
   return (
     <div className="w-[240px] flex-shrink-0 space-y-4">
@@ -127,7 +140,7 @@ export default function RightPanel({ onNavigate }: RightPanelProps) {
               return (
                 <div
                   key={market.symbol}
-                  onClick={() => handleToggleWatchlist(market.symbol)}
+                  onClick={() => onToggleWatchlist(market.symbol)}
                   className="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors border border-border-theme/40 hover:border-brand-green/30"
                   style={{ backgroundColor: selected ? 'var(--accent-light)' : 'var(--bg)' }}
                 >
@@ -144,60 +157,14 @@ export default function RightPanel({ onNavigate }: RightPanelProps) {
             })}
           </div>
         ) : (
-          /* Live Watchlist Tickers List */
-          <div className="space-y-2">
-            {activeMarkets.map((market) => {
-              const isMajorFX = market.symbol.includes('EUR') || market.symbol.includes('GBP') || market.symbol.includes('JPY');
-              const decimals = isMajorFX ? (market.symbol === 'USDJPY' ? 2 : 4) : 2;
-              const formattedPrice = market.priceValue.toLocaleString('en-US', {
-                minimumFractionDigits: decimals,
-                maximumFractionDigits: decimals,
-              });
-              const formattedChange = (market.changeValue >= 0 ? '+' : '') + market.changeValue.toFixed(2) + '%';
-              const isPositive = market.changeValue >= 0;
-
-              return (
-                <div
-                  key={market.symbol}
-                  className="flex items-center gap-3 p-2.5 rounded-lg transition-colors cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-hover)')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-                >
-                  <div
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-sm flex-shrink-0"
-                    style={{ backgroundColor: isPositive ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.1)' }}
-                  >
-                    {market.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-                      {market.name}
-                    </div>
-                    <div className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
-                      {market.category}
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-[12px] font-bold font-mono" style={{ color: 'var(--text-primary)' }}>
-                      {formattedPrice}
-                    </div>
-                    <div
-                      className="text-[10px] font-bold flex items-center justify-end gap-0.5"
-                      style={{ color: isPositive ? 'var(--accent)' : 'var(--red)' }}
-                    >
-                      {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                      {formattedChange}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          /* Live TradingView Watchlist Widget */
+          <div className="relative w-full h-[380px] overflow-hidden rounded-lg">
+            <div ref={widgetContainerRef} className="tradingview-widget-container w-full h-full"></div>
           </div>
         )}
 
         <button
-          onClick={() => onNavigate?.('tools')}
+          onClick={() => onNavigate?.('tools', 'chart')}
           className="w-full text-xs font-semibold py-1.5 rounded-lg transition-colors"
           style={{ color: 'var(--accent)', backgroundColor: 'var(--accent-light)' }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--accent-border)')}

@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck } from 'lucide-react';
-import { db, JournalEntry, EMOTIONS, SETUP_TYPES, Emotion, SetupType, TradeFeedback, TradingAccount } from '@/lib/supabase';
+import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck, CheckSquare, Square } from 'lucide-react';
+import { db, JournalEntry, EMOTIONS, SETUP_TYPES, Emotion, SetupType, TradeFeedback, TradingAccount, TradingSession, TRADING_SESSIONS } from '@/lib/supabase';
 
 interface PublicJournalEntry extends JournalEntry {
   avatar: string;
@@ -46,14 +46,19 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   const [notes, setNotes] = useState('');
   const [emotion, setEmotion] = useState<Emotion>('calm');
   const [setup, setSetup] = useState<SetupType>('Other');
+  const [session, setSession] = useState<TradingSession>('Asian');
   const [riskPct, setRiskPct] = useState('');
   const [riskReward, setRiskReward] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [newsChecked, setNewsChecked] = useState(false);
+  const [riskSet, setRiskSet] = useState(false);
+  const [mindsetReady, setMindsetReady] = useState(false);
+  const [sentiment, setSentiment] = useState<'Bullish' | 'Bearish' | 'Neutral' | null>(null);
 
   // Uploader / Visibility / Community Subtab States
   const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
   const [isDragging, setIsDragging] = useState(false);
-  const [journalSubTab, setJournalSubTab] = useState<'my' | 'community'>('my');
+  const [journalSubTab, setJournalSubTab] = useState<'my' | 'community' | 'ai'>('my');
   const [journalSettings, setJournalSettings] = useState<{ isPublic: boolean }>({ isPublic: false });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +69,10 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   const [newComment, setNewComment] = useState('');
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [feedbackError, setFeedbackError] = useState('');
+
+  // AI Coach state
+  const [aiChatMessages, setAiChatMessages] = useState<{role: 'user' | 'ai'; text: string}[]>([]);
+  const [aiChatInput, setAiChatInput] = useState('');
 
   // Load user journals dynamically — syncing from external localStorage store
   useEffect(() => {
@@ -172,7 +181,12 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
       riskPct: riskPct ? parseFloat(riskPct) : undefined,
       riskReward: riskReward ? parseFloat(riskReward) : undefined,
       imageUrl: imageUrl || undefined,
-      accountId: selectedAccountId || undefined
+      accountId: selectedAccountId || undefined,
+      session,
+      newsChecked,
+      riskSet,
+      mindsetReady,
+      sentiment: sentiment || undefined
     };
 
     const updatedJournals = [newTrade, ...journals];
@@ -190,9 +204,14 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
     setNotes('');
     setEmotion('calm');
     setSetup('Other');
+    setSession('Asian');
     setRiskPct('');
     setRiskReward('');
     setImageUrl('');
+    setNewsChecked(false);
+    setRiskSet(false);
+    setMindsetReady(false);
+    setSentiment(null);
     setIsLoggingTrade(false);
   };
 
@@ -430,6 +449,17 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
           }`}
         >
           Community Shared Journals
+        </button>
+        <button
+          onClick={() => setJournalSubTab('ai')}
+          className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider rounded-lg transition-all inline-flex items-center justify-center gap-1 ${
+            journalSubTab === 'ai'
+              ? 'bg-gradient-to-r from-purple-500/10 to-blue-500/10 text-purple-400 border border-purple-500/20 shadow-sm'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <Brain className="h-3.5 w-3.5" />
+          AI Coach
         </button>
       </div>
 
@@ -708,7 +738,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 <span>Enter Trade Details</span>
               </h3>
 
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Account</label>
                   <select
@@ -770,6 +800,21 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     placeholder="1.00"
                     className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Session</label>
+                  <select
+                    value={session}
+                    onChange={(e) => setSession(e.target.value as TradingSession)}
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+                  >
+                    {TRADING_SESSIONS.map((s) => (
+                      <option key={s} value={s} className="bg-bg-secondary text-text-secondary">
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -972,15 +1017,112 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 )}
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trade Setup & Notes</label>
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Supply zone rejection, FVG filled on 5m chart, strict risk stop hit..."
-                  className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2.5 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-border-theme/60">
+                {/* Left side: The Protocol */}
+                <div className="rounded-xl border border-border-theme bg-bg-secondary/40 p-4 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-widest text-text-primary">
+                    The Protocol
+                  </h4>
+                  
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewsChecked(!newsChecked)}
+                      className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-border-theme/40 bg-bg-input/20 hover:bg-bg-input/40 transition-all text-xs text-text-secondary hover:text-text-primary"
+                    >
+                      {newsChecked ? (
+                        <CheckSquare className="h-4 w-4 text-brand-green flex-shrink-0" />
+                      ) : (
+                        <Square className="h-4 w-4 text-text-muted flex-shrink-0" />
+                      )}
+                      <span className="font-semibold">News Checked</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRiskSet(!riskSet)}
+                      className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-border-theme/40 bg-bg-input/20 hover:bg-bg-input/40 transition-all text-xs text-text-secondary hover:text-text-primary"
+                    >
+                      {riskSet ? (
+                        <CheckSquare className="h-4 w-4 text-brand-green flex-shrink-0" />
+                      ) : (
+                        <Square className="h-4 w-4 text-text-muted flex-shrink-0" />
+                      )}
+                      <span className="font-semibold">Risk Set (Max 1%)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMindsetReady(!mindsetReady)}
+                      className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-border-theme/40 bg-bg-input/20 hover:bg-bg-input/40 transition-all text-xs text-text-secondary hover:text-text-primary"
+                    >
+                      {mindsetReady ? (
+                        <CheckSquare className="h-4 w-4 text-brand-green flex-shrink-0" />
+                      ) : (
+                        <Square className="h-4 w-4 text-text-muted flex-shrink-0" />
+                      )}
+                      <span className="font-semibold">Mindset Ready</span>
+                    </button>
+                  </div>
+
+                  {/* Session Readiness */}
+                  {(() => {
+                    const pct = Math.round(([newsChecked, riskSet, mindsetReady].filter(Boolean).length / 3) * 100);
+                    return (
+                      <div className="space-y-1.5 pt-2">
+                        <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-text-muted">
+                          <span>Session Readiness</span>
+                          <span className="font-mono text-brand-green">{pct}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-bg-input rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-brand-green transition-all duration-300 rounded-full"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Right side: Sentiment & Notes */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Market Sentiment</label>
+                    <div className="flex gap-2 mt-1.5">
+                      {(['Bullish', 'Bearish', 'Neutral'] as const).map((s) => {
+                        let activeClass = 'bg-bg-input border-border-theme text-text-secondary';
+                        if (sentiment === s) {
+                          if (s === 'Bullish') activeClass = 'bg-brand-green/20 border-brand-green/40 text-brand-green';
+                          if (s === 'Bearish') activeClass = 'bg-red-500/20 border-red-500/40 text-red-500';
+                          if (s === 'Neutral') activeClass = 'bg-bg-hover border-border-hover text-text-primary';
+                        }
+
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setSentiment(s)}
+                            className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-all ${activeClass}`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trade Setup & Notes</label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Enter your thoughts on today's price action and emotional state..."
+                      rows={3}
+                      className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input/30 py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all resize-none"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
@@ -1032,6 +1174,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                         <th className="py-3 px-4">Date</th>
                         <th className="py-3 px-4">Asset</th>
                         <th className="py-3 px-4">Setup</th>
+                        <th className="py-3 px-4">Session</th>
                         <th className="py-3 px-4 text-center">Type</th>
                         <th className="py-3 px-4 text-center">Lots</th>
                         <th className="py-3 px-4 text-right">Entry / Exit</th>
@@ -1063,6 +1206,11 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                           <td className="py-3.5 px-4">
                             <span className="inline-flex items-center gap-1 rounded-md bg-bg-input/60 border border-border-theme/80 text-[9px] font-bold text-text-secondary px-2 py-0.5 tracking-wide uppercase">
                               {j.setup || 'Other'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-bg-input/60 border border-border-theme/80 text-[9px] font-bold text-text-secondary px-2 py-0.5 tracking-wide uppercase">
+                              {j.session || 'Asian'}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-center">
@@ -1185,6 +1333,9 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                             {j.asset}
                             <span className="text-[9px] lowercase font-normal rounded bg-bg-input border border-border-theme px-2 py-0.5 text-text-secondary uppercase">
                               {j.setup}
+                            </span>
+                            <span className="text-[9px] lowercase font-normal rounded bg-bg-input border border-border-theme px-2 py-0.5 text-text-secondary uppercase">
+                              {j.session || 'Asian'}
                             </span>
                             {j.accountDetails && (
                               <span className="inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider text-brand-green bg-brand-green/5 border border-brand-green/15 px-2 py-0.5 rounded">
@@ -1314,10 +1465,14 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
               </div>
 
               {/* Advanced info row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border border-border-theme/80 rounded-xl p-4 bg-bg/20">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border border-border-theme/80 rounded-xl p-4 bg-bg/20">
                 <div>
                   <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block">Setup Tactic</span>
                   <span className="text-xs font-bold text-text-primary block mt-1">{selectedTrade.setup || 'Other'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block">Trading Session</span>
+                  <span className="text-xs font-bold text-text-primary block mt-1">{selectedTrade.session || 'Asian'}</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block">Risk Metrics</span>
@@ -1326,7 +1481,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     {selectedTrade.riskReward !== undefined ? ` (1:${selectedTrade.riskReward} RR)` : ''}
                   </span>
                 </div>
-                                <div>
+                <div>
                    <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block">Trader Mindset</span>
                   {(() => {
                     const emObj = EMOTIONS.find(e => e.value === selectedTrade.emotion);
@@ -1444,6 +1599,320 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ── AI INSIGHTS & COACH ── */}
+      {journalSubTab === 'ai' && (
+        <div className="space-y-6 animate-fade-in">
+          {(() => {
+            const wins = journals.filter(j => j.pnl > 0);
+            const losses = journals.filter(j => j.pnl <= 0);
+            const totalTrades = journals.length;
+            const winRate = totalTrades > 0 ? ((wins.length / totalTrades) * 100) : 0;
+            const totalPnl = journals.reduce((sum, j) => sum + j.pnl, 0);
+            const avgRR = journals.filter(j => j.riskReward).reduce((s, j) => s + (j.riskReward || 0), 0) / (journals.filter(j => j.riskReward).length || 1);
+
+            // Session stats
+            const sessionStats = (['Asian', 'London', 'New York'] as const).map(ses => {
+              const trades = journals.filter(j => j.session === ses);
+              const sesWins = trades.filter(j => j.pnl > 0);
+              const wr = trades.length > 0 ? ((sesWins.length / trades.length) * 100) : 0;
+              const pnl = trades.reduce((s, j) => s + j.pnl, 0);
+              return { session: ses, trades: trades.length, winRate: wr, pnl };
+            });
+
+            // Emotion stats
+            const emotionStats = (['calm', 'confident', 'anxious', 'fomo', 'revenge', 'frustrated', 'neutral'] as const).map(emo => {
+              const trades = journals.filter(j => j.emotion === emo);
+              const emoWins = trades.filter(j => j.pnl > 0);
+              const wr = trades.length > 0 ? ((emoWins.length / trades.length) * 100) : 0;
+              const pnl = trades.reduce((s, j) => s + j.pnl, 0);
+              return { emotion: emo, trades: trades.length, winRate: wr, pnl };
+            }).filter(e => e.trades > 0);
+
+            // Setup stats
+            const setupStats = (['Supply Zone', 'Demand Zone', 'FVG Fill', 'Breakout', 'Breakdown', 'Scalp', 'Trend Follow', 'Mean Reversion', 'News Trade', 'Liquidity Sweep', 'Order Block', 'Other'] as const).map(s => {
+              const trades = journals.filter(j => j.setup === s);
+              const sWins = trades.filter(j => j.pnl > 0);
+              const wr = trades.length > 0 ? ((sWins.length / trades.length) * 100) : 0;
+              const pnl = trades.reduce((s2, j) => s2 + j.pnl, 0);
+              return { setup: s, trades: trades.length, winRate: wr, pnl };
+            }).filter(s => s.trades > 0);
+
+            // AI Recommendations
+            const recommendations: string[] = [];
+            const bestSession = sessionStats.filter(s => s.trades >= 2).sort((a, b) => b.winRate - a.winRate)[0];
+            const worstSession = sessionStats.filter(s => s.trades >= 2).sort((a, b) => a.winRate - b.winRate)[0];
+            if (bestSession && bestSession.winRate > 55) recommendations.push(`🎯 Your best session is **${bestSession.session}** with a ${bestSession.winRate.toFixed(0)}% win rate. Consider focusing more trades here.`);
+            if (worstSession && worstSession.winRate < 45 && worstSession.trades >= 2) recommendations.push(`⚠️ Your **${worstSession.session}** session has a low ${worstSession.winRate.toFixed(0)}% win rate. Consider reducing position sizes or skipping this session.`);
+
+            const anxiousTrades = emotionStats.find(e => e.emotion === 'anxious');
+            const revengeTrading = emotionStats.find(e => e.emotion === 'revenge');
+            const fomoTrading = emotionStats.find(e => e.emotion === 'fomo');
+            const calmTrading = emotionStats.find(e => e.emotion === 'calm');
+            if (anxiousTrades && anxiousTrades.winRate < 40) recommendations.push(`😰 Trading while **anxious** is costing you — only ${anxiousTrades.winRate.toFixed(0)}% win rate. Step away from charts when feeling anxious.`);
+            if (revengeTrading && revengeTrading.trades >= 2) recommendations.push(`🔥 You have ${revengeTrading.trades} **revenge trades** with a ${revengeTrading.winRate.toFixed(0)}% win rate. Implement a cooldown rule after losses.`);
+            if (fomoTrading && fomoTrading.winRate < 45) recommendations.push(`📉 **FOMO trades** are underperforming at ${fomoTrading.winRate.toFixed(0)}% win rate. Wait for your setup — don't chase.`);
+            if (calmTrading && calmTrading.winRate > 60) recommendations.push(`🧘 When **calm**, you achieve a ${calmTrading.winRate.toFixed(0)}% win rate. Your best edge is emotional discipline.`);
+
+            const bestSetup = setupStats.filter(s => s.trades >= 2).sort((a, b) => b.winRate - a.winRate)[0];
+            const worstSetup = setupStats.filter(s => s.trades >= 2).sort((a, b) => a.winRate - b.winRate)[0];
+            if (bestSetup) recommendations.push(`✅ Your **${bestSetup.setup}** setup has the highest win rate at ${bestSetup.winRate.toFixed(0)}%. This is your edge — trade it more.`);
+            if (worstSetup && worstSetup.winRate < 40) recommendations.push(`❌ Consider dropping the **${worstSetup.setup}** setup (${worstSetup.winRate.toFixed(0)}% win rate). It's not aligned with your strengths.`);
+
+            if (avgRR < 1.5 && totalTrades > 2) recommendations.push(`📊 Your average R:R is ${avgRR.toFixed(1)}. Aim for at least 2:1 risk-to-reward for sustainable profitability.`);
+            if (totalTrades === 0) recommendations.push(`📝 Start logging trades to unlock personalized AI insights about your trading patterns.`);
+
+            // AI Chat handler
+            const handleAiChat = (question: string) => {
+              if (!question.trim()) return;
+              const userMsg = { role: 'user' as const, text: question };
+              let aiResponse = '';
+              const q = question.toLowerCase();
+
+              if (q.includes('session') || q.includes('time')) {
+                const best = sessionStats.filter(s => s.trades > 0).sort((a, b) => b.winRate - a.winRate)[0];
+                aiResponse = best ? `Based on your data, your best session is **${best.session}** with a ${best.winRate.toFixed(0)}% win rate across ${best.trades} trades ($${best.pnl.toFixed(0)} P&L). I'd recommend focusing your activity there.` : 'You need more trade data across different sessions for me to analyze this.';
+              } else if (q.includes('emotion') || q.includes('feel') || q.includes('mental') || q.includes('psychology')) {
+                const sorted = emotionStats.sort((a, b) => b.winRate - a.winRate);
+                if (sorted.length > 0) {
+                  aiResponse = `Here's your emotional breakdown:\n${sorted.map(e => `• **${e.emotion}**: ${e.winRate.toFixed(0)}% win rate (${e.trades} trades, $${e.pnl.toFixed(0)})`).join('\n')}\n\nYour best performance comes when trading with a **${sorted[0].emotion}** mindset.`;
+                } else {
+                  aiResponse = 'Log more trades with emotion tags to get emotional pattern analysis.';
+                }
+              } else if (q.includes('setup') || q.includes('strategy') || q.includes('pattern')) {
+                const sorted = setupStats.sort((a, b) => b.winRate - a.winRate);
+                if (sorted.length > 0) {
+                  aiResponse = `Your setup analysis:\n${sorted.map(s => `• **${s.setup}**: ${s.winRate.toFixed(0)}% win rate (${s.trades} trades, $${s.pnl.toFixed(0)})`).join('\n')}\n\n**${sorted[0].setup}** is your strongest setup. Consider prioritizing it.`;
+                } else {
+                  aiResponse = 'Tag your trades with setup types to unlock setup analysis.';
+                }
+              } else if (q.includes('risk') || q.includes('r:r') || q.includes('reward')) {
+                aiResponse = `Your average Risk:Reward ratio is **${avgRR.toFixed(1)}:1**. ${avgRR >= 2 ? 'Great — you\'re maintaining healthy R:R.' : 'Consider aiming for at least 2:1 R:R for better consistency.'} Total P&L: $${totalPnl.toFixed(0)} across ${totalTrades} trades.`;
+              } else if (q.includes('overall') || q.includes('summary') || q.includes('performance')) {
+                aiResponse = `**Performance Summary:**\n• Total Trades: ${totalTrades}\n• Win Rate: ${winRate.toFixed(1)}%\n• Total P&L: $${totalPnl.toFixed(0)}\n• Avg R:R: ${avgRR.toFixed(1)}:1\n• Wins: ${wins.length} | Losses: ${losses.length}\n\n${winRate > 50 ? 'You\'re above breakeven — focus on consistency.' : 'Your win rate needs improvement. Review your worst setups and sessions.'}`;
+              } else {
+                aiResponse = `Based on your ${totalTrades} logged trades:\n• Win Rate: ${winRate.toFixed(1)}%\n• Total P&L: $${totalPnl.toFixed(0)}\n\nTry asking me about your **sessions**, **emotions**, **setups**, **risk management**, or **overall performance** for deeper insights.`;
+              }
+
+              setAiChatMessages(prev => [...prev, userMsg, { role: 'ai', text: aiResponse }]);
+              setAiChatInput('');
+            };
+
+            const quickPrompts = [
+              'What is my best trading session?',
+              'How do my emotions affect my trading?',
+              'Which setup works best for me?',
+              'Give me my overall performance summary',
+              'How is my risk management?'
+            ];
+
+            return totalTrades < 3 ? (
+              /* Empty / Demo State */
+              <div className="text-center py-16 space-y-6">
+                <div className="inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/20 mx-auto">
+                  <Brain className="h-10 w-10 text-purple-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-text-primary">AI Trading Coach</h3>
+                  <p className="text-sm text-text-muted max-w-md mx-auto">
+                    Log at least <span className="text-purple-400 font-bold">3 trades</span> in your journal to unlock personalized AI insights about your trading patterns, emotional triggers, session profitability, and strategy effectiveness.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto text-left">
+                  <div className="p-3 rounded-xl border border-border-theme bg-bg-secondary space-y-1">
+                    <div className="text-purple-400 text-lg">📊</div>
+                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Session Analysis</div>
+                    <div className="text-[9px] text-text-muted">Discover your most profitable trading sessions</div>
+                  </div>
+                  <div className="p-3 rounded-xl border border-border-theme bg-bg-secondary space-y-1">
+                    <div className="text-purple-400 text-lg">🧠</div>
+                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Emotion Patterns</div>
+                    <div className="text-[9px] text-text-muted">See how emotions impact your win rate</div>
+                  </div>
+                  <div className="p-3 rounded-xl border border-border-theme bg-bg-secondary space-y-1">
+                    <div className="text-purple-400 text-lg">💬</div>
+                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider">AI Chat Coach</div>
+                    <div className="text-[9px] text-text-muted">Ask questions about your performance</div>
+                  </div>
+                </div>
+                <p className="text-xs text-text-muted">You currently have <span className="text-purple-400 font-bold">{totalTrades}</span> trade{totalTrades !== 1 ? 's' : ''} logged. Add {3 - totalTrades} more to begin.</p>
+              </div>
+            ) : (
+              /* Full AI Insights Dashboard */
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center gap-3 border-b border-border-theme pb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/20">
+                    <Brain className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-text-primary">AI Trading Coach</h3>
+                    <p className="text-[10px] text-text-muted">Analyzing {totalTrades} trades • Win Rate: {winRate.toFixed(1)}% • P&L: ${totalPnl.toFixed(0)}</p>
+                  </div>
+                </div>
+
+                {/* Stat Cards Row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-xl border border-border-theme bg-bg-secondary text-center">
+                    <div className="text-lg font-black text-text-primary">{winRate.toFixed(0)}%</div>
+                    <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Win Rate</div>
+                  </div>
+                  <div className="p-3 rounded-xl border border-border-theme bg-bg-secondary text-center">
+                    <div className={`text-lg font-black ${totalPnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>${totalPnl.toFixed(0)}</div>
+                    <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Total P&L</div>
+                  </div>
+                  <div className="p-3 rounded-xl border border-border-theme bg-bg-secondary text-center">
+                    <div className="text-lg font-black text-text-primary">{avgRR.toFixed(1)}</div>
+                    <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Avg R:R</div>
+                  </div>
+                  <div className="p-3 rounded-xl border border-border-theme bg-bg-secondary text-center">
+                    <div className="text-lg font-black text-text-primary">{totalTrades}</div>
+                    <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Trades</div>
+                  </div>
+                </div>
+
+                {/* Session Performance */}
+                <div className="t-card p-4 space-y-3">
+                  <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">📊 Session Performance</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {sessionStats.map(s => (
+                      <div key={s.session} className="p-3 rounded-lg border border-border-theme bg-bg space-y-1">
+                        <div className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">{s.session}</div>
+                        <div className={`text-base font-black ${s.winRate >= 50 ? 'text-brand-green' : s.trades > 0 ? 'text-red-400' : 'text-text-muted'}`}>
+                          {s.trades > 0 ? `${s.winRate.toFixed(0)}%` : '—'}
+                        </div>
+                        <div className="text-[9px] text-text-muted">{s.trades} trades • ${s.pnl.toFixed(0)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Emotion Analysis */}
+                {emotionStats.length > 0 && (
+                  <div className="t-card p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">🧠 Emotion Impact</h4>
+                    <div className="space-y-2">
+                      {emotionStats.sort((a, b) => b.winRate - a.winRate).map(e => (
+                        <div key={e.emotion} className="flex items-center gap-3 p-2 rounded-lg border border-border-theme bg-bg">
+                          <div className="text-xs font-bold text-text-primary capitalize w-20">{e.emotion}</div>
+                          <div className="flex-1 h-2 bg-bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${e.winRate >= 50 ? 'bg-brand-green' : 'bg-red-500'}`}
+                              style={{ width: `${Math.min(e.winRate, 100)}%` }}
+                            />
+                          </div>
+                          <div className={`text-xs font-bold w-12 text-right ${e.winRate >= 50 ? 'text-brand-green' : 'text-red-400'}`}>
+                            {e.winRate.toFixed(0)}%
+                          </div>
+                          <div className="text-[9px] text-text-muted w-16 text-right">{e.trades} trades</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Setup Analysis */}
+                {setupStats.length > 0 && (
+                  <div className="t-card p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">⚙️ Setup Effectiveness</h4>
+                    <div className="space-y-2">
+                      {setupStats.sort((a, b) => b.winRate - a.winRate).map(s => (
+                        <div key={s.setup} className="flex items-center gap-3 p-2 rounded-lg border border-border-theme bg-bg">
+                          <div className="text-xs font-bold text-text-primary w-28 truncate">{s.setup}</div>
+                          <div className="flex-1 h-2 bg-bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${s.winRate >= 50 ? 'bg-purple-500' : 'bg-red-500'}`}
+                              style={{ width: `${Math.min(s.winRate, 100)}%` }}
+                            />
+                          </div>
+                          <div className={`text-xs font-bold w-12 text-right ${s.winRate >= 50 ? 'text-purple-400' : 'text-red-400'}`}>
+                            {s.winRate.toFixed(0)}%
+                          </div>
+                          <div className="text-[9px] text-text-muted w-16 text-right">${s.pnl.toFixed(0)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Recommendations */}
+                {recommendations.length > 0 && (
+                  <div className="t-card p-4 space-y-3 border-l-2 border-purple-500/50">
+                    <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider">💡 AI Recommendations</h4>
+                    <div className="space-y-2">
+                      {recommendations.map((rec, i) => (
+                        <div key={i} className="text-xs text-text-secondary leading-relaxed p-2 rounded-lg bg-bg border border-border-theme">
+                          {rec.split('**').map((part, j) => j % 2 === 1 ? <strong key={j} className="text-text-primary">{part}</strong> : part)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactive AI Coach Chatbox */}
+                <div className="t-card p-4 space-y-3">
+                  <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
+                    <MessageCircle className="h-3.5 w-3.5 text-purple-400" />
+                    Ask Your AI Coach
+                  </h4>
+
+                  {/* Quick Prompts */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {quickPrompts.map((prompt, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleAiChat(prompt)}
+                        className="text-[9px] font-bold px-2.5 py-1.5 rounded-lg border border-purple-500/20 bg-purple-500/5 text-purple-400 hover:bg-purple-500/10 transition-all uppercase tracking-wider"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Chat Messages */}
+                  {aiChatMessages.length > 0 && (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {aiChatMessages.map((msg, i) => (
+                        <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[85%] p-3 rounded-xl text-xs leading-relaxed ${
+                            msg.role === 'user'
+                              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
+                              : 'bg-bg-secondary text-text-secondary border border-border-theme'
+                          }`}>
+                            {msg.text.split('\n').map((line, li) => (
+                              <div key={li}>
+                                {line.split('**').map((part, j) => j % 2 === 1 ? <strong key={j} className="text-text-primary">{part}</strong> : part)}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={aiChatInput}
+                      onChange={(e) => setAiChatInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleAiChat(aiChatInput); }}
+                      placeholder="Ask about your trading patterns..."
+                      className="t-input flex-1 text-xs py-2 px-3"
+                    />
+                    <button
+                      onClick={() => handleAiChat(aiChatInput)}
+                      disabled={!aiChatInput.trim()}
+                      className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 text-xs font-bold border border-purple-500/20 hover:bg-purple-500/30 transition-all disabled:opacity-50"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
