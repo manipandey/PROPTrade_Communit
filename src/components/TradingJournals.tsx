@@ -1,20 +1,42 @@
 // src/components/TradingJournals.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { PlusCircle, TrendingUp, TrendingDown, BookOpen, AlertCircle, FileText, Check } from 'lucide-react';
-import { db, JournalEntry } from '@/lib/supabase';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck } from 'lucide-react';
+import { db, JournalEntry, EMOTIONS, SETUP_TYPES, Emotion, SetupType, TradeFeedback, TradingAccount } from '@/lib/supabase';
+
+interface PublicJournalEntry extends JournalEntry {
+  avatar: string;
+  accountDetails?: {
+    propFirm: string;
+    type: 'Challenge' | 'Funded';
+    size: number;
+  };
+}
 
 interface TradingJournalsProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string } | null;
+  currentUser: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
   onOpenAuth: () => void;
 }
 
 export default function TradingJournals({ currentUser, onOpenAuth }: TradingJournalsProps) {
-  const [journals, setJournals] = useState<JournalEntry[]>(() => db.getJournals());
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [isLoggingTrade, setIsLoggingTrade] = useState(false);
 
+  // Accounts state
+  const [accounts, setAccounts] = useState<TradingAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState('all');
+  const [isManagingAccounts, setIsManagingAccounts] = useState(false);
+
+  // Form state for new account
+  const [newAccName, setNewAccName] = useState('');
+  const [newAccType, setNewAccType] = useState<'Challenge' | 'Funded'>('Challenge');
+  const [newAccFirm, setNewAccFirm] = useState('FTMO');
+  const [newAccSize, setNewAccSize] = useState('100000');
+
   // Form Fields
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [asset, setAsset] = useState('XAUUSD');
   const [direction, setDirection] = useState<'BUY' | 'SELL'>('BUY');
   const [lots, setLots] = useState('1.00');
@@ -22,6 +44,108 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   const [exitPrice, setExitPrice] = useState('');
   const [pnl, setPnl] = useState('');
   const [notes, setNotes] = useState('');
+  const [emotion, setEmotion] = useState<Emotion>('calm');
+  const [setup, setSetup] = useState<SetupType>('Other');
+  const [riskPct, setRiskPct] = useState('');
+  const [riskReward, setRiskReward] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+
+  // Uploader / Visibility / Community Subtab States
+  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
+  const [isDragging, setIsDragging] = useState(false);
+  const [journalSubTab, setJournalSubTab] = useState<'my' | 'community'>('my');
+  const [journalSettings, setJournalSettings] = useState<{ isPublic: boolean }>({ isPublic: false });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Community view details state
+  const [selectedTrade, setSelectedTrade] = useState<(JournalEntry & { avatar: string }) | null>(null);
+  const [tradeFeedbacks, setTradeFeedbacks] = useState<TradeFeedback[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [feedbackError, setFeedbackError] = useState('');
+
+  // Load user journals dynamically — syncing from external localStorage store
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (currentUser?.loggedIn) {
+      setJournals(db.getJournals(currentUser.username));
+      setJournalSettings(db.getJournalSettings(currentUser.username));
+      const accs = db.getAccounts(currentUser.username);
+      setAccounts(accs);
+      if (accs.length > 0) {
+        setSelectedAccountId(accs[0].id);
+      } else {
+        setSelectedAccountId('');
+      }
+    } else {
+      setJournals([]);
+      setJournalSettings({ isPublic: false });
+      setAccounts([]);
+      setSelectedAccountId('');
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [currentUser]);
+
+  // Load public feedbacks for selected trade in community
+  useEffect(() => {
+    if (selectedTrade) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTradeFeedbacks(db.getTradeFeedback(selectedTrade.id));
+    }
+  }, [selectedTrade]);
+
+  // Handle Drag-and-drop Image Upload
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileUpload(file);
+  };
+
+  const handleFileUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file.');
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      alert('Image size exceeds 3MB limit.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setImageUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Toggle Visibility Settings
+  const handleToggleVisibility = () => {
+    if (!currentUser?.loggedIn) return;
+    const nextSettings = { isPublic: !journalSettings.isPublic };
+    setJournalSettings(nextSettings);
+    db.saveJournalSettings(currentUser.username, nextSettings);
+  };
+
+  // Handle Trade Deletion
+  const handleDeleteTrade = (id: string) => {
+    if (!currentUser || !currentUser.loggedIn) return;
+    if (!confirm('Are you sure you want to delete this trade entry? This cannot be undone.')) return;
+    const updated = journals.filter((j) => j.id !== id);
+    setJournals(updated);
+    db.saveJournals(currentUser.username, updated);
+  };
 
   // Handle Trade Submission
   const handleLogTradeSubmit = (e: React.FormEvent) => {
@@ -34,21 +158,29 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
 
     const newTrade: JournalEntry = {
       id: `j-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date,
       asset: asset.toUpperCase(),
       direction,
       lots: parseFloat(lots) || 0.1,
       entryPrice: parseFloat(entryPrice) || 0,
       exitPrice: parseFloat(exitPrice) || 0,
       pnl: parseFloat(pnl) || 0,
-      notes
+      notes,
+      emotion,
+      setup,
+      author: currentUser.username,
+      riskPct: riskPct ? parseFloat(riskPct) : undefined,
+      riskReward: riskReward ? parseFloat(riskReward) : undefined,
+      imageUrl: imageUrl || undefined,
+      accountId: selectedAccountId || undefined
     };
 
     const updatedJournals = [newTrade, ...journals];
     setJournals(updatedJournals);
-    db.saveJournals(updatedJournals);
+    db.saveJournals(currentUser.username, updatedJournals);
 
     // Reset Form
+    setDate(new Date().toISOString().split('T')[0]);
     setAsset('XAUUSD');
     setDirection('BUY');
     setLots('1.00');
@@ -56,21 +188,63 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
     setExitPrice('');
     setPnl('');
     setNotes('');
+    setEmotion('calm');
+    setSetup('Other');
+    setRiskPct('');
+    setRiskReward('');
+    setImageUrl('');
     setIsLoggingTrade(false);
   };
 
-  // Aggregated Stats
-  const stats = useMemo(() => {
-    if (journals.length === 0) {
-      return { totalTrades: 0, netPnl: 0, winRate: 0, avgWin: 0, avgLoss: 0, profitFactor: 0 };
+  // Submit Feedback / Rating / Question
+  const handlePostFeedback = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !currentUser.loggedIn) {
+      onOpenAuth();
+      return;
+    }
+    if (!selectedTrade) return;
+    if (!newComment.trim() && selectedRating === 0) {
+      setFeedbackError('Please select a rating or type a question/comment.');
+      return;
     }
 
-    const totalTrades = journals.length;
-    const wins = journals.filter((j) => j.pnl > 0);
-    const losses = journals.filter((j) => j.pnl <= 0);
+    const ratingArg = selectedRating > 0 ? selectedRating : undefined;
+    const feedback = db.addTradeFeedback(selectedTrade.id, currentUser.username, newComment.trim(), ratingArg);
+    
+    setTradeFeedbacks((prev) => [...prev, feedback]);
+    setNewComment('');
+    setSelectedRating(0);
+    setFeedbackError('');
+  };
+
+  // Aggregated Stats
+  const activeJournals = useMemo(() => {
+    return journals.filter(j => selectedAccountFilter === 'all' || j.accountId === selectedAccountFilter);
+  }, [journals, selectedAccountFilter]);
+
+  const stats = useMemo(() => {
+    if (activeJournals.length === 0) {
+      return { 
+        totalTrades: 0, 
+        netPnl: 0, 
+        winRate: 0, 
+        avgWin: 0, 
+        avgLoss: 0, 
+        profitFactor: 0,
+        bestSetup: { name: 'N/A', pnl: 0, winRate: 0 },
+        worstSetup: { name: 'N/A', pnl: 0, winRate: 0 },
+        toxicEmotion: { name: 'N/A', pnl: 0, winRate: 0 },
+        peakEmotion: { name: 'N/A', pnl: 0, winRate: 0 }
+      };
+    }
+
+    const totalTrades = activeJournals.length;
+    const wins = activeJournals.filter((j) => j.pnl > 0);
+    const losses = activeJournals.filter((j) => j.pnl <= 0);
     
     const winRate = totalTrades > 0 ? (wins.length / totalTrades) * 100 : 0;
-    const netPnl = journals.reduce((acc, j) => acc + j.pnl, 0);
+    const netPnl = activeJournals.reduce((acc, j) => acc + j.pnl, 0);
 
     const totalWinVal = wins.reduce((acc, j) => acc + j.pnl, 0);
     const totalLossVal = Math.abs(losses.reduce((acc, j) => acc + j.pnl, 0));
@@ -80,263 +254,1198 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
 
     const profitFactor = totalLossVal > 0 ? totalWinVal / totalLossVal : totalWinVal > 0 ? 99.9 : 0;
 
+    // Advanced setup & emotion analytics
+    const setupStats: Record<string, { pnl: number; wins: number; total: number }> = {};
+    const emotionStats: Record<string, { pnl: number; wins: number; total: number }> = {};
+
+    activeJournals.forEach((j) => {
+      const s = j.setup || 'Other';
+      if (!setupStats[s]) setupStats[s] = { pnl: 0, wins: 0, total: 0 };
+      setupStats[s].pnl += j.pnl;
+      setupStats[s].total += 1;
+      if (j.pnl > 0) setupStats[s].wins += 1;
+
+      const em = j.emotion || 'neutral';
+      if (!emotionStats[em]) emotionStats[em] = { pnl: 0, wins: 0, total: 0 };
+      emotionStats[em].pnl += j.pnl;
+      emotionStats[em].total += 1;
+      if (j.pnl > 0) emotionStats[em].wins += 1;
+    });
+
+    let bestSetup = { name: 'None', pnl: -999999, winRate: 0 };
+    let worstSetup = { name: 'None', pnl: 999999, winRate: 0 };
+    let peakEmotion = { name: 'None', pnl: -999999, winRate: 0 };
+    let toxicEmotion = { name: 'None', pnl: 999999, winRate: 0 };
+
+    Object.entries(setupStats).forEach(([name, data]) => {
+      const wr = Math.round((data.wins / data.total) * 100);
+      if (bestSetup.name === 'None' || data.pnl > bestSetup.pnl) {
+        bestSetup = { name, pnl: data.pnl, winRate: wr };
+      }
+      if (worstSetup.name === 'None' || data.pnl < worstSetup.pnl) {
+        worstSetup = { name, pnl: data.pnl, winRate: wr };
+      }
+    });
+
+    Object.entries(emotionStats).forEach(([name, data]) => {
+      const wr = Math.round((data.wins / data.total) * 100);
+      if (peakEmotion.name === 'None' || data.pnl > peakEmotion.pnl) {
+        peakEmotion = { name, pnl: data.pnl, winRate: wr };
+      }
+      if (toxicEmotion.name === 'None' || data.pnl < toxicEmotion.pnl) {
+        toxicEmotion = { name, pnl: data.pnl, winRate: wr };
+      }
+    });
+
+    // Clean up empty edge cases
+    if (bestSetup.pnl === -999999) bestSetup = { name: 'N/A', pnl: 0, winRate: 0 };
+    if (worstSetup.pnl === 999999) worstSetup = { name: 'N/A', pnl: 0, winRate: 0 };
+    if (peakEmotion.pnl === -999999) peakEmotion = { name: 'N/A', pnl: 0, winRate: 0 };
+    if (toxicEmotion.pnl === 999999) toxicEmotion = { name: 'N/A', pnl: 0, winRate: 0 };
+
     return {
       totalTrades,
       netPnl,
       winRate: Math.round(winRate),
       avgWin: Math.round(avgWin),
       avgLoss: Math.round(avgLoss),
-      profitFactor: parseFloat(profitFactor.toFixed(2))
+      profitFactor: parseFloat(profitFactor.toFixed(2)),
+      bestSetup,
+      worstSetup,
+      peakEmotion,
+      toxicEmotion
     };
-  }, [journals]);
+  }, [activeJournals]);
+
+  const publicJournals = useMemo(() => db.getAllPublicJournals() as PublicJournalEntry[], []);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
       
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-b border-zinc-950 pb-6">
-        <div className="text-center sm:text-left space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white uppercase font-sans">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-b border-border-theme pb-6">
+        <div className="text-center md:text-left space-y-1">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary uppercase font-sans">
             Trading <span className="text-brand-green">Journals</span>
           </h2>
-          <p className="text-xs text-zinc-400 max-w-xl">
+          <p className="text-xs text-text-secondary max-w-xl">
             Cultivate pure discipline. Track setups, analyze win rate patterns, monitor daily drawdown limits, and keep an active record of your trades.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            if (currentUser?.loggedIn) {
-              setIsLoggingTrade(!isLoggingTrade);
-            } else {
-              onOpenAuth();
-            }
-          }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-green px-4 py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
-        >
-          <PlusCircle className="h-4 w-4" />
-          <span>Log New Trade</span>
-        </button>
-      </div>
-
-      {/* Stats Summary Panel */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="rounded-xl border border-zinc-900 bg-[#070708] p-4 text-center">
-          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Total Trades</span>
-          <span className="text-xl font-black text-white mt-1 block">{stats.totalTrades}</span>
-        </div>
-        
-        <div className="rounded-xl border border-zinc-900 bg-[#070708] p-4 text-center">
-          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Net P&L</span>
-          <span className={`text-xl font-black mt-1 block font-mono ${stats.netPnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>
-            {stats.netPnl >= 0 ? '+' : ''}${stats.netPnl.toLocaleString()}
-          </span>
-        </div>
-
-        <div className="rounded-xl border border-zinc-900 bg-[#070708] p-4 text-center">
-          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Win Rate</span>
-          <span className="text-xl font-black text-white mt-1 block">{stats.winRate}%</span>
-        </div>
-
-        <div className="rounded-xl border border-zinc-900 bg-[#070708] p-4 text-center">
-          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Profit Factor</span>
-          <span className="text-xl font-black text-brand-green mt-1 block font-mono">{stats.profitFactor}</span>
-        </div>
-
-        <div className="col-span-2 md:col-span-1 rounded-xl border border-zinc-900 bg-[#070708] p-4 text-center">
-          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Avg Win / Loss</span>
-          <span className="text-xs font-bold text-zinc-300 mt-1.5 block font-mono">
-            <span className="text-brand-green">${stats.avgWin}</span>
-            <span className="text-zinc-600"> / </span>
-            <span className="text-red-500">${stats.avgLoss}</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Log Trade Form Drawer */}
-      {isLoggingTrade && currentUser?.loggedIn && (
-        <form onSubmit={handleLogTradeSubmit} className="rounded-xl border border-zinc-800 bg-[#0c0c0e] p-6 space-y-4 glow-accent animate-fade-in">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-            <PlusCircle className="h-4.5 w-4.5 text-brand-green" />
-            <span>Enter Trade Details</span>
-          </h3>
-
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Asset/Pair</label>
-              <input
-                type="text"
-                required
-                value={asset}
-                onChange={(e) => setAsset(e.target.value)}
-                placeholder="e.g. XAUUSD"
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Direction</label>
-              <select
-                value={direction}
-                onChange={(e) => setDirection(e.target.value as 'BUY' | 'SELL')}
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-zinc-300 focus:border-brand-green focus:outline-none transition-all"
+        <div className="flex flex-wrap items-center gap-3 justify-center">
+          {currentUser?.loggedIn && (
+            <div className="flex items-center gap-2 rounded-lg border border-border-theme bg-bg-secondary px-3 py-2 text-xs">
+              <span className="text-text-muted font-bold uppercase text-[9px] tracking-wider">Journal visibility:</span>
+              <button
+                onClick={handleToggleVisibility}
+                className={`inline-flex items-center gap-1 font-bold px-2 py-1 rounded transition-all select-none uppercase tracking-wider text-[9px] ${
+                  journalSettings.isPublic
+                    ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
+                    : 'bg-bg-secondary text-text-secondary border border-border-theme'
+                }`}
+                title="Toggle journal community visibility"
               >
-                <option value="BUY" className="bg-black text-brand-green font-bold">BUY (Long)</option>
-                <option value="SELL" className="bg-black text-red-500 font-bold">SELL (Short)</option>
+                {journalSettings.isPublic ? (
+                  <>
+                    <Globe className="h-3 w-3 text-brand-green" />
+                    <span>Public</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-3 w-3 text-text-muted" />
+                    <span>Private</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {journalSubTab === 'my' && currentUser?.loggedIn && (
+            <div className="flex gap-2 flex-wrap items-center">
+              {/* Account Filter */}
+              <select
+                id="journal-account-filter"
+                value={selectedAccountFilter}
+                onChange={(e) => setSelectedAccountFilter(e.target.value)}
+                className="rounded-lg border border-border-theme bg-bg-card py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+              >
+                <option value="all">All Accounts</option>
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
               </select>
-            </div>
 
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Lot Size</label>
-              <input
-                type="text"
-                required
-                value={lots}
-                onChange={(e) => setLots(e.target.value)}
-                placeholder="1.00"
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
-              />
-            </div>
+              {/* Manage Accounts Button */}
+              <button
+                id="journal-manage-accounts-btn"
+                onClick={() => setIsManagingAccounts(prev => !prev)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-xs font-bold uppercase tracking-wider border transition-all ${
+                  isManagingAccounts
+                    ? 'bg-brand-green/10 border-brand-green/35 text-brand-green font-bold shadow-[0_0_10px_rgba(34,197,94,0.05)]'
+                    : 'border-border-theme bg-bg-card text-text-secondary hover:border-brand-green/30 hover:text-text-primary'
+                }`}
+              >
+                <span>Accounts Manager</span>
+              </button>
 
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono">Entry Price</label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={entryPrice}
-                onChange={(e) => setEntryPrice(e.target.value)}
-                placeholder="e.g. 2350.50"
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono">Exit Price</label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={exitPrice}
-                onChange={(e) => setExitPrice(e.target.value)}
-                placeholder="e.g. 2362.80"
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono">Net Profit ($)</label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={pnl}
-                onChange={(e) => setPnl(e.target.value)}
-                placeholder="e.g. 1230 or -450"
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Trade Setup & Notes</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Supply zone rejection, FVG filled on 5m chart, strict risk stop hit..."
-              className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2.5 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setIsLoggingTrade(false)}
-              className="rounded-lg border border-zinc-900 bg-black/50 px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-lg bg-brand-green px-5 py-2 text-xs font-bold text-black hover:bg-brand-green/90 uppercase tracking-wider shadow-[0_0_10px_rgba(34,197,94,0.2)]"
-            >
-              Log Position
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Guest Lock Notification */}
-      {!currentUser?.loggedIn && (
-        <div className="rounded-xl border border-zinc-900 bg-[#070709] p-5 text-center flex items-center justify-center gap-3 glass-panel">
-          <AlertCircle className="h-5 w-5 text-brand-green pulse-indicator" />
-          <div className="text-xs text-zinc-400 text-left">
-            <span className="font-bold text-white block">Simulate Your Log Book</span>
-            Log active positions, record notes, and let our stats system automatically compute profit factors. Sign in to begin!
-          </div>
-        </div>
-      )}
-
-      {/* Journal History Table */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-1.5 border-b border-zinc-900 pb-3">
-          <BookOpen className="h-5 w-5 text-brand-green" />
-          <span>Active Trade Log History</span>
-        </h3>
-
-        <div className="rounded-xl border border-zinc-900 bg-[#070708] overflow-hidden">
-          {journals.length === 0 ? (
-            <div className="p-8 text-center text-zinc-600 text-xs italic">
-              No trades logged yet. Click "Log New Trade" at the top to record your first transaction!
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-zinc-900 bg-black/40 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Asset</th>
-                    <th className="py-3 px-4 text-center">Type</th>
-                    <th className="py-3 px-4 text-center">Lots</th>
-                    <th className="py-3 px-4 text-right">Entry / Exit</th>
-                    <th className="py-3 px-4 text-right">Net P&L</th>
-                    <th className="py-3 px-4 max-w-[200px] hidden sm:table-cell">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-900/40 font-medium">
-                  {journals.map((j) => (
-                    <tr key={j.id} className="hover:bg-zinc-950/40 transition-colors">
-                      <td className="py-3.5 px-4 text-zinc-500 font-mono">{j.date}</td>
-                      <td className="py-3.5 px-4 text-white font-bold">{j.asset}</td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
-                          j.direction === 'BUY' 
-                            ? 'bg-brand-green/10 text-brand-green border border-brand-green/15' 
-                            : 'bg-red-950/20 text-red-500 border border-red-900/15'
-                        }`}>
-                          {j.direction}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center text-zinc-400 font-mono">{j.lots.toFixed(2)}</td>
-                      <td className="py-3.5 px-4 text-right text-zinc-400 font-mono leading-none">
-                        <div>{j.entryPrice.toLocaleString()}</div>
-                        <div className="text-[9px] text-zinc-600 mt-1">{j.exitPrice.toLocaleString()}</div>
-                      </td>
-                      <td className={`py-3.5 px-4 text-right font-black font-mono ${j.pnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>
-                        {j.pnl >= 0 ? '+' : ''}${j.pnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-400 max-w-[200px] truncate hidden sm:table-cell" title={j.notes}>
-                        {j.notes || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <button
+                onClick={() => {
+                  if (currentUser?.loggedIn) {
+                    setIsLoggingTrade(!isLoggingTrade);
+                  } else {
+                    onOpenAuth();
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand-green px-4 py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>Log New Trade</span>
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Subtab Navigation Bar */}
+      <div className="flex border border-border-theme bg-bg-input/45 p-1 rounded-xl max-w-md mx-auto">
+        <button
+          onClick={() => setJournalSubTab('my')}
+          className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+            journalSubTab === 'my'
+              ? 'bg-bg-secondary text-text-primary border border-border-theme shadow-sm'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          My Journal Logbook
+        </button>
+        <button
+          onClick={() => setJournalSubTab('community')}
+          className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+            journalSubTab === 'community'
+              ? 'bg-bg-secondary text-text-primary border border-border-theme shadow-sm'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          Community Shared Journals
+        </button>
+      </div>
+
+      {/* Subtab Content Orchestration */}
+      {journalSubTab === 'my' && (
+        <>
+          {/* Stats Summary Panel */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="rounded-xl border border-border-theme bg-bg-card p-4 text-center">
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Total Trades</span>
+              <span className="text-xl font-black text-text-primary mt-1 block">{stats.totalTrades}</span>
+            </div>
+            
+            <div className="rounded-xl border border-border-theme bg-bg-card p-4 text-center">
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Net P&L</span>
+              <span className={`text-xl font-black mt-1 block font-mono ${stats.netPnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>
+                {stats.netPnl >= 0 ? '+' : ''}${stats.netPnl.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-border-theme bg-bg-card p-4 text-center">
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Win Rate</span>
+              <span className="text-xl font-black text-text-primary mt-1 block">{stats.winRate}%</span>
+            </div>
+
+            <div className="rounded-xl border border-border-theme bg-bg-card p-4 text-center">
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Profit Factor</span>
+              <span className="text-xl font-black text-brand-green mt-1 block font-mono">{stats.profitFactor}</span>
+            </div>
+
+            <div className="col-span-2 md:col-span-1 rounded-xl border border-border-theme bg-bg-card p-4 text-center">
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Avg Win / Loss</span>
+              <span className="text-xs font-bold text-text-secondary mt-1.5 block font-mono">
+                <span className="text-brand-green">${stats.avgWin}</span>
+                <span className="text-text-muted"> / </span>
+                <span className="text-red-500">${stats.avgLoss}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Journal Insights Panel */}
+          {journals.length > 0 && (
+            <div className="rounded-xl border border-border-theme bg-bg-card p-5 space-y-4 animate-fade-in text-left">
+              <div className="flex items-center gap-2 border-b border-border-theme pb-3">
+                <Brain className="h-4.5 w-4.5 text-brand-green" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-text-primary">Journal Performance Insights</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Peak Tactic */}
+                <div className="rounded-lg bg-bg-input/40 border border-border-theme p-3.5 space-y-2">
+                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Peak Tactic</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-text-primary uppercase tracking-wide truncate max-w-[120px]" title={stats.bestSetup.name}>
+                      {stats.bestSetup.name}
+                    </span>
+                    <span className="text-[10px] font-bold font-mono text-brand-green">+{stats.bestSetup.winRate}% WR</span>
+                  </div>
+                  <span className="text-[10px] text-text-muted block font-mono">
+                    P&L: <span className={stats.bestSetup.pnl >= 0 ? 'text-brand-green font-bold' : 'text-red-500 font-bold'}>
+                      {stats.bestSetup.pnl >= 0 ? '+' : ''}${stats.bestSetup.pnl.toLocaleString()}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Leak Tactic */}
+                <div className="rounded-lg bg-bg-input/40 border border-border-theme p-3.5 space-y-2">
+                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Leak Tactic</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-text-primary uppercase tracking-wide truncate max-w-[120px]" title={stats.worstSetup.name}>
+                      {stats.worstSetup.name}
+                    </span>
+                    <span className="text-[10px] font-bold font-mono text-red-500">{stats.worstSetup.winRate}% WR</span>
+                  </div>
+                  <span className="text-[10px] text-text-muted block font-mono">
+                    P&L: <span className={stats.worstSetup.pnl >= 0 ? 'text-brand-green font-bold' : 'text-red-500 font-bold'}>
+                      {stats.worstSetup.pnl >= 0 ? '+' : ''}${stats.worstSetup.pnl.toLocaleString()}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Peak Mindset */}
+                <div className="rounded-lg bg-bg-input/40 border border-border-theme p-3.5 space-y-2">
+                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Peak Mindset</span>
+                  <div className="flex items-center justify-between">
+                    {(() => {
+                      const emObj = EMOTIONS.find(e => e.value === stats.peakEmotion.name);
+                      return (
+                        <div className="flex items-center gap-1 truncate max-w-[120px]">
+                          <span className="text-sm">{emObj?.emoji || '😌'}</span>
+                          <span className="text-xs font-bold text-text-primary uppercase tracking-wide truncate">{emObj?.label || stats.peakEmotion.name}</span>
+                        </div>
+                      );
+                    })()}
+                    <span className="text-[10px] font-bold font-mono text-brand-green">+{stats.peakEmotion.winRate}% WR</span>
+                  </div>
+                  <span className="text-[10px] text-text-muted block font-mono">
+                    P&L: <span className={stats.peakEmotion.pnl >= 0 ? 'text-brand-green font-bold' : 'text-red-500 font-bold'}>
+                      {stats.peakEmotion.pnl >= 0 ? '+' : ''}${stats.peakEmotion.pnl.toLocaleString()}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Leak Mindset */}
+                <div className="rounded-lg bg-bg-input/40 border border-border-theme p-3.5 space-y-2">
+                  <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Leak Mindset</span>
+                  <div className="flex items-center justify-between">
+                    {(() => {
+                      const emObj = EMOTIONS.find(e => e.value === stats.toxicEmotion.name);
+                      return (
+                        <div className="flex items-center gap-1 truncate max-w-[120px]">
+                          <span className="text-sm">{emObj?.emoji || '🔥'}</span>
+                          <span className="text-xs font-bold text-text-primary uppercase tracking-wide truncate">{emObj?.label || stats.toxicEmotion.name}</span>
+                        </div>
+                      );
+                    })()}
+                    <span className="text-[10px] font-bold font-mono text-red-500">{stats.toxicEmotion.winRate}% WR</span>
+                  </div>
+                  <span className="text-[10px] text-text-muted block font-mono">
+                    P&L: <span className={stats.toxicEmotion.pnl >= 0 ? 'text-brand-green font-bold' : 'text-red-500 font-bold'}>
+                      {stats.toxicEmotion.pnl >= 0 ? '+' : ''}${stats.toxicEmotion.pnl.toLocaleString()}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Accounts Management UI Panel */}
+          {isManagingAccounts && currentUser?.loggedIn && (
+            <div className="rounded-xl border border-border-theme bg-bg-card p-6 space-y-5 glow-accent animate-fade-in text-left">
+              <div className="flex justify-between items-center border-b border-border-theme pb-3" style={{ borderColor: 'var(--border)' }}>
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">
+                    Trading Accounts Manager
+                  </h3>
+                  <p className="text-[10px] text-text-secondary mt-0.5">
+                    Link challenge credentials and funded accounts to isolate P&L statistics.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsManagingAccounts(false)}
+                  className="text-text-muted hover:text-text-primary transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Current Accounts List */}
+                <div className="lg:col-span-7 space-y-3">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Linked Accounts ({accounts.length})</h4>
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                    {accounts.map(acc => (
+                      <div
+                        key={acc.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-bg-secondary"
+                        style={{ borderColor: 'var(--border)' }}
+                      >
+                        <div>
+                          <div className="text-xs font-bold text-text-primary">{acc.name}</div>
+                          <div className="text-[9px] font-mono text-text-muted mt-0.5 uppercase">
+                            {acc.propFirm} &bull; {acc.type} &bull; ${acc.size.toLocaleString()}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove account "${acc.name}"? Historical logs will lose their link but remain in database.`)) {
+                              const updated = accounts.filter(a => a.id !== acc.id);
+                              setAccounts(updated);
+                              db.saveAccounts(currentUser.username, updated);
+                              if (selectedAccountId === acc.id) {
+                                setSelectedAccountId(updated.length > 0 ? updated[0].id : '');
+                              }
+                            }
+                          }}
+                          className="text-text-muted hover:text-red-500 transition-colors p-1"
+                          title="Remove Account"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Add Account Form */}
+                <div className="lg:col-span-5 rounded-lg border bg-bg-secondary p-4 space-y-3.5" style={{ borderColor: 'var(--border)' }}>
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Create New Account</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-text-muted">Account Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={newAccName}
+                        onChange={(e) => setNewAccName(e.target.value)}
+                        placeholder="e.g. My FTMO Funded 100K"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-1.5 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-bold uppercase tracking-wider text-text-muted">Prop Firm</label>
+                        <select
+                          value={newAccFirm}
+                          onChange={(e) => setNewAccFirm(e.target.value)}
+                          className="mt-1.5 w-full rounded-lg border border-border-theme bg-bg-input py-1.5 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
+                        >
+                          <option value="FTMO">FTMO</option>
+                          <option value="FundedNext">FundedNext</option>
+                          <option value="The 5%ers">The 5%ers</option>
+                          <option value="FundedMax">FundedMax</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold uppercase tracking-wider text-text-muted">Account Type</label>
+                        <select
+                          value={newAccType}
+                          onChange={(e) => setNewAccType(e.target.value as 'Challenge' | 'Funded')}
+                          className="mt-1.5 w-full rounded-lg border border-border-theme bg-bg-input py-1.5 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
+                        >
+                          <option value="Challenge">Challenge</option>
+                          <option value="Funded">Funded</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-text-muted">Size of Account (USD)</label>
+                      <select
+                        value={newAccSize}
+                        onChange={(e) => setNewAccSize(e.target.value)}
+                        className="mt-1.5 w-full rounded-lg border border-border-theme bg-bg-input py-1.5 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
+                      >
+                        <option value="10000">10,000</option>
+                        <option value="25000">25,000</option>
+                        <option value="50000">50,000</option>
+                        <option value="100000">100,000</option>
+                        <option value="200000">200,000</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (!newAccName.trim()) return;
+                        const newAcc: TradingAccount = {
+                          id: `acc-${Date.now()}`,
+                          name: newAccName,
+                          type: newAccType,
+                          propFirm: newAccFirm,
+                          size: parseInt(newAccSize)
+                        };
+                        const updated = [...accounts, newAcc];
+                        setAccounts(updated);
+                        db.saveAccounts(currentUser.username, updated);
+                        setNewAccName('');
+                        if (updated.length === 1) setSelectedAccountId(newAcc.id);
+                      }}
+                      className="w-full rounded-lg bg-brand-green py-2 text-[10px] font-bold uppercase text-black hover:bg-brand-green/90 transition-all"
+                    >
+                      Save Trading Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Log Trade Form Drawer */}
+          {isLoggingTrade && currentUser?.loggedIn && (
+            <form onSubmit={handleLogTradeSubmit} className="rounded-xl border border-border-theme bg-bg-secondary p-6 space-y-4 glow-accent animate-fade-in text-left">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                <PlusCircle className="h-4.5 w-4.5 text-brand-green" />
+                <span>Enter Trade Details</span>
+              </h3>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Account</label>
+                  <select
+                    id="journal-form-account-select"
+                    value={selectedAccountId}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+                  >
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id} className="bg-bg-input text-text-primary">
+                        {acc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Asset/Pair</label>
+                  <input
+                    type="text"
+                    required
+                    value={asset}
+                    onChange={(e) => setAsset(e.target.value)}
+                    placeholder="e.g. XAUUSD"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Direction</label>
+                  <select
+                    value={direction}
+                    onChange={(e) => setDirection(e.target.value as 'BUY' | 'SELL')}
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+                  >
+                    <option value="BUY" className="bg-bg-input text-brand-green font-bold">BUY (Long)</option>
+                    <option value="SELL" className="bg-bg-input text-red-500 font-bold">SELL (Short)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Lot Size</label>
+                  <input
+                    type="text"
+                    required
+                    value={lots}
+                    onChange={(e) => setLots(e.target.value)}
+                    placeholder="1.00"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Entry Price</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={entryPrice}
+                    onChange={(e) => setEntryPrice(e.target.value)}
+                    placeholder="e.g. 2350.50"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Exit Price</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={exitPrice}
+                    onChange={(e) => setExitPrice(e.target.value)}
+                    placeholder="e.g. 2362.80"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Net Profit ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={pnl}
+                    onChange={(e) => setPnl(e.target.value)}
+                    placeholder="e.g. 1230 or -450"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Setup Tactic</label>
+                  <select
+                    value={setup}
+                    onChange={(e) => setSetup(e.target.value as SetupType)}
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+                  >
+                    {SETUP_TYPES.map((t) => (
+                      <option key={t} value={t} className="bg-bg-secondary text-text-secondary">
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Psychological State</label>
+                  <select
+                    value={emotion}
+                    onChange={(e) => setEmotion(e.target.value as Emotion)}
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+                  >
+                    {EMOTIONS.map((em) => (
+                      <option key={em.value} value={em.value} className="bg-bg-secondary text-text-secondary">
+                        {em.emoji} {em.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Risk %</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={riskPct}
+                    onChange={(e) => setRiskPct(e.target.value)}
+                    placeholder="e.g. 1.0"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Planned R:R Ratio</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={riskReward}
+                    onChange={(e) => setRiskReward(e.target.value)}
+                    placeholder="e.g. 3.0"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Screenshot Upload / Attachment Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    <span className="inline-flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" /> Attach Chart/Screenshot (optional)</span>
+                  </label>
+                  <div className="flex rounded-md border border-border-theme bg-bg-input p-0.5 text-[9px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setImageMode('upload')}
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded transition-all uppercase tracking-wider ${
+                        imageMode === 'upload' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      <Upload className="h-2.5 w-2.5" />
+                      Upload
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageMode('url')}
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded transition-all uppercase tracking-wider ${
+                        imageMode === 'url' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      <Link className="h-2.5 w-2.5" />
+                      URL
+                    </button>
+                  </div>
+                </div>
+
+                {imageMode === 'url' && (
+                  <input
+                    type="text"
+                    placeholder="Paste image URL here... (e.g. https://i.imgur.com/chart.png)"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    className="w-full rounded-lg border border-border-theme bg-bg-input py-2.5 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                  />
+                )}
+
+                {imageMode === 'upload' && !imageUrl && (
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 px-4 cursor-pointer transition-all duration-200 ${
+                      isDragging
+                        ? 'border-brand-green bg-brand-green/5 shadow-inner'
+                        : 'border-border-theme bg-bg-input/40 hover:border-border-hover hover:bg-bg-input/65'
+                    }`}
+                  >
+                    <div className={`rounded-full p-2 transition-colors ${
+                      isDragging ? 'bg-brand-green/10 text-brand-green' : 'bg-bg-secondary text-text-secondary'
+                    }`}>
+                      <Upload className="h-4 w-4" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[11px] font-bold text-text-secondary">
+                        {isDragging ? 'Drop your screenshot here' : 'Click or Drag trade screenshot here'}
+                      </p>
+                      <p className="text-[9px] text-text-muted mt-0.5">PNG, JPG up to 3MB</p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+                )}
+
+                {imageUrl && (
+                  <div className="relative rounded-xl border border-border-theme bg-bg-input overflow-hidden max-w-sm group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="Screenshot Preview"
+                      className="w-full max-h-32 object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageUrl('');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="absolute top-2 right-2 rounded bg-bg/70 border border-border-theme p-1 text-text-secondary hover:text-red-400 transition-all"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trade Setup & Notes</label>
+                <input
+                  type="text"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Supply zone rejection, FVG filled on 5m chart, strict risk stop hit..."
+                  className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2.5 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLoggingTrade(false)}
+                  className="rounded-lg border border-border-theme bg-bg-input/50 px-4 py-2 text-xs font-bold text-text-secondary hover:text-text-primary uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-brand-green px-5 py-2 text-xs font-bold text-black hover:bg-brand-green/90 uppercase tracking-wider shadow-[0_0_10px_rgba(34,197,94,0.2)]"
+                >
+                  Log Position
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Guest Lock Notification */}
+          {!currentUser?.loggedIn && (
+            <div className="rounded-xl border border-border-theme bg-bg-card p-5 text-center flex items-center justify-center gap-3 glass-panel">
+              <AlertCircle className="h-5 w-5 text-brand-green pulse-indicator" />
+              <div className="text-xs text-text-secondary text-left">
+                <span className="font-bold text-text-primary block">Simulate Your Log Book</span>
+                Log active positions, record notes, and let our stats system automatically compute profit factors. Sign in to begin!
+              </div>
+            </div>
+          )}
+
+          {/* Journal History Table */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5 border-b border-border-theme pb-3">
+              <BookOpen className="h-5 w-5 text-brand-green" />
+              <span>Active Trade Log History</span>
+            </h3>
+
+            <div className="rounded-xl border border-border-theme bg-bg-card overflow-hidden">
+              {activeJournals.length === 0 ? (
+                <div className="p-8 text-center text-text-muted text-xs italic">
+                  No trades logged yet. Click &ldquo;Log New Trade&rdquo; at the top to record your first transaction!
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border-theme bg-bg-input/40 text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                        <th className="py-3 px-4">Date</th>
+                        <th className="py-3 px-4">Asset</th>
+                        <th className="py-3 px-4">Setup</th>
+                        <th className="py-3 px-4 text-center">Type</th>
+                        <th className="py-3 px-4 text-center">Lots</th>
+                        <th className="py-3 px-4 text-right">Entry / Exit</th>
+                        <th className="py-3 px-4 text-center">Risk / RR</th>
+                        <th className="py-3 px-4 text-center">Mindset</th>
+                        <th className="py-3 px-4 text-right">Net P&L</th>
+                        <th className="py-3 px-4 max-w-[150px] hidden lg:table-cell">Notes</th>
+                        <th className="py-3 px-4 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-theme/40 font-medium">
+                      {activeJournals.map((j) => (
+                        <tr key={j.id} className="hover:bg-bg-hover/40 transition-colors">
+                          <td className="py-3.5 px-4 text-text-muted font-mono">{j.date}</td>
+                          <td className="py-3.5 px-4 text-text-primary font-bold">
+                            <div>{j.asset}</div>
+                            {(() => {
+                              const acc = accounts.find(a => a.id === j.accountId);
+                              if (acc) {
+                                return (
+                                  <div className="text-[8px] uppercase tracking-wider font-semibold text-text-muted mt-0.5">
+                                    {acc.propFirm} {acc.type} ${acc.size / 1000}K
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-bg-input/60 border border-border-theme/80 text-[9px] font-bold text-text-secondary px-2 py-0.5 tracking-wide uppercase">
+                              {j.setup || 'Other'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
+                              j.direction === 'BUY' 
+                                ? 'bg-brand-green/10 text-brand-green border border-brand-green/15' 
+                                : 'bg-red-950/20 text-red-500 border border-red-900/15'
+                            }`}>
+                              {j.direction}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center text-text-secondary font-mono">{j.lots.toFixed(2)}</td>
+                          <td className="py-3.5 px-4 text-right text-text-secondary font-mono leading-none">
+                            <div>{j.entryPrice.toLocaleString()}</div>
+                            <div className="text-[9px] text-text-muted mt-1">{j.exitPrice.toLocaleString()}</div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center text-text-secondary font-mono text-xs">
+                            {j.riskPct !== undefined ? (
+                              <span className="text-text-primary">{j.riskPct}%</span>
+                            ) : (
+                              <span className="text-text-muted">-</span>
+                            )}
+                            {j.riskReward !== undefined && (
+                              <span className="text-text-muted text-[10px] block mt-0.5">1:{j.riskReward} RR</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {(() => {
+                              const emObj = EMOTIONS.find((e) => e.value === j.emotion);
+                              return (
+                                <span className={`inline-flex items-center gap-1 text-xs font-semibold ${emObj?.color || 'text-text-muted'}`} title={emObj?.label}>
+                                  <span>{emObj?.emoji || '😐'}</span>
+                                  <span className="text-[9px] uppercase tracking-wider hidden md:inline font-bold">{emObj?.label || 'Neutral'}</span>
+                                </span>
+                              );
+                            })()}
+                          </td>
+                          <td className={`py-3.5 px-4 text-right font-black font-mono ${j.pnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>
+                            {j.pnl >= 0 ? '+' : ''}${j.pnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-3.5 px-4 text-text-secondary max-w-[150px] truncate hidden lg:table-cell" title={j.notes}>
+                            {j.notes || '-'}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              onClick={() => handleDeleteTrade(j.id)}
+                              className="text-text-muted hover:text-red-500 transition-colors p-1"
+                              title="Delete Position Entry"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {journalSubTab === 'community' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-b border-border-theme pb-4">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                <Globe className="h-5 w-5 text-brand-green" />
+                <span>Community Trade Showroom</span>
+              </h3>
+              <p className="text-[11px] text-text-muted mt-1">
+                Explore real trade entries shared by other prop traders. Ask questions, rate execution, and gain analytical insight.
+              </p>
+            </div>
+          </div>
+
+          {publicJournals.length === 0 ? (
+            <div className="rounded-xl border border-border-theme bg-bg-card p-12 text-center text-text-muted text-xs italic">
+              No public trading journals are shared yet. Be the first to toggle your journal status to &ldquo;Public&rdquo; in the header!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {publicJournals.map((j) => {
+                const feedbackList = db.getTradeFeedback(j.id);
+                const ratings = feedbackList.filter(f => f.rating !== undefined).map(f => f.rating as number);
+                const avgRating = ratings.length > 0 ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : null;
+
+                return (
+                  <div
+                    key={j.id}
+                    className="group flex flex-col justify-between rounded-xl border border-border-theme bg-bg-card hover:border-border-hover transition-all overflow-hidden"
+                  >
+                    <div className="p-5 space-y-4">
+                      {/* User Header */}
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-bg-secondary text-sm font-bold text-text-primary border border-border-theme">
+                            {j.avatar}
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-text-primary block">{j.author}</span>
+                            <span className="text-[9px] text-text-muted block font-mono">{j.date}</span>
+                          </div>
+                        </div>
+
+                        <span className={`inline-block text-[9px] font-mono font-bold px-2 py-0.5 rounded ${
+                          j.direction === 'BUY' 
+                            ? 'bg-brand-green/10 text-brand-green border border-brand-green/15' 
+                            : 'bg-red-950/20 text-red-500 border border-red-900/15'
+                        }`}>
+                          {j.direction} {j.lots.toFixed(2)} Lots
+                        </span>
+                      </div>
+
+                      {/* Trade Summary */}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-sm font-bold text-text-primary uppercase tracking-wide flex flex-wrap items-center gap-1.5">
+                            {j.asset}
+                            <span className="text-[9px] lowercase font-normal rounded bg-bg-input border border-border-theme px-2 py-0.5 text-text-secondary uppercase">
+                              {j.setup}
+                            </span>
+                            {j.accountDetails && (
+                              <span className="inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider text-brand-green bg-brand-green/5 border border-brand-green/15 px-2 py-0.5 rounded">
+                                <ShieldCheck className="h-3 w-3 text-brand-green" />
+                                {j.accountDetails.propFirm} {j.accountDetails.type}
+                              </span>
+                            )}
+                          </h4>
+                          <span className="text-[10px] text-text-muted block mt-1">
+                            Entry: {j.entryPrice.toLocaleString()} &middot; Exit: {j.exitPrice.toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="text-right">
+                          <span className={`text-base font-black font-mono ${j.pnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>
+                            {j.pnl >= 0 ? '+' : ''}${j.pnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                          {j.riskPct !== undefined && (
+                            <span className="text-[9px] text-text-muted block mt-0.5 font-mono">
+                              Risked: {j.riskPct}% {j.riskReward !== undefined ? `(1:${j.riskReward} RR)` : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Attached Screenshot (if any) */}
+                      {j.imageUrl && (
+                        <div className="relative overflow-hidden rounded-lg border border-border-theme bg-bg-input max-h-40">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={j.imageUrl}
+                            alt="Trade Chart"
+                            className="w-full h-40 object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
+
+                      {/* Mindset & Notes */}
+                      <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 italic bg-bg/20 p-2.5 rounded-lg border border-border-theme">
+                        &ldquo;{j.notes || 'No trade description provided.'}&rdquo;
+                      </p>
+                    </div>
+
+                    {/* Interactions Footer */}
+                    <div className="flex items-center justify-between border-t border-border-theme/60 bg-bg-input/20 px-5 py-3">
+                      <div className="flex items-center gap-3.5 text-[10px] font-bold text-text-muted">
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="h-3.5 w-3.5 text-text-muted" />
+                          {feedbackList.length} Q&A
+                        </span>
+                        {avgRating && (
+                          <span className="flex items-center gap-1 text-yellow-500/90">
+                            <Star className="h-3.5 w-3.5 fill-current animate-pulse" />
+                            {avgRating} ({ratings.length} Feedback)
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => setSelectedTrade(j)}
+                        className="rounded bg-bg-input border border-border-theme text-[10px] font-bold uppercase tracking-wider text-brand-green hover:bg-brand-green hover:text-black hover:border-brand-green px-3 py-1.5 transition-all"
+                      >
+                        Details & Q&A
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Details & Feedback Modal */}
+      {selectedTrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 backdrop-blur-md animate-fade-in p-4 overflow-y-auto">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-border-theme bg-bg-card shadow-2xl glow-accent my-8 flex flex-col max-h-[85vh]">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-border-theme px-6 py-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-bg-secondary text-sm font-bold text-text-primary border border-border-theme">
+                  {selectedTrade.avatar}
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-text-primary block">{selectedTrade.author}&apos;s Trade</span>
+                  <span className="text-[9px] text-text-muted block font-mono">{selectedTrade.date}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => { setSelectedTrade(null); setFeedbackError(''); }}
+                className="text-text-muted hover:text-text-primary transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+              {/* Stats parameters */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-lg border border-border-theme bg-bg-input/40 p-2.5 text-center">
+                  <span className="text-[9px] text-text-muted uppercase tracking-widest block">Asset</span>
+                  <span className="text-sm font-black text-text-primary block mt-0.5">{selectedTrade.asset}</span>
+                </div>
+                <div className="rounded-lg border border-border-theme bg-bg-input/40 p-2.5 text-center">
+                  <span className="text-[9px] text-text-muted uppercase tracking-widest block">Lots</span>
+                  <span className="text-sm font-black text-text-primary font-mono block mt-0.5">{selectedTrade.lots.toFixed(2)}</span>
+                </div>
+                <div className="rounded-lg border border-border-theme bg-bg-input/40 p-2.5 text-center">
+                  <span className="text-[9px] text-text-muted uppercase tracking-widest block">Type</span>
+                  <span className={`inline-block text-[9px] font-bold uppercase mt-1 px-2.5 py-0.5 rounded ${
+                    selectedTrade.direction === 'BUY' 
+                      ? 'bg-brand-green/10 text-brand-green border border-brand-green/15' 
+                      : 'bg-red-950/20 text-red-500 border border-red-900/15'
+                  }`}>
+                    {selectedTrade.direction}
+                  </span>
+                </div>
+                <div className="rounded-lg border border-border-theme bg-bg-input/40 p-2.5 text-center">
+                  <span className="text-[9px] text-text-muted uppercase tracking-widest block">Net P&L</span>
+                  <span className={`text-sm font-black font-mono block mt-0.5 ${selectedTrade.pnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>
+                    {selectedTrade.pnl >= 0 ? '+' : ''}${selectedTrade.pnl.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Advanced info row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border border-border-theme/80 rounded-xl p-4 bg-bg/20">
+                <div>
+                  <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block">Setup Tactic</span>
+                  <span className="text-xs font-bold text-text-primary block mt-1">{selectedTrade.setup || 'Other'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block">Risk Metrics</span>
+                  <span className="text-xs font-bold text-text-secondary block mt-1 font-mono">
+                    {selectedTrade.riskPct !== undefined ? `${selectedTrade.riskPct}%` : 'N/A'} Risk
+                    {selectedTrade.riskReward !== undefined ? ` (1:${selectedTrade.riskReward} RR)` : ''}
+                  </span>
+                </div>
+                                <div>
+                   <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block">Trader Mindset</span>
+                  {(() => {
+                    const emObj = EMOTIONS.find(e => e.value === selectedTrade.emotion);
+                    return (
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold mt-1 ${emObj?.color || 'text-text-secondary'}`}>
+                        <span>{emObj?.emoji}</span>
+                        <span className="uppercase text-[10px] tracking-wider font-extrabold">{emObj?.label}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Large Image (if attached) */}
+              {selectedTrade.imageUrl && (
+                <div className="rounded-xl border border-border-theme bg-bg-input overflow-hidden shadow-md max-h-[300px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedTrade.imageUrl}
+                    alt="Trade Screenshot Detail"
+                    className="w-full h-full object-contain max-h-[300px]"
+                  />
+                </div>
+              )}
+
+              {/* Thesis/Notes */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest block">Trade Thesis Notes</span>
+                <div className="rounded-lg bg-bg-input/45 border border-border-theme p-4 text-xs text-text-secondary leading-relaxed whitespace-pre-line">
+                  {selectedTrade.notes || 'No description entered.'}
+                </div>
+              </div>
+
+              {/* Q&A & Feedback list */}
+              <div className="space-y-4 border-t border-border-theme/60 pt-5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                  <MessageCircle className="h-4 w-4 text-brand-green" />
+                  <span>Discussion Q&A & Reviews ({tradeFeedbacks.length})</span>
+                </h4>
+
+                {/* Feedbacks Loop */}
+                {tradeFeedbacks.length === 0 ? (
+                  <p className="text-[11px] text-text-muted italic">No reviews or questions yet. Ask a question below!</p>
+                ) : (
+                  <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                    {tradeFeedbacks.map((fb) => (
+                      <div key={fb.id} className="rounded-lg bg-bg/40 border border-border-theme p-3 space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-text-primary">{fb.author}</span>
+                          <span className="text-[9px] text-text-muted font-mono">
+                            {new Date(fb.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {fb.rating && (
+                          <div className="flex gap-0.5 text-yellow-500">
+                            {Array.from({ length: fb.rating }).map((_, i) => (
+                              <Star key={i} className="h-3 w-3 fill-current" />
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-text-secondary">{fb.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Ask a Question Form */}
+                <form onSubmit={handlePostFeedback} className="space-y-3 border-t border-border-theme pt-4">
+                  <div className="flex items-center gap-4">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Rate trade execution (optional):</label>
+                    <div className="flex gap-1 text-text-muted">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setSelectedRating(star)}
+                          className={`hover:scale-110 transition-transform ${
+                            star <= selectedRating ? 'text-yellow-500' : 'text-text-subtle'
+                          }`}
+                        >
+                          <Star className="h-4.5 w-4.5 fill-current" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <textarea
+                      placeholder="Ask a question or provide constructive feedback on this setup..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      rows={2}
+                      className="w-full rounded-lg border border-border-theme bg-bg-input py-2.5 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all resize-none"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute bottom-3 right-3 rounded-lg bg-brand-green/10 text-brand-green border border-brand-green/25 hover:bg-brand-green hover:text-black hover:border-brand-green p-1.5 transition-all"
+                      title="Post Feedback"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {feedbackError && <p className="text-[10px] text-red-500">{feedbackError}</p>}
+                </form>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-bg-secondary border-t border-border-theme px-6 py-4 flex justify-end">
+              <button
+                onClick={() => { setSelectedTrade(null); setFeedbackError(''); }}
+                className="rounded-lg bg-bg-input border border-border-theme text-text-secondary px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-bg-hover transition-all"
+              >
+                Close details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

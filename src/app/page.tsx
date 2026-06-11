@@ -3,32 +3,53 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/supabase';
-import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
+import Topbar from '@/components/Topbar';
 import Hero from '@/components/Hero';
+import RightPanel from '@/components/RightPanel';
 import CommunityFeed from '@/components/CommunityFeed';
 import TraderProfiles from '@/components/TraderProfiles';
 import PayoutShowcase from '@/components/PayoutShowcase';
 import LearningHub from '@/components/LearningHub';
 import TradingJournals from '@/components/TradingJournals';
+import Tools from '@/components/Tools';
 import PropFirmReviews from '@/components/PropFirmReviews';
 import Roadmap from '@/components/Roadmap';
-import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
-import { Trophy, TrendingUp, ShieldAlert, Sparkles, Flame, GraduationCap, Compass, Landmark } from 'lucide-react';
+import AdSlot from '@/components/AdSlot';
+import AdminPanel from '@/components/AdminPanel';
+
+type Theme = 'dark' | 'light';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('home');
   const [authOpen, setAuthOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ username: string; loggedIn: boolean; avatar: string } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>('dark');
+  const [currentUser, setCurrentUser] = useState<{
+    username: string; loggedIn: boolean; avatar: string; isDemo?: boolean
+  } | null>(null);
 
-  // Load user status on mount
+  // Load user and theme on mount — syncing from external localStorage store
   useEffect(() => {
-    setCurrentUser(db.getCurrentUser());
+    /* eslint-disable react-hooks/set-state-in-effect */
+    const user = db.getCurrentUser();
+    const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'dark';
+    document.documentElement.setAttribute('data-theme', stored);
+    setCurrentUser(user);
+    setTheme(stored);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  const handleAuthSuccess = (username: string) => {
-    const updatedUser = db.getCurrentUser();
-    setCurrentUser(updatedUser);
+  const handleToggleTheme = () => {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('propnepal_theme', next);
+  };
+
+  const handleAuthSuccess = () => {
+    setCurrentUser(db.getCurrentUser());
   };
 
   const handleLogout = () => {
@@ -36,175 +57,171 @@ export default function Home() {
     setCurrentUser(db.getCurrentUser());
   };
 
+  const handleMobileToggle = () => {
+    setMobileMenuOpen((prev) => !prev);
+  };
+
+  // Close mobile menu on tab change
+  const handleSetActiveTab = (tab: string) => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col justify-between">
-      {/* Sticky Header with Ticker Tape */}
-      <Header
+    <div className="flex flex-col lg:flex-row h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
+      {/* Left Sidebar */}
+      <Sidebar
         currentUser={currentUser}
+        activeTab={activeTab}
+        setActiveTab={handleSetActiveTab}
         onOpenAuth={() => setAuthOpen(true)}
         onLogout={handleLogout}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        mobileOpen={mobileMenuOpen}
+        onMobileToggle={handleMobileToggle}
       />
 
-      {/* Main Tab Render Orchestration */}
-      <main className="flex-1 w-full bg-black">
-        {activeTab === 'home' && (
-          <div className="space-y-16 animate-fade-in pb-16">
-            
-            {/* Hero Splash section */}
-            <Hero
-              onBrowseFeed={() => setActiveTab('feed')}
-              onOpenJournal={() => setActiveTab('journals')}
-              onOpenAuth={() => setAuthOpen(true)}
-              isLoggedIn={currentUser?.loggedIn || false}
-            />
+      {/* Main Area (right of sidebar) */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* Top Bar */}
+        <Topbar theme={theme} />
 
-            {/* Core Feature Cards */}
-            <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-10 space-y-2">
-                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-green uppercase tracking-widest bg-brand-green/5 border border-brand-green/15 px-3 py-1 rounded-full font-mono">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Platform Suite</span>
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg)' }}>
+          <div className="max-w-[1400px] mx-auto p-6 space-y-6">
+
+            {/* ── HOME ── */}
+            {activeTab === 'home' && (
+              <div className="flex gap-6 animate-fade-in">
+                {/* Left: Main content */}
+                <div className="flex-1 min-w-0 space-y-6">
+                  <Hero
+                    onBrowseFeed={() => handleSetActiveTab('home')}
+                    onOpenJournal={() => handleSetActiveTab('journals')}
+                    onOpenAuth={() => setAuthOpen(true)}
+                    isLoggedIn={currentUser?.loggedIn || false}
+                    username={currentUser?.username}
+                  />
+
+                  {/* Live Trading Feed preview */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+                        Live Trading Feed
+                      </h2>
+                    </div>
+                    <CommunityFeed currentUser={currentUser} onOpenAuth={() => setAuthOpen(true)} />
+                  </div>
+
+                  <Roadmap />
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
-                  Why Funded Traders Choose <span className="text-brand-green">PropNepal</span>
-                </h2>
-                <p className="text-xs text-zinc-400 max-w-lg mx-auto">
-                  A high-tech digital sandbox containing specialized evaluation tools, community logs, and direct localized advice.
-                </p>
+
+                {/* Right Panel */}
+                <div className="hidden xl:block">
+                  <div className="sticky top-6 space-y-4">
+                    <RightPanel onNavigate={handleSetActiveTab} />
+                    <AdSlot variant="sidebar" />
+                  </div>
+                </div>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div
-                  onClick={() => setActiveTab('payouts')}
-                  className="group rounded-xl border border-zinc-900 bg-[#070708] p-5 cursor-pointer hover:border-brand-green/30 hover:scale-[1.01] transition-all"
-                >
-                  <Trophy className="h-7 w-7 text-brand-green mb-3 stroke-[2.5]" />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-brand-green">
-                    Payout showcase
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
-                    Verify real-time splits processed directly to Nepalese eSewa wallets and bank transfers. Check recent leaderboards!
+            {/* ── TOP TRADERS ── */}
+            {activeTab === 'profiles' && (
+              <div className="animate-fade-in space-y-5">
+                <div>
+                  <h1 className="text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                    Top Traders
+                  </h1>
+                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Verified funded trader profiles and performance rankings
                   </p>
                 </div>
+                <TraderProfiles />
+                <AdSlot variant="banner" className="mt-4" />
+              </div>
+            )}
 
-                <div
-                  onClick={() => setActiveTab('journals')}
-                  className="group rounded-xl border border-zinc-900 bg-[#070708] p-5 cursor-pointer hover:border-brand-green/30 hover:scale-[1.01] transition-all"
-                >
-                  <TrendingUp className="h-7 w-7 text-brand-green mb-3 stroke-[2.5]" />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-brand-green">
-                    Trading Journals
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
-                    Log entry/exit trades inside an automated mathematical tracker. Calculate win rates and cumulative profit targets.
+            {/* ── PAYOUT SHOWCASE ── */}
+            {activeTab === 'payouts' && (
+              <div className="animate-fade-in space-y-5">
+                <div>
+                  <h1 className="text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                    Payout Showcase
+                  </h1>
+                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Verified real-time payouts processed to eSewa and Nepalese bank accounts
                   </p>
                 </div>
+                <PayoutShowcase />
+                <AdSlot variant="banner" className="mt-4" />
+              </div>
+            )}
 
-                <div
-                  onClick={() => setActiveTab('reviews')}
-                  className="group rounded-xl border border-zinc-900 bg-[#070708] p-5 cursor-pointer hover:border-brand-green/30 hover:scale-[1.01] transition-all"
-                >
-                  <Landmark className="h-7 w-7 text-brand-green mb-3 stroke-[2.5]" />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-brand-green">
+            {/* ── TRADING JOURNALS ── */}
+            {activeTab === 'journals' && (
+              <div className="animate-fade-in space-y-5">
+                <TradingJournals
+                  currentUser={currentUser}
+                  onOpenAuth={() => setAuthOpen(true)}
+                />
+                <AdSlot variant="banner" className="mt-4" />
+              </div>
+            )}
+
+            {/* ── TRADING TOOLS ── */}
+            {activeTab === 'tools' && (
+              <div className="animate-fade-in space-y-5">
+                <Tools theme={theme} />
+                <AdSlot variant="banner" className="mt-4" />
+              </div>
+            )}
+
+            {/* ── PROP FIRM REVIEWS ── */}
+            {activeTab === 'reviews' && (
+              <div className="animate-fade-in space-y-5">
+                <div>
+                  <h1 className="text-xl font-black" style={{ color: 'var(--text-primary)' }}>
                     Prop Firm Reviews
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
-                    Unbiased comparison reviews rating drawdown types, profit target policies, news gaps, and Nepalese support channels.
+                  </h1>
+                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Unbiased comparisons for drawdown types, profit targets, and Nepal payout channels
                   </p>
                 </div>
-
-                <div
-                  onClick={() => setActiveTab('academy')}
-                  className="group rounded-xl border border-zinc-900 bg-[#070708] p-5 cursor-pointer hover:border-brand-green/30 hover:scale-[1.01] transition-all"
-                >
-                  <GraduationCap className="h-7 w-7 text-brand-green mb-3 stroke-[2.5]" />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-white group-hover:text-brand-green">
-                    Learning Academy
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
-                    Master Smart Money Concepts, FVG, Asian sweeps, and strict drawdown rules. Take our trading style assessment quiz!
-                  </p>
-                </div>
+                <PropFirmReviews />
+                <AdSlot variant="banner" className="mt-4" />
               </div>
-            </section>
+            )}
 
-            {/* Featured Discussions Preview Block */}
-            <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 border-y border-zinc-950 py-12 bg-[#040405]">
-              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-8">
-                <div className="text-left space-y-0.5">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500">HIGHLIGHTED DISCUSSIONS</h3>
-                  <h4 className="text-lg font-black text-white uppercase">What traders are talking about today</h4>
-                </div>
-                <button
-                  onClick={() => setActiveTab('feed')}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-brand-green hover:underline uppercase tracking-wider"
-                >
-                  <span>Go to Community Feed</span>
-                  <span>&rarr;</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div
-                  onClick={() => setActiveTab('feed')}
-                  className="rounded-xl border border-zinc-900 bg-black p-5 cursor-pointer hover:border-zinc-800 transition-all text-left space-y-2.5"
-                >
-                  <div className="flex justify-between items-center text-[9px] font-mono text-zinc-500">
-                    <span>BY u/PrabeshFX</span>
-                    <span className="text-brand-green bg-brand-green/10 px-2 py-0.5 rounded font-bold uppercase">FTMO RULES</span>
-                  </div>
-                  <h5 className="text-xs sm:text-sm font-extrabold text-white leading-snug">
-                    How to handle daily drawdown limits on FTMO? Sharing my risk management framework
-                  </h5>
-                  <p className="text-[11px] text-zinc-400 line-clamp-2">
-                    Many traders fail not because of their strategy, but because they violate the 5% daily drawdown rule. Here is my exact protocol...
+            {/* ── LEARNING HUB ── */}
+            {activeTab === 'academy' && (
+              <div className="animate-fade-in space-y-5">
+                <div>
+                  <h1 className="text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                    Learning Hub
+                  </h1>
+                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Master SMC, FVG fills, liquidity sweeps and evaluation strategies
                   </p>
                 </div>
-
-                <div
-                  onClick={() => setActiveTab('feed')}
-                  className="rounded-xl border border-zinc-900 bg-black p-5 cursor-pointer hover:border-zinc-800 transition-all text-left space-y-2.5"
-                >
-                  <div className="flex justify-between items-center text-[9px] font-mono text-zinc-500">
-                    <span>BY u/BishalFX</span>
-                    <span className="text-brand-green bg-brand-green/10 px-2 py-0.5 rounded font-bold uppercase">PAYOUTS</span>
-                  </div>
-                  <h5 className="text-xs sm:text-sm font-extrabold text-white leading-snug">
-                    Got my first payout approved on FundedNext! $1,240 payout split processed via eSewa!
-                  </h5>
-                  <p className="text-[11px] text-zinc-400 line-clamp-2">
-                    Stoked to share that my 80/20 split payout from FundedNext was processed today! I requested it yesterday and it arrived directly via eSewa in NRS...
-                  </p>
-                </div>
+                <LearningHub />
+                <AdSlot variant="banner" className="mt-4" />
               </div>
-            </section>
+            )}
 
-            {/* Development Roadmap section */}
-            <Roadmap />
+            {/* ── ADMIN PANEL ── */}
+            {activeTab === 'admin' && currentUser?.loggedIn && currentUser.username === 'admin' && (
+              <div className="animate-fade-in space-y-5">
+                <AdminPanel />
+              </div>
+            )}
+
           </div>
-        )}
+        </main>
+      </div>
 
-        {activeTab === 'feed' && <CommunityFeed currentUser={currentUser} onOpenAuth={() => setAuthOpen(true)} />}
-
-        {activeTab === 'profiles' && <TraderProfiles />}
-
-        {activeTab === 'payouts' && <PayoutShowcase />}
-
-        {activeTab === 'journals' && (
-          <TradingJournals currentUser={currentUser} onOpenAuth={() => setAuthOpen(true)} />
-        )}
-
-        {activeTab === 'reviews' && <PropFirmReviews />}
-
-        {activeTab === 'academy' && <LearningHub />}
-      </main>
-
-      {/* Shared Footer */}
-      <Footer />
-
-      {/* Global simulated AuthModal */}
+      {/* Auth Modal */}
       <AuthModal
         isOpen={authOpen}
         onClose={() => setAuthOpen(false)}

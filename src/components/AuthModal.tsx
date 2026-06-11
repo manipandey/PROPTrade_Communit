@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, Sparkles } from 'lucide-react';
+import { X, Lock, Mail, User, Sparkles, CheckCircle, AlertTriangle } from 'lucide-react';
 import { db } from '@/lib/supabase';
 
 interface AuthModalProps {
@@ -16,71 +16,193 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [isDemoAccount, setIsDemoAccount] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   if (!isOpen) return null;
 
+  // Inline validation helpers
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  const isValidUsername = (u: string) => /^[a-zA-Z0-9_]{3,20}$/.test(u);
+
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setUsername('');
+    setIsDemoAccount(false);
+    setError('');
+    setSuccessMessage('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || (isSignUp && !username)) {
-      setError('Please fill in all required fields.');
+    setError('');
+    setSuccessMessage('');
+
+    // 1. Common Validation: Password check
+    if (!password) {
+      setError('Please enter a password.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
       return;
     }
 
-    const finalUsername = isSignUp ? username : email.split('@')[0];
-    const userAvatar = finalUsername.slice(0, 2).toUpperCase();
+    if (isSignUp) {
+      // ── SIGN UP FLOW ──
+      if (!username) {
+        setError('Please enter a username.');
+        return;
+      }
+      if (!isValidUsername(username)) {
+        setError('Username must be 3–20 characters, using only letters, numbers, and underscores.');
+        return;
+      }
 
-    // Save to simulated database
-    db.setCurrentUser({
-      username: finalUsername,
-      email,
-      avatar: userAvatar,
-      loggedIn: true
-    });
+      if (!isDemoAccount) {
+        if (!email) {
+          setError('Please enter an email address.');
+          return;
+        }
+        if (!isValidEmail(email)) {
+          setError('Please enter a valid email address.');
+          return;
+        }
+      }
 
-    onAuthSuccess(finalUsername);
-    onClose();
+      const targetEmail = isDemoAccount ? `demo_${username.toLowerCase()}_${Date.now()}@propnepal.com` : email;
+      
+      const result = db.registerUser(targetEmail, username, password, isDemoAccount);
+
+      if (!result.success) {
+        setError(result.error || 'Registration failed. Please try again.');
+        return;
+      }
+
+      // Auto-login after successful registration
+      db.setCurrentUser({
+        username,
+        email: targetEmail,
+        avatar: username.slice(0, 2).toUpperCase(),
+        loggedIn: true,
+        isDemo: isDemoAccount
+      });
+
+      setSuccessMessage(`Account ${username} created successfully! 🎉`);
+      setTimeout(() => {
+        onAuthSuccess(username);
+        onClose();
+        resetForm();
+      }, 1000);
+
+    } else {
+      // ── LOGIN FLOW ──
+      if (!email) {
+        setError('Please enter your email.');
+        return;
+      }
+      if (!isValidEmail(email)) {
+        setError('Please enter a valid email address.');
+        return;
+      }
+
+      const result = db.authenticateUser(email, password);
+
+      if (!result.success) {
+        setError(result.error || 'Login failed. Please try again.');
+        return;
+      }
+
+      // Set current user session
+      db.setCurrentUser({
+        username: result.username!,
+        email,
+        avatar: result.avatar!,
+        loggedIn: true,
+        isDemo: result.isDemo
+      });
+
+      setSuccessMessage(`Welcome back, ${result.username}! ✨`);
+      setTimeout(() => {
+        onAuthSuccess(result.username!);
+        onClose();
+        resetForm();
+      }, 1000);
+    }
   };
 
-  const handleQuickLogin = (role: 'FTMO_Champ' | 'GoldHunter' | 'NepaliScalper') => {
+  const handleQuickLogin = (role: 'FTMO_Champ' | 'GoldHunter' | 'NepaliScalper' | 'admin') => {
     const avatarMap: Record<string, string> = {
       FTMO_Champ: '⚡',
       GoldHunter: '💰',
-      NepaliScalper: '🦅'
+      NepaliScalper: '🦅',
+      admin: '👑'
     };
+    
+    const isDemo = role !== 'admin';
+    const email = role === 'admin' ? 'admin@propnepal.com' : `${role.toLowerCase()}@propnepal.com`;
+    const users = db.getRegisteredUsers();
+    if (!users.some(u => u.email === email)) {
+      db.registerUser(email, role, role === 'admin' ? 'admin123' : 'demo1234', isDemo);
+    }
     
     db.setCurrentUser({
       username: role,
-      email: `${role.toLowerCase()}@propnepal.com`,
+      email,
       avatar: avatarMap[role] || '👤',
-      loggedIn: true
+      loggedIn: true,
+      isDemo
     });
 
-    onAuthSuccess(role);
-    onClose();
+    setSuccessMessage(role === 'admin' ? 'Logged in as Admin! 👑' : `Logged in as demo trader ${role}!`);
+    setTimeout(() => {
+      onAuthSuccess(role);
+      onClose();
+      resetForm();
+    }, 800);
+  };
+
+  const switchMode = () => {
+    setIsSignUp(!isSignUp);
+    setIsDemoAccount(false);
+    setError('');
+    setSuccessMessage('');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-800 bg-[#0d0d0f] p-8 shadow-2xl glow-accent">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md animate-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl p-8 shadow-2xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
         
         {/* Close Button */}
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+          onClick={() => { onClose(); resetForm(); }}
+          className="absolute top-4 right-4 text-text-secondary hover:text-text-primary transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
 
+        {/* Success Overlay */}
+        {successMessage && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center animate-fade-in" style={{ backgroundColor: 'var(--bg-card)' }}>
+              <div className="rounded-full p-4 mb-4" style={{ backgroundColor: 'var(--accent-light)' }}>
+              <CheckCircle className="h-10 w-10" style={{ color: 'var(--accent)' }} />
+            </div>
+            <p className="text-lg font-bold text-center px-4" style={{ color: 'var(--text-primary)' }}>{successMessage}</p>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Redirecting you in...</p>
+          </div>
+        )}
+
         {/* Modal Header */}
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-green/10 text-brand-green">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
             <Sparkles className="h-6 w-6" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">
+          <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
             {isSignUp ? 'Join PropNepal' : 'Welcome Back'}
           </h2>
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             {isSignUp 
               ? 'Connect with top Nepalese traders & share payouts' 
               : 'Log in to write posts, log journals, and check reviews'}
@@ -88,18 +210,39 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-950/50 border border-red-800/60 p-3 text-center text-xs text-red-200">
-            {error}
+          <div className="mb-4 flex items-start gap-2.5 rounded-lg bg-red-950/50 border border-red-800/60 p-3 text-xs text-red-200 animate-fade-in">
+            <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
 
         {/* Auth Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
+            <div className="flex items-center gap-2.5 rounded-lg p-3 mb-2" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--bg-hover)' }}>
+              <input
+                type="checkbox"
+                id="isDemoAccount"
+                checked={isDemoAccount}
+                onChange={(e) => {
+                  setIsDemoAccount(e.target.checked);
+                  setError('');
+                }}
+                className="h-4 w-4 rounded cursor-pointer"
+                style={{ accentColor: 'var(--accent)' }}
+              />
+              <label htmlFor="isDemoAccount" className="text-xs font-bold select-none cursor-pointer" style={{ color: 'var(--text-primary)' }}>
+                ⚡ Register as Demo Account
+                <span className="text-[10px] font-normal block mt-0.5" style={{ color: 'var(--text-muted)' }}>No email or personal details needed.</span>
+              </label>
+            </div>
+          )}
+
+          {isSignUp && (
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Username</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Username</label>
               <div className="relative mt-1">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3" style={{ color: 'var(--text-muted)' }}>
                   <User className="h-4 w-4" />
                 </span>
                 <input
@@ -107,32 +250,34 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="e.g. NepalPips"
-                  className="w-full rounded-lg border border-zinc-800 bg-black py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green transition-all"
+                  className="t-input w-full py-2.5 pl-10 pr-4 text-sm"
+                />
+              </div>
+            </div>
+          )}
+
+          {(!isSignUp || !isDemoAccount) && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Email Address</label>
+              <div className="relative mt-1">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3" style={{ color: 'var(--text-muted)' }}>
+                  <Mail className="h-4 w-4" />
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="t-input w-full py-2.5 pl-10 pr-4 text-sm"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Email Address</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Password</label>
             <div className="relative mt-1">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
-                <Mail className="h-4 w-4" />
-              </span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-lg border border-zinc-800 bg-black py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green transition-all"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Password</label>
-            <div className="relative mt-1">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3" style={{ color: 'var(--text-muted)' }}>
                 <Lock className="h-4 w-4" />
               </span>
               <input
@@ -140,52 +285,47 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-zinc-800 bg-black py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green transition-all"
+                className="t-input w-full py-2.5 pl-10 pr-4 text-sm"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="mt-2 w-full rounded-lg bg-brand-green py-3 text-sm font-bold text-black hover:bg-brand-green/90 transition-all glow-accent"
+            className="btn-primary mt-2 w-full py-3 text-sm"
           >
-            {isSignUp ? 'Create Trading Account' : 'Sign In'}
+            {isSignUp ? (isDemoAccount ? 'Create Demo Profile' : 'Create Trading Account') : 'Sign In'}
           </button>
         </form>
 
         {/* Quick Demo Accounts */}
-        <div className="mt-6 border-t border-zinc-800 pt-6">
-          <div className="text-center text-xs font-semibold uppercase tracking-widest text-zinc-500">
-            Or test with a demo profile
+        <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="text-center text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
+            Or test with a demo profile / admin account
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <button
-              onClick={() => handleQuickLogin('FTMO_Champ')}
-              className="rounded-lg border border-zinc-800 bg-black/50 py-2 text-center text-xs text-zinc-300 hover:border-brand-green hover:text-white transition-all"
-            >
-              ⚡ FTMO Champ
-            </button>
-            <button
-              onClick={() => handleQuickLogin('GoldHunter')}
-              className="rounded-lg border border-zinc-800 bg-black/50 py-2 text-center text-xs text-zinc-300 hover:border-brand-green hover:text-white transition-all"
-            >
-              💰 Gold Hunter
-            </button>
-            <button
-              onClick={() => handleQuickLogin('NepaliScalper')}
-              className="rounded-lg border border-zinc-800 bg-black/50 py-2 text-center text-xs text-zinc-300 hover:border-brand-green hover:text-white transition-all"
-            >
-              🦅 Nepal Scalper
-            </button>
+          <div className="grid grid-cols-2 gap-2">
+            {(['FTMO_Champ', 'GoldHunter', 'NepaliScalper', 'admin'] as const).map((role, i) => (
+              <button
+                key={role}
+                onClick={() => handleQuickLogin(role)}
+                className="rounded-lg py-2 text-center text-xs font-medium transition-all"
+                style={{ border: '1px solid var(--border)', backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                {['⚡ FTMO Champ', '💰 Gold Hunter', '🦅 Scalper', '👑 Admin'][i]}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Footer Toggle */}
-        <div className="mt-6 text-center text-sm text-zinc-400">
+        <div className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
           {isSignUp ? 'Already have an account?' : "Don't have an account yet?"}{' '}
           <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="font-bold text-brand-green hover:underline focus:outline-none"
+            onClick={switchMode}
+            className="font-bold hover:underline focus:outline-none"
+            style={{ color: 'var(--accent)' }}
           >
             {isSignUp ? 'Sign In' : 'Sign Up'}
           </button>

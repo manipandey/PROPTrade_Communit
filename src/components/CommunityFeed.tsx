@@ -1,9 +1,10 @@
 // src/components/CommunityFeed.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Search, Flame, Clock, MessageSquare, ArrowUp, ArrowDown, User, Hash, Share2, PlusCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { Search, Flame, Clock, MessageSquare, ArrowUp, ArrowDown, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link } from 'lucide-react';
 import { db, Post, Comment } from '@/lib/supabase';
+import AdSlot from './AdSlot';
 
 interface CommunityFeedProps {
   currentUser: { username: string; loggedIn: boolean; avatar: string } | null;
@@ -11,7 +12,11 @@ interface CommunityFeedProps {
 }
 
 export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeedProps) {
-  const [posts, setPosts] = useState<Post[]>(() => db.getPosts());
+  const [posts, setPosts] = useState<Post[]>([]);
+  
+  useEffect(() => {
+    setPosts(db.getPosts());
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<'hot' | 'new'>('hot');
@@ -22,10 +27,46 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   const [postContent, setPostContent] = useState('');
   const [postCategory, setPostCategory] = useState('FTMO');
   const [postTagsString, setPostTagsString] = useState('');
+  const [postImageUrl, setPostImageUrl] = useState('');
+  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle file upload -> convert to base64 data URL
+  const handleFileUpload = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPostImageUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileUpload(file);
+  }, [handleFileUpload]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   // Expand Thread State (Post ID)
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [newCommentContent, setNewCommentContent] = useState('');
+  const [activeLightboxImage, setActiveLightboxImage] = useState<string | null>(null);
 
   const categories = ['All', 'FTMO', 'FundedNext', 'Local Market', 'Payouts', 'Trading Journals', 'General'];
 
@@ -93,7 +134,8 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
       upvotes: 1,
       comments: [],
       createdAt: new Date().toISOString(),
-      userVoted: 'up' // Creator automatically upvotes their post
+      userVoted: 'up', // Creator automatically upvotes their post
+      imageUrl: postImageUrl.trim() || undefined
     };
 
     const newPostsList = [newPost, ...posts];
@@ -105,6 +147,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
     setPostContent('');
     setPostCategory('FTMO');
     setPostTagsString('');
+    setPostImageUrl('');
     setIsCreatingPost(false);
   };
 
@@ -181,7 +224,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
             className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all ${
               selectedCategory === cat
                 ? 'bg-brand-green text-black shadow-[0_0_10px_rgba(34,197,94,0.3)]'
-                : 'border border-zinc-900 bg-[#070709] text-zinc-400 hover:text-white hover:border-zinc-800'
+                : 'border border-border-theme bg-bg-card text-text-secondary hover:text-text-primary hover:border-border-hover'
             }`}
           >
             {cat}
@@ -190,10 +233,10 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
       </div>
 
       {/* Control bar: Search and Sort */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-b border-zinc-900 pb-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-b border-border-theme pb-4">
         {/* Search */}
         <div className="relative w-full sm:max-w-xs">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
             <Search className="h-4 w-4" />
           </span>
           <input
@@ -201,17 +244,17 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
             placeholder="Search threads..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-zinc-900 bg-[#070709] py-2 pl-9 pr-4 text-xs text-white placeholder-zinc-500 focus:border-brand-green focus:outline-none transition-all"
+            className="w-full rounded-lg border border-border-theme bg-bg-card py-2 pl-9 pr-4 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
           />
         </div>
 
         {/* Sort and Create Post Trigger */}
         <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-          <div className="flex rounded-lg border border-zinc-900 bg-[#070709] p-0.5 text-xs font-bold font-sans">
+          <div className="flex rounded-lg border border-border-theme bg-bg-card p-0.5 text-xs font-bold font-sans">
             <button
               onClick={() => setSortBy('hot')}
               className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md uppercase tracking-wider transition-all ${
-                sortBy === 'hot' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                sortBy === 'hot' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               <Flame className="h-3.5 w-3.5" />
@@ -220,7 +263,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
             <button
               onClick={() => setSortBy('new')}
               className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md uppercase tracking-wider transition-all ${
-                sortBy === 'new' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                sortBy === 'new' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               <Clock className="h-3.5 w-3.5" />
@@ -246,40 +289,40 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
 
       {/* Compose Discussion Panel */}
       {isCreatingPost && currentUser?.loggedIn && (
-        <form onSubmit={handleCreatePostSubmit} className="rounded-xl border border-zinc-800 bg-[#0c0c0e] p-6 space-y-4 glow-accent animate-fade-in">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+        <form onSubmit={handleCreatePostSubmit} className="rounded-xl border border-border-theme bg-bg-secondary p-6 space-y-4 glow-accent animate-fade-in">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
             <PlusCircle className="h-4 w-4 text-brand-green" />
             <span>Create a New Discussion</span>
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Thread Title</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Thread Title</label>
               <input
                 type="text"
                 required
                 placeholder="What is on your trading mind?"
                 value={postTitle}
                 onChange={(e) => setPostTitle(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
+                className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Category</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Category</label>
               <select
                 value={postCategory}
                 onChange={(e) => setPostCategory(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-zinc-300 focus:border-brand-green focus:outline-none transition-all"
+                className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
               >
                 {categories.filter(c => c !== 'All').map(c => (
-                  <option key={c} value={c} className="bg-black text-zinc-300">{c}</option>
+                  <option key={c} value={c} className="bg-bg-input text-text-secondary">{c}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">
               Tags (comma separated)
             </label>
             <input
@@ -287,27 +330,141 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
               placeholder="e.g. gold, ftmo, supplyanddemand"
               value={postTagsString}
               onChange={(e) => setPostTagsString(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
+              className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Body Content</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Body Content</label>
             <textarea
               required
               rows={4}
               placeholder="Describe your thesis, share charts, or ask questions..."
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all resize-none"
+              className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all resize-none"
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                <span className="inline-flex items-center gap-1"><ImageIcon className="h-3 w-3" /> Attach Image (optional)</span>
+              </label>
+              <div className="flex rounded-md border border-border-theme bg-bg-input p-0.5 text-[9px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setImageMode('upload')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded transition-all uppercase tracking-wider ${
+                    imageMode === 'upload' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  <Upload className="h-3 w-3" />
+                  Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageMode('url')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded transition-all uppercase tracking-wider ${
+                    imageMode === 'url' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  <Link className="h-3 w-3" />
+                  URL
+                </button>
+              </div>
+            </div>
+
+            {/* URL Mode */}
+            {imageMode === 'url' && !postImageUrl && (
+              <input
+                type="text"
+                placeholder="Paste image URL here... (e.g. https://i.imgur.com/chart.png)"
+                value={postImageUrl}
+                onChange={(e) => setPostImageUrl(e.target.value)}
+                className="w-full rounded-lg border border-border-theme bg-bg-input py-2.5 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+              />
+            )}
+
+            {/* Upload / Drag-and-Drop Mode */}
+            {imageMode === 'upload' && !postImageUrl && (
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 px-4 cursor-pointer transition-all duration-200 ${
+                  isDragging
+                    ? 'border-brand-green bg-brand-green/5 shadow-[0_0_20px_rgba(34,197,94,0.1)]'
+                    : 'border-border-theme bg-bg-input/40 hover:border-border-hover hover:bg-bg-input/60'
+                }`}
+              >
+                <div className={`rounded-full p-3 transition-colors ${
+                  isDragging ? 'bg-brand-green/10 text-brand-green' : 'bg-bg-secondary text-text-secondary'
+                }`}>
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div className="text-center">
+                  <p className={`text-xs font-bold ${
+                    isDragging ? 'text-brand-green' : 'text-text-secondary'
+                  }`}>
+                    {isDragging ? 'Drop your image here' : 'Click to upload or drag & drop'}
+                  </p>
+                  <p className="text-[10px] text-text-muted mt-0.5">PNG, JPG, GIF up to 5MB</p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Image Preview (shown for both modes) */}
+            {postImageUrl && (
+              <div className="relative rounded-xl border border-border-theme bg-bg-input overflow-hidden group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={postImageUrl}
+                  alt="Preview"
+                  className="w-full max-h-48 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <div className="absolute top-2 right-2 flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPostImageUrl('');
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="rounded-lg bg-bg/70 backdrop-blur-sm border border-border-theme/50 p-1.5 text-text-secondary hover:text-red-400 hover:border-red-500/30 transition-all"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-brand-green" />
+                    Image attached — ready to publish
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setIsCreatingPost(false)}
-              className="rounded-lg border border-zinc-900 bg-black/50 px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider"
+              className="rounded-lg border border-border-theme bg-bg-input/50 px-4 py-2 text-xs font-bold text-text-secondary hover:text-text-primary uppercase tracking-wider"
             >
               Cancel
             </button>
@@ -323,9 +480,9 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
 
       {/* Guest Lock Screen */}
       {!currentUser?.loggedIn && (
-        <div className="rounded-2xl border border-zinc-900 bg-[#070709]/80 p-6 text-center space-y-3 glass-panel">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Join Nepal's Trading Conversations</h3>
-          <p className="text-xs text-zinc-400 max-w-lg mx-auto">
+        <div className="rounded-2xl border border-border-theme bg-bg-card/85 p-6 text-center space-y-3 glass-panel">
+          <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">Join Nepal&apos;s Trading Conversations</h3>
+          <p className="text-xs text-text-secondary max-w-lg mx-auto">
             Create an account or login to upvote analysis threads, ask technical questions, comment on posts, and collaborate on localized prop-firm guides.
           </p>
           <button
@@ -341,39 +498,39 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
       {/* Posts List */}
       <div className="space-y-4">
         {filteredAndSortedPosts.length === 0 ? (
-          <div className="rounded-xl border border-zinc-900 bg-black/50 p-12 text-center text-zinc-500 text-xs">
+          <div className="rounded-xl border border-border-theme bg-bg-input/50 p-12 text-center text-text-muted text-xs">
             No active discussions found for this category/search. Be the first to start a thread!
           </div>
         ) : (
-          filteredAndSortedPosts.map((post) => {
+          filteredAndSortedPosts.map((post, index) => {
             const isExpanded = expandedPostId === post.id;
             
             return (
-              <div
-                key={post.id}
-                className="rounded-xl border border-zinc-900 bg-[#070708] transition-all duration-300 hover:border-zinc-800 hover:shadow-[0_0_15px_rgba(34,197,94,0.02)]"
-              >
+              <React.Fragment key={post.id}>
+                <div
+                  className="rounded-xl border border-border-theme bg-bg-card transition-all duration-300 hover:border-border-hover hover:shadow-[0_0_15px_rgba(34,197,94,0.02)]"
+                >
                 <div className="p-5 flex gap-4">
                   {/* Voting Column */}
                   <div className="flex flex-col items-center gap-1.5 pt-0.5">
                     <button
                       onClick={() => handleVote(post.id, 'up')}
-                      className={`rounded p-1 transition-colors hover:bg-zinc-800 ${
-                        post.userVoted === 'up' ? 'text-brand-green bg-brand-green/10' : 'text-zinc-500'
+                      className={`rounded p-1 transition-colors hover:bg-bg-hover ${
+                        post.userVoted === 'up' ? 'text-brand-green bg-brand-green/10' : 'text-text-secondary'
                       }`}
                       title="Upvote"
                     >
                       <ArrowUp className="h-4 w-4 stroke-[2.5]" />
                     </button>
                     <span className={`text-xs font-mono font-bold ${
-                      post.userVoted === 'up' ? 'text-brand-green' : post.userVoted === 'down' ? 'text-red-500' : 'text-white'
+                      post.userVoted === 'up' ? 'text-brand-green' : post.userVoted === 'down' ? 'text-red-500' : 'text-text-primary'
                     }`}>
                       {post.upvotes}
                     </span>
                     <button
                       onClick={() => handleVote(post.id, 'down')}
-                      className={`rounded p-1 transition-colors hover:bg-zinc-800 ${
-                        post.userVoted === 'down' ? 'text-red-500 bg-red-950/20' : 'text-zinc-500'
+                      className={`rounded p-1 transition-colors hover:bg-bg-hover ${
+                        post.userVoted === 'down' ? 'text-red-500 bg-red-950/20' : 'text-text-secondary'
                       }`}
                       title="Downvote"
                     >
@@ -384,8 +541,8 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                   {/* Main Thread Content */}
                   <div className="flex-1 space-y-2.5">
                     {/* Header */}
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-zinc-500 font-mono">
-                      <span className="text-zinc-400">u/{post.author}</span>
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-text-secondary font-mono">
+                      <span className="text-text-muted">u/{post.author}</span>
                       <span>•</span>
                       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                       <span>•</span>
@@ -397,34 +554,64 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                     {/* Title */}
                     <h3
                       onClick={() => setExpandedPostId(isExpanded ? null : post.id)}
-                      className="text-sm font-bold text-white hover:text-brand-green cursor-pointer leading-snug transition-colors"
+                      className="text-sm font-bold text-text-primary hover:text-brand-green cursor-pointer leading-snug transition-colors"
                     >
                       {post.title}
                     </h3>
 
                     {/* Excerpt/Content */}
-                    <p className="text-xs text-zinc-400 line-clamp-3 leading-relaxed">
+                    <p 
+                      onClick={() => setExpandedPostId(isExpanded ? null : post.id)}
+                      className={`text-xs text-text-secondary leading-relaxed cursor-pointer transition-colors ${
+                        isExpanded ? '' : 'line-clamp-3 hover:text-text-primary'
+                      }`}
+                    >
                       {post.content}
                     </p>
+
+                    {/* Post Image */}
+                    {post.imageUrl && (
+                      <div className="relative mt-2 overflow-hidden rounded-xl border border-border-theme bg-bg-input group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={post.imageUrl}
+                          alt={post.title}
+                          className="w-full h-auto max-h-[600px] object-contain transition-transform duration-500 group-hover:scale-[1.01] bg-black/10 cursor-zoom-in"
+                          onClick={() => setActiveLightboxImage(post.imageUrl || null)}
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="inline-flex items-center gap-1.5 rounded-md bg-bg/70 backdrop-blur-sm border border-border-theme/50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-text-secondary">
+                            <ImageIcon className="h-3 w-3 text-brand-green" />
+                            <span>Chart / Screenshot</span>
+                          </div>
+                          <div className="inline-flex items-center gap-1 rounded-md bg-bg/70 backdrop-blur-sm border border-border-theme/50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-text-secondary">
+                            <MapPin className="h-3 w-3 text-brand-green" />
+                            <span>{post.category === 'Local Market' ? 'Nepal' : post.category}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {post.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex items-center rounded-md bg-zinc-950 border border-zinc-900 px-2 py-0.5 text-[9px] font-mono font-bold text-zinc-400"
+                          className="inline-flex items-center rounded-md bg-bg-input border border-border-theme px-2 py-0.5 text-[9px] font-mono font-bold text-text-secondary"
                         >
-                          <Hash className="h-2 w-2 mr-0.5 text-zinc-600" />
+                          <Hash className="h-2 w-2 mr-0.5 text-text-muted" />
                           {tag}
                         </span>
                       ))}
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="flex items-center gap-4 pt-3 border-t border-zinc-900/60 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                    <div className="flex items-center gap-4 pt-3 border-t border-border-theme text-[10px] font-bold uppercase tracking-widest text-text-secondary">
                       <button
                         onClick={() => setExpandedPostId(isExpanded ? null : post.id)}
-                        className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1.5 hover:text-text-primary transition-colors"
                       >
                         <MessageSquare className="h-3.5 w-3.5 text-brand-green" />
                         <span>{post.comments.length} Comments</span>
@@ -435,7 +622,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                           navigator.clipboard.writeText(window.location.href);
                           alert('Link copied to clipboard!');
                         }}
-                        className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1.5 hover:text-text-primary transition-colors"
                       >
                         <Share2 className="h-3.5 w-3.5" />
                         <span>Share</span>
@@ -446,11 +633,11 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
 
                 {/* Expanded Comment Thread View */}
                 {isExpanded && (
-                  <div className="border-t border-zinc-900 bg-black/40 p-5 rounded-b-xl space-y-4 animate-fade-in">
+                  <div className="border-t border-border-theme bg-bg-input/40 p-5 rounded-b-xl space-y-4 animate-fade-in">
                     
                     {/* Add Comment Input */}
                     <form onSubmit={(e) => handleCreateCommentSubmit(e, post.id)} className="space-y-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
                         {currentUser?.loggedIn ? `Comment as u/${currentUser.username}` : 'You must be signed in to comment'}
                       </div>
                       <div className="flex gap-2">
@@ -461,12 +648,12 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                           disabled={!currentUser?.loggedIn}
                           value={newCommentContent}
                           onChange={(e) => setNewCommentContent(e.target.value)}
-                          className="flex-1 rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
+                          className="flex-1 rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
                         />
                         <button
                           type="submit"
                           disabled={!currentUser?.loggedIn}
-                          className="rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 px-4 text-xs font-bold uppercase tracking-wider hover:bg-brand-green hover:text-black hover:border-brand-green transition-all"
+                          className="rounded-lg bg-bg-secondary border border-border-theme text-text-secondary px-4 text-xs font-bold uppercase tracking-wider hover:bg-brand-green hover:text-black hover:border-brand-green transition-all"
                         >
                           Send
                         </button>
@@ -476,18 +663,18 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                     {/* Comments List */}
                     <div className="space-y-3 pt-2">
                       {post.comments.length === 0 ? (
-                        <div className="text-zinc-600 text-xs italic py-2">
+                        <div className="text-text-muted text-xs italic py-2">
                           No responses yet. Be the first to share your thoughts!
                         </div>
                       ) : (
                         post.comments.map((comm) => (
-                          <div key={comm.id} className="border-l border-zinc-900 pl-4 py-1 space-y-1">
-                            <div className="flex items-center gap-2 text-[9px] font-mono font-bold text-zinc-500">
-                              <span className="text-zinc-400">u/{comm.author}</span>
+                          <div key={comm.id} className="border-l border-border-theme pl-4 py-1 space-y-1">
+                            <div className="flex items-center gap-2 text-[9px] font-mono font-bold text-text-secondary">
+                              <span className="text-text-muted">u/{comm.author}</span>
                               <span>•</span>
                               <span>{new Date(comm.createdAt).toLocaleDateString()}</span>
                             </div>
-                            <p className="text-xs text-zinc-300 leading-relaxed">
+                            <p className="text-xs text-text-secondary leading-relaxed">
                               {comm.content}
                             </p>
                           </div>
@@ -497,10 +684,41 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                   </div>
                 )}
               </div>
+              {/* Inline Banner Ad between 2nd and 3rd post */}
+              {index === 1 && (
+                <div className="my-2">
+                  <AdSlot variant="banner" />
+                </div>
+              )}
+              </React.Fragment>
             );
           })
         )}
       </div>
+
+      {/* Image Lightbox Modal */}
+      {activeLightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 cursor-zoom-out animate-fade-in"
+          onClick={() => setActiveLightboxImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-xl border border-border-theme/40 shadow-2xl glow-accent" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src={activeLightboxImage} 
+              alt="Fullscreen View" 
+              className="max-w-full max-h-[85vh] object-contain rounded-xl"
+            />
+            <button 
+              className="absolute top-3 right-3 rounded-lg bg-bg-card/75 border border-border-theme p-1.5 text-text-secondary hover:text-text-primary transition-all hover:bg-bg-hover"
+              onClick={() => setActiveLightboxImage(null)}
+              title="Close Preview"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

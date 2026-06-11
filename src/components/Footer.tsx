@@ -6,7 +6,7 @@ import { ShieldAlert, Heart, Shield } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-zinc-950 bg-[#040405] text-xs py-12">
+    <footer className="border-t border-border-theme bg-bg-secondary text-xs py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Top Grid */}
@@ -17,19 +17,19 @@ export default function Footer() {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-green to-emerald-600">
                 <Shield className="h-4.5 w-4.5 text-black stroke-[2.5]" />
               </div>
-              <span className="text-sm font-black tracking-tight text-white uppercase font-sans">
+              <span className="text-sm font-black tracking-tight text-text-primary uppercase font-sans">
                 Prop<span className="text-brand-green">Nepal</span>
               </span>
             </div>
-            <p className="text-zinc-500 text-[11px] leading-relaxed">
-              Nepal's premier prop trading community portal. Sharing evaluations, verifying payouts, logging trading journals, and building a disciplined local retail trading ecosystem.
+            <p className="text-text-muted text-[11px] leading-relaxed">
+              Nepal&apos;s premier prop trading community portal. Sharing evaluations, verifying payouts, logging trading journals, and building a disciplined local retail trading ecosystem.
             </p>
           </div>
 
           {/* Quick links */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-white mb-3">Platform Links</h4>
-            <ul className="space-y-2 text-zinc-500 text-[11px]">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-primary mb-3">Platform Links</h4>
+            <ul className="space-y-2 text-text-muted text-[11px]">
               <li><span className="hover:text-brand-green cursor-pointer">Community Discussions</span></li>
               <li><span className="hover:text-brand-green cursor-pointer">Trader Rankings Leaderboard</span></li>
               <li><span className="hover:text-brand-green cursor-pointer">Certificate Validator Engine</span></li>
@@ -39,8 +39,8 @@ export default function Footer() {
 
           {/* Prop Reviews links */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-white mb-3">Funding Reviews</h4>
-            <ul className="space-y-2 text-zinc-500 text-[11px]">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-primary mb-3">Funding Reviews</h4>
+            <ul className="space-y-2 text-text-muted text-[11px]">
               <li><span className="hover:text-brand-green cursor-pointer">FTMO Rules Evaluation</span></li>
               <li><span className="hover:text-brand-green cursor-pointer">FundedNext Nepal Bank Payouts</span></li>
               <li><span className="hover:text-brand-green cursor-pointer">The 5%ers Scaling Program</span></li>
@@ -50,8 +50,8 @@ export default function Footer() {
 
           {/* Contact Support */}
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-white mb-3">Support & Network</h4>
-            <ul className="space-y-2 text-zinc-500 text-[11px]">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-primary mb-3">Support & Network</h4>
+            <ul className="space-y-2 text-text-muted text-[11px]">
               <li><span>Email: support@propnepal.com</span></li>
               <li><span>Kathmandu, Nepal</span></li>
               <li className="inline-flex items-center gap-1 bg-brand-green/5 border border-brand-green/10 text-brand-green rounded px-2.5 py-1 text-[10px] font-mono font-bold mt-1.5 uppercase tracking-wider">
@@ -63,10 +63,10 @@ export default function Footer() {
         </div>
 
         {/* Risk Disclaimer */}
-        <div className="rounded-xl border border-zinc-900 bg-black/45 p-4 flex gap-3 text-[10px] leading-relaxed text-zinc-500 max-w-4xl mx-auto">
-          <ShieldAlert className="h-5 w-5 text-zinc-600 flex-shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-border-theme bg-bg-input/45 p-4 flex gap-3 text-[10px] leading-relaxed text-text-muted max-w-4xl mx-auto">
+          <ShieldAlert className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
           <div className="space-y-1 text-left">
-            <span className="font-bold text-zinc-400 uppercase tracking-widest block text-[9px]">Financial & Evaluation Disclosure</span>
+            <span className="font-bold text-text-secondary uppercase tracking-widest block text-[9px]">Financial & Evaluation Disclosure</span>
             <p>
               PropNepal is an educational community portal and trade journaling provider. PropNepal does not offer direct trading challenges, financial brokerage services, or retail advisory accounts. Funded evaluations are simulated challenges offered by external firms where payouts represent performance fees. Trading financial instruments carries high risk. Adhere strictly to proper sizing parameters.
             </p>
@@ -74,7 +74,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom copyright row */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-zinc-900 pt-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-border-theme pt-6 text-[10px] font-bold uppercase tracking-widest text-text-muted">
           <div>
             &copy; {new Date().getFullYear()} PropNepal. All rights reserved.
           </div>

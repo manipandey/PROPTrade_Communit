@@ -1,299 +1,584 @@
 // src/components/PayoutShowcase.tsx
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Award, ShieldAlert, Sparkles, Printer, ArrowRight, DollarSign, Calendar, Landmark, Check } from 'lucide-react';
-import { db, Payout } from '@/lib/supabase';
+import React, { useState, useEffect, useRef } from 'react';
+import { Award, Sparkles, Check, Upload, Heart, MessageSquare, X } from 'lucide-react';
+import { db, Payout, Comment } from '@/lib/supabase';
 
 export default function PayoutShowcase() {
-  const [payouts, setPayouts] = useState<Payout[]>(() => db.getPayouts());
-  const [leaderboard] = useState([
-    { rank: '1', trader: 'PrabeshFX', total: '$42,500', trades: '124', firm: 'FTMO' },
-    { rank: '2', trader: 'SandhyaScalps', total: '$28,900', trades: '82', firm: 'The 5%ers' },
-    { rank: '3', trader: 'BishalFX', total: '$18,200', trades: '61', firm: 'FundedNext' },
-    { rank: '4', trader: 'RohanPips', total: '$15,400', trades: '49', firm: 'FundedNext' }
-  ]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ username: string; loggedIn: boolean; avatar: string } | null>(null);
 
-  // Certificate Generator States
-  const [certName, setCertName] = useState('Anish Traders');
-  const [certFirm, setCertFirm] = useState('FTMO');
-  const [certAmount, setCertAmount] = useState('5000');
-  const [certGenerated, setCertGenerated] = useState(false);
-  const certificateRef = useRef<HTMLDivElement>(null);
+  // Form States
+  const [formFirm, setFormFirm] = useState('FTMO');
+  const [formAmount, setFormAmount] = useState('');
+  const [formImage, setFormImage] = useState('');
+  const [formTrader, setFormTrader] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const handleCreatePayoutProof = (e: React.FormEvent) => {
+  // Interaction States
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [activeLightboxImage, setActiveLightboxImage] = useState<string | null>(null);
+  const [selectedTraderPayouts, setSelectedTraderPayouts] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load payouts and user
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    const rawPayouts = db.getPayouts() || [];
+    const sanitized = rawPayouts.map(p => ({
+      ...p,
+      likes: p.likes || [],
+      comments: p.comments || []
+    }));
+    setPayouts(sanitized);
+    setCurrentUser(db.getCurrentUser());
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+
+  const handleFileUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (PNG/JPG/WEBP).');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File size exceeds 2MB limit.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setFormImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!certName || !certAmount) return;
+    setIsDragging(true);
+  };
 
-    const numericAmount = parseFloat(certAmount);
-    if (isNaN(numericAmount) || numericAmount <= 0) return;
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileUpload(file);
+  };
+
+  // Submit Payout Form
+  const handleSubmitPayout = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formAmount || !formImage) {
+      alert('Amount and Certificate upload are mandatory!');
+      return;
+    }
+
+    const numericAmount = parseFloat(formAmount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      alert('Please enter a valid payout amount.');
+      return;
+    }
+
+    const traderName = currentUser?.loggedIn ? currentUser.username : (formTrader.trim() || 'GuestTrader');
 
     const newPayout: Payout = {
       id: `p-${Date.now()}`,
-      trader: certName.replace(/\s+/g, ''),
+      trader: traderName.replace(/\s+/g, ''),
       amount: numericAmount,
-      propFirm: certFirm,
+      propFirm: formFirm,
       date: new Date().toISOString().split('T')[0],
-      hash: `TXN-${Math.floor(1000000 + Math.random() * 9000000)}-NP`
+      hash: `TXN-${Math.floor(1000000 + Math.random() * 9000000)}-NP`,
+      verified: false, // Must be verified by admin
+      likes: [],
+      comments: [],
+      imageUrl: formImage
     };
 
-    const updatedPayouts = [newPayout, ...payouts];
-    setPayouts(updatedPayouts);
-    db.savePayouts(updatedPayouts);
-    setCertGenerated(true);
+    const updated = [newPayout, ...payouts];
+    setPayouts(updated);
+    db.savePayouts(updated);
 
-    // Auto reset trigger after 3s
-    setTimeout(() => {
-      setCertGenerated(false);
-    }, 4000);
+    // Reset Form
+    setFormAmount('');
+    setFormImage('');
+    setFormTrader('');
+    setSubmitSuccess(true);
+    setTimeout(() => setSubmitSuccess(false), 4000);
   };
 
-  const handlePrint = () => {
-    if (typeof window !== 'undefined') {
-      window.print();
+  // Like Payout
+  const handleLike = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentUser?.loggedIn) {
+      alert('Please connect your account to like payout achievements!');
+      return;
     }
+
+    const updated = payouts.map(p => {
+      if (p.id === id) {
+        const username = currentUser.username;
+        const likesList = p.likes || [];
+        const liked = likesList.includes(username);
+        const nextLikes = liked 
+          ? likesList.filter(u => u !== username)
+          : [...likesList, username];
+        return { ...p, likes: nextLikes };
+      }
+      return p;
+    });
+
+    setPayouts(updated);
+    db.savePayouts(updated);
   };
+
+  // Comment Payout
+  const handlePostComment = (id: string, e: React.FormEvent) => {
+    e.preventDefault();
+    const commentText = commentInputs[id]?.trim();
+    if (!commentText) return;
+
+    if (!currentUser?.loggedIn) {
+      alert('Please connect your account to comment on payouts!');
+      return;
+    }
+
+    const updated = payouts.map(p => {
+      if (p.id === id) {
+        const newComment: Comment = {
+          id: `c-${Date.now()}`,
+          author: currentUser.username,
+          content: commentText,
+          createdAt: new Date().toISOString()
+        };
+        const commentsList = p.comments || [];
+        return { ...p, comments: [...commentsList, newComment] };
+      }
+      return p;
+    });
+
+    setPayouts(updated);
+    db.savePayouts(updated);
+    setCommentInputs(prev => ({ ...prev, [id]: '' }));
+  };
+
+  // Separate list into Verified
+  const verifiedPayouts = payouts.filter(p => p.verified);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-12">
+    <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
       
       {/* Page Header */}
       <div className="text-center space-y-2 max-w-2xl mx-auto">
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white uppercase font-sans">
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary uppercase font-sans">
           Payout <span className="text-brand-green">Showcase</span>
         </h2>
-        <p className="text-xs sm:text-sm text-zinc-400">
-          The Wall of Fame. Real payout splits processed by Nepalese traders from global funding providers. Local payment confirmations verified via eSewa and bank statements.
+        <p className="text-xs sm:text-sm text-text-secondary">
+          The Wall of Fame. Upload your certificates from global funding providers. Local payout confirmations are subject to admin review before verification.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Side: Recent Payouts & Leaderboard */}
-        <div className="lg:col-span-7 space-y-8">
-          
-          {/* Wall of Fame List */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-              <Award className="h-4.5 w-4.5 text-brand-green" />
-              <span>Recent Payouts Verified</span>
-            </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {payouts.map((payout) => (
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Side: Recent Verified Payouts */}
+        <div className="lg:col-span-7 space-y-6 text-left">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+            <Award className="h-5 w-5 text-brand-green" />
+            <span>Verified Payout Wall of Fame</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {verifiedPayouts.map((payout) => {
+              const hasLiked = currentUser?.loggedIn && payout.likes.includes(currentUser.username);
+              const isCommentsOpen = !!expandedComments[payout.id];
+
+              return (
                 <div
                   key={payout.id}
-                  className="rounded-xl border border-zinc-900 bg-[#070708] p-4 space-y-3 hover:border-zinc-800 transition-all"
+                  className="rounded-xl border border-border-theme bg-bg-card hover:border-border-hover transition-all flex flex-col justify-between overflow-hidden"
                 >
-                  <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500">
-                    <span className="font-bold uppercase tracking-wider text-brand-green bg-brand-green/5 border border-brand-green/15 px-2 py-0.5 rounded">
-                      {payout.propFirm}
-                    </span>
-                    <span>{payout.date}</span>
+                  {/* Card Main Body */}
+                  <div className="p-4 space-y-3.5">
+                    <div className="flex justify-between items-center text-[10px] font-mono text-text-muted">
+                      <span className="font-bold uppercase tracking-wider text-brand-green bg-brand-green/5 border border-brand-green/15 px-2 py-0.5 rounded">
+                        {payout.propFirm}
+                      </span>
+                      <span>{payout.date}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-bg-input border border-border-theme text-sm font-bold text-text-primary uppercase cursor-pointer hover:border-brand-green/45 hover:text-brand-green transition-all"
+                          onClick={() => setSelectedTraderPayouts(payout.trader)}
+                        >
+                          {payout.trader.slice(0, 2)}
+                        </div>
+                        <div>
+                          <div 
+                            className="font-bold text-text-primary text-xs cursor-pointer hover:text-brand-green hover:underline transition-all"
+                            onClick={() => setSelectedTraderPayouts(payout.trader)}
+                          >
+                            u/{payout.trader}
+                          </div>
+                          <div className="text-[9px] text-text-muted font-mono leading-none mt-0.5">{payout.hash}</div>
+                        </div>
+                      </div>
+
+                      {payout.imageUrl && (
+                        <div
+                          className="h-10 w-14 rounded overflow-hidden border border-border-theme/60 bg-bg-secondary cursor-pointer hover:scale-105 transition-all"
+                          onClick={() => setActiveLightboxImage(payout.imageUrl || null)}
+                          title="View Certificate"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={payout.imageUrl} alt="Cert" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-baseline justify-between border-t border-border-theme/40 pt-2.5">
+                      <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Payout Amount</span>
+                      <span className="text-base font-black text-brand-green font-mono">
+                        ${payout.amount.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 text-sm font-bold text-white uppercase">
-                      {payout.trader.slice(0, 2)}
-                    </div>
-                    <div>
-                      <div className="font-bold text-white text-xs">u/{payout.trader}</div>
-                      <div className="text-[10px] text-zinc-500 font-mono leading-none mt-0.5">{payout.hash}</div>
-                    </div>
-                  </div>
+                  {/* Card Social Engagement Panel */}
+                  <div className="bg-bg-input/30 border-t border-border-theme/40 p-3 space-y-3">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-text-muted">
+                      <button
+                        onClick={(e) => handleLike(payout.id, e)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded transition-all hover:bg-bg-hover ${
+                          hasLiked ? 'text-brand-green bg-brand-green/5' : 'hover:text-text-primary'
+                        }`}
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${hasLiked ? 'fill-current' : ''}`} />
+                        <span>{payout.likes.length} Likes</span>
+                      </button>
 
-                  <div className="flex items-baseline justify-between border-t border-zinc-900/60 pt-2.5">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Payout Amount</span>
-                    <span className="text-base font-black text-brand-green font-mono">
-                      ${payout.amount.toLocaleString()}
-                    </span>
+                      <button
+                        onClick={() => setExpandedComments(prev => ({ ...prev, [payout.id]: !isCommentsOpen }))}
+                        className="flex items-center gap-1 px-2 py-1 rounded transition-all hover:bg-bg-hover hover:text-text-primary"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>{payout.comments.length} Comments</span>
+                      </button>
+                    </div>
+
+                    {/* Expandable Comments Drawer */}
+                    {isCommentsOpen && (
+                      <div className="space-y-3 border-t border-border-theme/40 pt-3 animate-fade-in">
+                        {payout.comments.length > 0 && (
+                          <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                            {payout.comments.map((comment) => (
+                              <div key={comment.id} className="text-[11px] leading-relaxed rounded bg-bg-secondary/40 p-2 border border-border-theme/40">
+                                <span className="font-bold text-text-primary block">{comment.author}</span>
+                                <span className="text-text-secondary">{comment.content}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {currentUser?.loggedIn ? (
+                          <form onSubmit={(e) => handlePostComment(payout.id, e)} className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              required
+                              placeholder="Write a comment..."
+                              value={commentInputs[payout.id] || ''}
+                              onChange={(e) => setCommentInputs(prev => ({ ...prev, [payout.id]: e.target.value }))}
+                              className="flex-1 rounded-md border border-border-theme bg-bg-input px-2 py-1.5 text-[11px] text-text-primary focus:border-brand-green focus:outline-none"
+                            />
+                            <button
+                              type="submit"
+                              className="rounded-md bg-brand-green px-2.5 py-1.5 text-[10px] font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all"
+                            >
+                              Post
+                            </button>
+                          </form>
+                        ) : (
+                          <div className="text-[10px] text-text-muted italic text-center py-1">
+                            Connect your account to write comments.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Leaderboard Table */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-              <Sparkles className="h-4.5 w-4.5 text-brand-green" />
-              <span>PropNepal Rankings Leaderboard</span>
-            </h3>
-
-            <div className="rounded-xl border border-zinc-900 bg-[#070708] overflow-hidden">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-zinc-900 bg-black/40 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                    <th className="py-3 px-4 text-center">Rank</th>
-                    <th className="py-3 px-4">Trader</th>
-                    <th className="py-3 px-4">Primary Firm</th>
-                    <th className="py-3 px-4 text-center">Total Trades</th>
-                    <th className="py-3 px-4 text-right">Total Payout</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-900/40">
-                  {leaderboard.map((item) => (
-                    <tr key={item.rank} className="hover:bg-zinc-950/40 transition-colors">
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-brand-green">{item.rank}</td>
-                      <td className="py-3.5 px-4 font-bold text-white">u/{item.trader}</td>
-                      <td className="py-3.5 px-4 font-mono font-semibold text-zinc-400">{item.firm}</td>
-                      <td className="py-3.5 px-4 text-center font-mono text-zinc-400">{item.trades}</td>
-                      <td className="py-3.5 px-4 text-right font-black text-white font-mono">{item.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Right Side: Interactive Certificate Builder */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="rounded-xl border border-zinc-800 bg-[#0c0c0e] p-6 space-y-4 glow-accent">
+        {/* Right Side: Upload Certificate Proof */}
+        <div className="lg:col-span-5 space-y-6 text-left">
+          <div className="rounded-xl border border-border-theme bg-bg-card p-6 space-y-4 glow-accent">
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                Certificate Generator
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">
+                Post Payout Certificate
               </h3>
-              <p className="text-[11px] text-zinc-400 mt-1">
-                Enter your funding achievements to compile a custom, high-fidelity PropNepal certificate! Generating also registers you in the community payout stream.
+              <p className="text-[11px] text-text-secondary mt-1">
+                Upload your certificate of payout provided by your prop firm. Mandatory verification applies.
               </p>
             </div>
 
-            <form onSubmit={handleCreatePayoutProof} className="space-y-3.5">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Trader Name</label>
-                <input
-                  type="text"
-                  required
-                  value={certName}
-                  onChange={(e) => setCertName(e.target.value)}
-                  placeholder="e.g. Samir FX"
-                  className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
-                />
-              </div>
+            <form onSubmit={handleSubmitPayout} className="space-y-3.5">
+              {!currentUser?.loggedIn && (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trader Handle</label>
+                  <input
+                    type="text"
+                    required
+                    value={formTrader}
+                    onChange={(e) => setFormTrader(e.target.value)}
+                    placeholder="e.g. SamirFX"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Prop Firm</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Prop Firm</label>
                   <select
-                    value={certFirm}
-                    onChange={(e) => setCertFirm(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-zinc-300 focus:border-brand-green focus:outline-none transition-all"
+                    value={formFirm}
+                    onChange={(e) => setFormFirm(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none"
                   >
-                    <option value="FTMO" className="bg-black">FTMO</option>
-                    <option value="FundedNext" className="bg-black">FundedNext</option>
-                    <option value="The 5%ers" className="bg-black">The 5%ers</option>
-                    <option value="FundedMax" className="bg-black">FundedMax</option>
+                    <option value="FTMO">FTMO</option>
+                    <option value="FundedNext">FundedNext</option>
+                    <option value="The 5%ers">The 5%ers</option>
+                    <option value="FundedMax">FundedMax</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono">Amount (USD)</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Amount (USD)</label>
                   <input
                     type="number"
                     required
-                    value={certAmount}
-                    onChange={(e) => setCertAmount(e.target.value)}
-                    placeholder="e.g. 1250"
-                    className="mt-1 w-full rounded-lg border border-zinc-900 bg-black py-2 px-3 text-xs text-white placeholder-zinc-700 focus:border-brand-green focus:outline-none transition-all"
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
+                    placeholder="e.g. 1500"
+                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none"
                   />
+                </div>
+              </div>
+
+              {/* Certificate Image File Dropzone */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+                  Mandatory Certificate Upload
+                </label>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center ${
+                    isDragging
+                      ? 'border-brand-green bg-brand-green/5'
+                      : formImage
+                        ? 'border-brand-green bg-bg-secondary/40'
+                        : 'border-border-theme bg-bg-secondary/20 hover:border-brand-green/40'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                    className="hidden"
+                  />
+                  {formImage ? (
+                    <div className="space-y-2 w-full flex flex-col items-center">
+                      <div className="h-20 w-32 rounded border border-border-theme overflow-hidden bg-bg-secondary">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={formImage} alt="Uploaded Cert Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[10px] text-brand-green font-bold flex items-center gap-1.5">
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Ready to upload</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 text-text-muted">
+                      <Upload className="h-6 w-6 mx-auto text-text-subtle" />
+                      <div className="text-[10px] font-bold">DRAG & DROP CERTIFICATE IMAGE</div>
+                      <div className="text-[8px] uppercase tracking-wider">or click to browse from device</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="mt-2 w-full rounded-lg bg-brand-green py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all shadow-[0_0_10px_rgba(34,197,94,0.2)] flex items-center justify-center gap-1.5"
+                className="w-full rounded-lg bg-brand-green py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all shadow-[0_0_10px_rgba(34,197,94,0.15)] flex items-center justify-center gap-1.5"
               >
-                {certGenerated ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    <span>Registered Successfully!</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    <span>Compile Certificate</span>
-                  </>
-                )}
+                <Sparkles className="h-4 w-4" />
+                <span>Submit Certificate Proof</span>
               </button>
             </form>
-          </div>
 
-          {/* Certificate Visual Mockup Panel */}
-          <div className="border border-zinc-900 bg-black rounded-xl p-4 overflow-hidden">
-            <div
-              ref={certificateRef}
-              className="relative w-full aspect-[4/3] rounded-lg border-2 border-dashed border-brand-green/30 bg-[#070709] p-6 flex flex-col justify-between text-center glow-accent overflow-hidden"
-              id="printable-certificate"
-            >
-              {/* Corner tech borders */}
-              <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-brand-green/80" />
-              <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-brand-green/80" />
-              <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b border-l border-brand-green/80" />
-              <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b border-r border-brand-green/80" />
-
-              {/* Watermark Logo */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-2">
-                <Award className="h-48 w-48 text-brand-green" />
+            {submitSuccess && (
+              <div className="p-3 bg-brand-green/10 border border-brand-green/30 rounded-lg text-brand-green text-[10px] font-bold flex items-center gap-1.5 animate-fade-in">
+                <Check className="h-4 w-4 flex-shrink-0" />
+                <span>Submitted successfully! It is pending admin verification. You can review and approve it under the central Admin Panel.</span>
               </div>
-
-              {/* Header */}
-              <div className="space-y-1">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-green font-mono">
-                  PROPNEPAL TRADING NETWORK
-                </h4>
-                <h5 className="text-[7px] font-bold uppercase tracking-widest text-zinc-500">
-                  NEPAL'S FIRST PROP TRADING COMMUNITY
-                </h5>
-              </div>
-
-              {/* Body */}
-              <div className="space-y-3">
-                <div className="text-[7px] font-bold uppercase tracking-wider text-zinc-500">
-                  This Certificate of Payout Achievement is Proudly Awarded to
-                </div>
-                <div className="text-lg font-black tracking-tight text-white uppercase border-b border-zinc-900 pb-1.5 max-w-[80%] mx-auto font-sans text-glow">
-                  {certName || 'Your Name'}
-                </div>
-                <div className="text-[8px] text-zinc-400 max-w-sm mx-auto leading-relaxed">
-                  For executing institutional risk parameters and successfully processing a certified payout split of
-                </div>
-                <div className="text-2xl font-black text-brand-green font-mono text-glow">
-                  ${parseFloat(certAmount || '0').toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </div>
-                <div className="text-[8px] text-zinc-500 font-mono uppercase tracking-widest">
-                  Funded via {certFirm} Evaluation Account
-                </div>
-              </div>
-
-              {/* Signatures & Seal */}
-              <div className="flex justify-between items-end border-t border-zinc-900/60 pt-4 px-2">
-                <div className="text-left font-mono text-[7px] text-zinc-500 space-y-0.5">
-                  <div className="font-bold text-white italic">PropNepal Review Board</div>
-                  <div>VERIFIED SECURE</div>
-                </div>
-                {/* Micro seal logo */}
-                <div className="h-10 w-10 rounded-full border border-brand-green/30 bg-brand-green/5 flex items-center justify-center shadow-[0_0_8px_rgba(34,197,94,0.1)]">
-                  <Award className="h-5 w-5 text-brand-green" />
-                </div>
-                <div className="text-right font-mono text-[7px] text-zinc-500 space-y-0.5">
-                  <div className="font-bold text-brand-green">APPROVED SPLIT</div>
-                  <div>HASH ID: TXN-NP</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Print certificate Button */}
-            <div className="mt-3 flex justify-center">
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-[#0d0d0f] hover:border-brand-green hover:text-white px-4 py-2 text-xs font-bold text-zinc-400 uppercase tracking-wider transition-all"
-              >
-                <Printer className="h-4 w-4" />
-                <span>Print / Save PDF</span>
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Certificate Lightbox Modal */}
+      {activeLightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 cursor-zoom-out animate-fade-in"
+          onClick={() => setActiveLightboxImage(null)}
+        >
+          <div className="relative max-w-3xl max-h-[85vh] overflow-hidden rounded-xl border border-brand-green/20 shadow-2xl glow-accent" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src={activeLightboxImage} 
+              alt="Payout Certificate Preview" 
+              className="max-w-full max-h-[80vh] object-contain rounded-xl"
+            />
+            <button 
+              className="absolute top-3 right-3 rounded-lg bg-bg-card/75 border border-border-theme p-1.5 text-text-secondary hover:text-text-primary transition-all hover:bg-bg-hover"
+              onClick={() => setActiveLightboxImage(null)}
+              title="Close Preview"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Trader Payouts Modal */}
+      {selectedTraderPayouts && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in"
+          onClick={() => setSelectedTraderPayouts(null)}
+        >
+          <div 
+            className="relative max-w-2xl w-full max-h-[80vh] overflow-y-auto rounded-2xl border border-border-theme bg-bg-card p-6 space-y-6 shadow-2xl glow-accent"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border-theme pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green/10 border border-brand-green/20 text-base font-bold text-brand-green uppercase font-sans">
+                  {selectedTraderPayouts.slice(0, 2)}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-text-primary">Trader Payout Profile</h3>
+                  <p className="text-xs text-brand-green font-semibold">u/{selectedTraderPayouts}</p>
+                </div>
+              </div>
+              <button 
+                className="rounded-lg border border-border-theme p-2 text-text-secondary hover:text-text-primary transition-all hover:bg-bg-hover"
+                onClick={() => setSelectedTraderPayouts(null)}
+                title="Close Modal"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Stats Summary */}
+            {(() => {
+              const traderPayouts = payouts.filter(p => p.trader.toLowerCase() === selectedTraderPayouts.toLowerCase());
+              const verifiedAmount = traderPayouts.filter(p => p.verified).reduce((sum, p) => sum + p.amount, 0);
+              const pendingAmount = traderPayouts.filter(p => !p.verified).reduce((sum, p) => sum + p.amount, 0);
+              const totalPayoutsCount = traderPayouts.length;
+
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-bg-secondary border border-border-theme rounded-xl p-3 text-center space-y-1">
+                      <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Total Claims</div>
+                      <div className="text-base font-black text-text-primary font-mono">{totalPayoutsCount}</div>
+                    </div>
+                    <div className="bg-bg-secondary border border-border-theme rounded-xl p-3 text-center space-y-1">
+                      <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Verified Payout</div>
+                      <div className="text-base font-black text-brand-green font-mono">${verifiedAmount.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-bg-secondary border border-border-theme rounded-xl p-3 text-center space-y-1">
+                      <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Pending Review</div>
+                      <div className="text-base font-black text-yellow-500 font-mono">${pendingAmount.toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  {/* Payouts list */}
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-text-muted">Payout Transaction History</h4>
+                    {traderPayouts.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-text-muted italic bg-bg-secondary/40 border border-dashed border-border-theme rounded-xl">
+                        No payout transactions logged.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+                        {traderPayouts.map(p => (
+                          <div 
+                            key={p.id} 
+                            className="p-3 bg-bg-secondary border border-border-theme rounded-xl flex items-center justify-between gap-4 hover:border-border-hover transition-colors"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-[10px] text-text-primary bg-bg-input px-2 py-0.5 rounded border border-border-theme uppercase">
+                                  {p.propFirm}
+                                </span>
+                                <span className="text-[10px] text-text-muted font-mono">{p.date}</span>
+                              </div>
+                              <div className="text-[9px] text-text-muted font-mono">{p.hash}</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right space-y-0.5">
+                                <div className="font-bold font-mono text-brand-green text-sm">${p.amount.toLocaleString()}</div>
+                                <div className="text-[9px] font-bold uppercase">
+                                  {p.verified ? (
+                                    <span className="text-brand-green inline-flex items-center gap-0.5">
+                                      <Check className="h-3 w-3" /> Verified
+                                    </span>
+                                  ) : (
+                                    <span className="text-yellow-500">Pending Review</span>
+                                  )}
+                                </div>
+                              </div>
+                              {p.imageUrl && (
+                                <div 
+                                  className="h-10 w-14 rounded overflow-hidden border border-border-theme bg-bg-input flex-shrink-0 cursor-pointer hover:scale-105 transition-all"
+                                  onClick={() => setActiveLightboxImage(p.imageUrl || null)}
+                                  title="View Certificate"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={p.imageUrl} alt="Certificate" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

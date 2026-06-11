@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, CheckCircle2, Circle, HelpCircle, ArrowUpRight } from 'lucide-react';
+import { CheckCircle2, Circle } from 'lucide-react';
 
 export default function Roadmap() {
   const milestones = [
@@ -41,16 +41,16 @@ export default function Roadmap() {
       
       {/* Page Header */}
       <div className="text-center space-y-2 max-w-2xl mx-auto">
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white uppercase font-sans">
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary uppercase font-sans">
           Community <span className="text-brand-green">Roadmap</span>
         </h2>
-        <p className="text-xs sm:text-sm text-zinc-400">
+        <p className="text-xs sm:text-sm text-text-secondary">
           Building the future of trading in Nepal. Follow our development stages as we build tools, indicators, copy networks, and bots to empower local traders.
         </p>
       </div>
 
       {/* Timeline Layout */}
-      <div className="relative border-l border-zinc-900 ml-4 sm:ml-8 pl-6 sm:pl-10 space-y-10 max-w-3xl mx-auto text-left">
+      <div className="relative border-l border-border-theme ml-4 sm:ml-8 pl-6 sm:pl-10 space-y-10 max-w-3xl mx-auto text-left">
         {milestones.map((ms, index) => {
           const isActive = ms.status === 'active';
           const isCompleted = ms.status === 'completed';
@@ -58,12 +58,12 @@ export default function Roadmap() {
           return (
             <div key={index} className="relative">
               {/* Left timeline indicator circle */}
-              <div className={`absolute -left-[31px] sm:-left-[47px] top-1 flex h-6 w-6 items-center justify-center rounded-full border bg-black transition-all ${
+              <div className={`absolute -left-[31px] sm:-left-[47px] top-1 flex h-6 w-6 items-center justify-center rounded-full border bg-bg transition-all ${
                 isCompleted 
                   ? 'border-brand-green bg-brand-green/10 text-brand-green' 
                   : isActive 
-                    ? 'border-brand-green bg-black text-brand-green pulse-indicator shadow-[0_0_10px_rgba(34,197,94,0.4)]'
-                    : 'border-zinc-800 text-zinc-700'
+                    ? 'border-brand-green bg-bg text-brand-green pulse-indicator shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                    : 'border-border-theme text-text-muted'
               }`}>
                 {isCompleted ? (
                   <CheckCircle2 className="h-4 w-4" />
@@ -77,39 +77,39 @@ export default function Roadmap() {
               {/* Card Container */}
               <div className={`rounded-xl border p-5 sm:p-6 transition-all duration-300 ${
                 isActive 
-                  ? 'border-brand-green/30 bg-[#0c0c0e] glow-accent' 
-                  : 'border-zinc-900 bg-[#070708] hover:border-zinc-800'
+                  ? 'border-brand-green/30 bg-bg-input glow-accent' 
+                  : 'border-border-theme bg-bg-card hover:border-border-hover'
               }`}>
                 {/* Header */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-900/60 pb-3 mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-theme/60 pb-3 mb-3">
                   <div>
-                    <span className="text-[10px] font-bold font-mono text-zinc-500 uppercase tracking-widest block">
+                    <span className="text-[10px] font-bold font-mono text-text-muted uppercase tracking-widest block">
                       TIMELINE TARGET
                     </span>
-                    <h3 className="text-sm sm:text-base font-black text-white mt-0.5">
+                    <h3 className="text-sm sm:text-base font-black text-text-primary mt-0.5">
                       {ms.title}
                     </h3>
                   </div>
                   <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
                     isCompleted 
-                      ? 'bg-zinc-900 text-zinc-400 border border-zinc-800' 
+                      ? 'bg-bg-input text-text-secondary border border-border-theme' 
                       : isActive 
                         ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
-                        : 'bg-black text-zinc-600 border border-zinc-950'
+                        : 'bg-bg text-text-muted border border-border-theme'
                   }`}>
                     {ms.quarter} • {ms.status.replace('_', ' ')}
                   </span>
                 </div>
 
                 {/* Description */}
-                <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                <p className="text-xs text-text-secondary leading-relaxed mb-4">
                   {ms.desc}
                 </p>
 
                 {/* Bullets */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {ms.points.map((p, pIdx) => (
-                    <div key={pIdx} className="flex items-start space-x-2 text-[11px] text-zinc-300 leading-snug">
+                    <div key={pIdx} className="flex items-start space-x-2 text-[11px] text-text-secondary leading-snug">
                       <div className="mt-1 h-1.5 w-1.5 rounded-full bg-brand-green flex-shrink-0" />
                       <span>{p}</span>
                     </div>

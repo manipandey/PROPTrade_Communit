@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "PropNepal — Nepal's First Prop Trading Community Platform",
-  description: "Connect with Nepal's premier funded traders. Share payout proofs, log trading journals, compare prop firm reviews, and master evaluation strategies to access institutional trading capital.",
+  title: "PropNepal — Nepal's Premier Prop Trading Community",
+  description: "Connect with Nepal's funded traders. Share payout proofs, log trading journals, compare prop firm reviews, and master evaluation strategies to access institutional capital.",
+  keywords: ["prop trading", "Nepal", "FTMO", "FundedNext", "trading journal", "funded trader"],
 };
 
 export default function RootLayout({
@@ -23,11 +20,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" data-theme="dark" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script
+          id="theme-loader"
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var theme = localStorage.getItem('propnepal_theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+              } catch(e) {}
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full overflow-hidden">{children}</body>
     </html>
   );
 }

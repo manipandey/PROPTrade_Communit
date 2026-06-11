@@ -2,10 +2,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, LogIn, LogOut, Menu, X, ArrowUpRight, ArrowDownRight, Globe } from 'lucide-react';
+import { Shield, LogIn, LogOut, Menu, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react';
+import { db } from '@/lib/supabase';
 
 interface HeaderProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string } | null;
+  currentUser: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
   onOpenAuth: () => void;
   onLogout: () => void;
   activeTab: string;
@@ -14,20 +15,19 @@ interface HeaderProps {
 
 interface TickerItem {
   symbol: string;
-  price: string;
-  change: string;
-  isPositive: boolean;
+  priceValue: number;
+  changeValue: number;
 }
 
 export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, setActiveTab }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tickerData, setTickerData] = useState<TickerItem[]>([
-    { symbol: 'XAUUSD (Gold)', price: '2428.50', change: '+1.24%', isPositive: true },
-    { symbol: 'EURUSD', price: '1.0832', change: '+0.08%', isPositive: true },
-    { symbol: 'US30 (Dow)', price: '39820', change: '-0.15%', isPositive: false },
-    { symbol: 'BTCUSD', price: '67,250', change: '+2.10%', isPositive: true },
-    { symbol: 'NEPSE (Nepal)', price: '2,014.25', change: '+0.45%', isPositive: true },
-    { symbol: 'GBPUSD', price: '1.2715', change: '-0.04%', isPositive: false }
+    { symbol: 'XAUUSD (Gold)', priceValue: 2428.50, changeValue: 1.24 },
+    { symbol: 'EURUSD', priceValue: 1.0832, changeValue: 0.08 },
+    { symbol: 'US30 (Dow)', priceValue: 39820, changeValue: -0.15 },
+    { symbol: 'BTCUSD', priceValue: 67250, changeValue: 2.10 },
+    { symbol: 'NEPSE (Nepal)', priceValue: 2014.25, changeValue: 0.45 },
+    { symbol: 'GBPUSD', priceValue: 1.2715, changeValue: -0.04 }
   ]);
 
   // Simulate updating ticker prices in real-time
@@ -35,22 +35,14 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
     const interval = setInterval(() => {
       setTickerData((prev) =>
         prev.map((item) => {
-          const numericPrice = parseFloat(item.price.replace(/,/g, ''));
           const percentChange = (Math.random() - 0.48) * 0.1; // slight bias towards green
-          const newPrice = (numericPrice * (1 + percentChange / 100)).toFixed(
-            item.symbol.includes('EUR') || item.symbol.includes('GBP') ? 4 : 2
-          );
-          const currentChange = parseFloat(item.change.replace('%', ''));
-          const newChange = (currentChange + percentChange).toFixed(2) + '%';
-          const formattedPrice = parseFloat(newPrice).toLocaleString(undefined, {
-            minimumFractionDigits: item.symbol.includes('EUR') || item.symbol.includes('GBP') ? 4 : 2
-          });
+          const nextPrice = item.priceValue * (1 + percentChange / 100);
+          const nextChange = item.changeValue + percentChange;
 
           return {
             ...item,
-            price: formattedPrice,
-            change: (parseFloat(newChange) >= 0 ? '+' : '') + newChange,
-            isPositive: parseFloat(newChange) >= 0
+            priceValue: nextPrice,
+            changeValue: nextChange
           };
         })
       );
@@ -61,38 +53,49 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
 
   const navItems = [
     { id: 'home', label: 'Home' },
-    { id: 'feed', label: 'Community Feed' },
     { id: 'profiles', label: 'Top Traders' },
     { id: 'payouts', label: 'Payout Showcase' },
     { id: 'journals', label: 'Trading Journals' },
     { id: 'reviews', label: 'Prop Firm Reviews' },
-    { id: 'academy', label: 'Learning Hub' }
+    { id: 'academy', label: 'Learning Hub' },
+    { id: 'admin', label: 'Admin Panel' }
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-900 bg-black/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-border-theme bg-bg/85 backdrop-blur-md">
       {/* Ticker Tape */}
-      <div className="w-full border-b border-zinc-900 bg-[#060608] py-1.5 overflow-hidden text-xs">
+      <div className="w-full border-b border-border-theme bg-bg-secondary py-1.5 overflow-hidden text-xs">
         <div className="flex animate-marquee whitespace-nowrap gap-8 items-center px-4">
-          {tickerData.concat(tickerData).map((item, index) => (
-            <div key={index} className="inline-flex items-center space-x-2 font-mono">
-              <span className="text-zinc-400 font-semibold">{item.symbol}</span>
-              <span className="text-white font-bold">{item.price}</span>
-              <span
-                className={`inline-flex items-center font-bold ${
-                  item.isPositive ? 'text-brand-green' : 'text-red-500'
-                }`}
-              >
-                {item.isPositive ? (
-                  <ArrowUpRight className="h-3 w-3 mr-0.5" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 mr-0.5" />
-                )}
-                {item.change}
-              </span>
-              <span className="text-zinc-800">|</span>
-            </div>
-          ))}
+          {tickerData.concat(tickerData).map((item, index) => {
+            const isEURorGBP = item.symbol.includes('EUR') || item.symbol.includes('GBP');
+            const decimals = isEURorGBP ? 4 : 2;
+            const displayPrice = item.priceValue.toLocaleString('en-US', {
+              minimumFractionDigits: decimals,
+              maximumFractionDigits: decimals
+            });
+            const displayChange = (item.changeValue >= 0 ? '+' : '') + item.changeValue.toFixed(2) + '%';
+            const isPositive = item.changeValue >= 0;
+
+            return (
+              <div key={index} className="inline-flex items-center space-x-2 font-mono">
+                <span className="text-text-secondary font-semibold">{item.symbol}</span>
+                <span className="text-text-primary font-bold">{displayPrice}</span>
+                <span
+                  className={`inline-flex items-center font-bold ${
+                    isPositive ? 'text-brand-green' : 'text-red-500'
+                  }`}
+                >
+                  {isPositive ? (
+                    <ArrowUpRight className="h-3 w-3 mr-0.5" />
+                  ) : (
+                    <ArrowDownRight className="h-3 w-3 mr-0.5" />
+                  )}
+                  {displayChange}
+                </span>
+                <span className="text-text-subtle">|</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -103,15 +106,15 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-green to-emerald-600 shadow-[0_0_15px_rgba(34,197,94,0.3)]">
               <Shield className="h-5 w-5 text-black stroke-[2.5]" />
-              <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border border-black bg-red-600 flex items-center justify-center text-[8px] font-bold text-white leading-none">
+              <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border border-bg bg-red-600 flex items-center justify-center text-[8px] font-bold text-white leading-none">
                 🇳🇵
               </div>
             </div>
             <div>
-              <span className="text-lg font-black tracking-tight text-white uppercase font-sans">
+              <span className="text-lg font-black tracking-tight text-text-primary uppercase font-sans">
                 Prop<span className="text-brand-green">Nepal</span>
               </span>
-              <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 font-mono -mt-1">
+              <div className="text-[9px] font-bold uppercase tracking-wider text-text-muted font-mono -mt-1">
                 Community Platform
               </div>
             </div>
@@ -126,7 +129,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
                 className={`rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
                   activeTab === item.id
                     ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
                 }`}
               >
                 {item.label}
@@ -137,17 +140,40 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
           {/* Right Section: Auth & Profile */}
           <div className="hidden lg:flex items-center space-x-4">
             {currentUser && currentUser.loggedIn ? (
-              <div className="flex items-center space-x-3 rounded-xl border border-zinc-800 bg-[#0d0d0f] p-1.5 pr-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 text-sm font-bold text-white border border-zinc-700 glow-accent">
+              <div className="flex items-center space-x-3 rounded-xl border border-border-theme bg-bg-secondary p-1.5 pr-3">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold border glow-accent ${
+                  currentUser.isDemo ? 'bg-yellow-950/20 text-yellow-400 border-yellow-800/40' : 'bg-bg-input text-text-primary border-border-theme'
+                }`}>
                   {currentUser.avatar}
                 </div>
                 <div className="text-left">
-                  <div className="text-xs font-bold text-white">{currentUser.username}</div>
-                  <div className="text-[9px] font-semibold text-brand-green uppercase tracking-wider">Funded Trader</div>
+                  <div className="text-xs font-bold text-text-primary flex items-center gap-1">
+                    {currentUser.username}
+                    {currentUser.isDemo && (
+                      <span className="text-[8px] bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-1 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Demo</span>
+                    )}
+                  </div>
+                  <div className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">
+                    {currentUser.isDemo ? 'Demo Profile' : 'Funded Trader'}
+                  </div>
                 </div>
+                {currentUser.isDemo && (
+                  <button
+                    onClick={() => {
+                      if (confirm("Are you sure you want to delete this demo account and all its journal data? This cannot be undone.")) {
+                        db.deleteUserAccount(currentUser.username);
+                        onLogout();
+                      }
+                    }}
+                    className="ml-2 text-text-muted hover:text-red-500 transition-colors p-1"
+                    title="Delete Demo Account"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   onClick={onLogout}
-                  className="ml-2 text-zinc-500 hover:text-red-500 transition-colors p-1"
+                  className="ml-1 text-text-muted hover:text-red-500 transition-colors p-1"
                   title="Log Out"
                 >
                   <LogOut className="h-4 w-4" />
@@ -168,7 +194,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
           <div className="flex lg:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center rounded-lg border border-zinc-800 bg-[#0c0c0e] p-2 text-zinc-400 hover:text-white transition-colors"
+              className="inline-flex items-center justify-center rounded-lg border border-border-theme bg-bg-input p-2 text-text-secondary hover:text-text-primary transition-colors"
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -178,7 +204,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-zinc-950 bg-black/95 p-4 animate-fade-in space-y-4">
+        <div className="lg:hidden border-t border-border-theme bg-bg/95 p-4 animate-fade-in space-y-4">
           <div className="flex flex-col space-y-2">
             {navItems.map((item) => (
               <button
@@ -190,7 +216,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
                 className={`w-full rounded-lg py-3 px-4 text-left text-sm font-bold uppercase tracking-wider transition-all ${
                   activeTab === item.id
                     ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
-                    : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-white'
+                    : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
                 }`}
               >
                 {item.label}
@@ -198,28 +224,56 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
             ))}
           </div>
 
-          <div className="border-t border-zinc-900 pt-4">
+          <div className="border-t border-border-theme pt-4">
             {currentUser && currentUser.loggedIn ? (
-              <div className="flex items-center justify-between rounded-xl bg-zinc-950 p-3 border border-zinc-900">
-                <div className="flex items-center space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-green/10 text-brand-green border border-brand-green/30 text-lg font-bold">
-                    {currentUser.avatar}
+              <div className="flex flex-col gap-3 rounded-xl bg-bg-input p-3 border border-border-theme">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg border text-lg font-bold ${
+                      currentUser.isDemo ? 'bg-yellow-950/20 text-yellow-400 border-yellow-800/40' : 'bg-brand-green/10 text-brand-green border-brand-green/30'
+                    }`}>
+                      {currentUser.avatar}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-text-primary flex items-center gap-1.5">
+                        {currentUser.username}
+                        {currentUser.isDemo && (
+                          <span className="text-[8px] bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-1 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Demo</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-text-muted font-semibold">
+                        {currentUser.isDemo ? 'Demo Profile' : 'Funded Trader'}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm font-bold text-white">{currentUser.username}</div>
-                    <div className="text-xs text-brand-green font-semibold">Funded Trader</div>
+                  <div className="flex gap-2">
+                    {currentUser.isDemo && (
+                      <button
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this demo account and all its journal data? This cannot be undone.")) {
+                            db.deleteUserAccount(currentUser.username);
+                            onLogout();
+                            setMobileMenuOpen(false);
+                          }
+                        }}
+                        className="flex items-center justify-center rounded-lg bg-red-950/20 border border-red-900/50 p-2 text-red-400 hover:bg-red-950/50 hover:text-red-355 transition-all"
+                        title="Delete Demo Account"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        onLogout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="flex items-center space-x-1 rounded-lg bg-bg-input border border-border-theme px-3 py-1.5 text-xs font-bold text-text-secondary hover:text-text-primary transition-all"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Logout</span>
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    onLogout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center space-x-1 rounded-lg bg-red-950/30 border border-red-900/50 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-950/50 hover:text-red-300 transition-all"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span>Logout</span>
-                </button>
               </div>
             ) : (
               <button

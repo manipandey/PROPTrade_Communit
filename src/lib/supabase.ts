@@ -12,6 +12,7 @@ export interface Post {
   comments: Comment[];
   createdAt: string;
   userVoted?: 'up' | 'down' | null;
+  imageUrl?: string;
 }
 
 export interface Comment {
@@ -33,6 +34,18 @@ export interface TraderProfile {
   status: 'Active' | 'Under Review' | 'Resetting';
   equityCurve: number[];
   bio: string;
+  isDemo?: boolean;
+  // Dynamic metrics computed for sorting
+  journalCount?: number;
+  totalProfit?: number;
+}
+
+export interface TradingAccount {
+  id: string;
+  name: string;
+  type: 'Challenge' | 'Funded';
+  propFirm: string;
+  size: number;
 }
 
 export interface Payout {
@@ -42,6 +55,10 @@ export interface Payout {
   propFirm: string;
   date: string;
   hash: string;
+  verified: boolean;
+  likes: string[]; // usernames of users who liked
+  comments: Comment[];
+  imageUrl?: string;
 }
 
 export interface Review {
@@ -57,6 +74,50 @@ export interface Review {
   cons: string[];
 }
 
+export interface Ad {
+  id: string;
+  text: string;
+  author: string;
+  isSponsored: boolean;
+  logoUrl?: string;
+  imageUrl?: string; // Optional banner image uploaded by the admin
+}
+
+export interface Lesson {
+  title: string;
+  content: string; // Further description/text content of the lesson
+  mediaUrl?: string; // Image or Video URL/base64
+  mediaType?: 'image' | 'video'; // Type of media
+}
+
+export interface CourseModule {
+  id: string;
+  level: string;
+  title: string;
+  duration: string;
+  desc: string;
+  lessons: Lesson[];
+}
+
+export type Emotion = 'calm' | 'confident' | 'anxious' | 'fomo' | 'revenge' | 'frustrated' | 'neutral';
+export type SetupType = 'Supply Zone' | 'Demand Zone' | 'FVG Fill' | 'Breakout' | 'Breakdown' | 'Scalp' | 'Trend Follow' | 'Mean Reversion' | 'News Trade' | 'Liquidity Sweep' | 'Order Block' | 'Other';
+
+export const EMOTIONS: { value: Emotion; label: string; emoji: string; color: string }[] = [
+  { value: 'calm', label: 'Calm', emoji: '😌', color: 'text-sky-400' },
+  { value: 'confident', label: 'Confident', emoji: '💪', color: 'text-brand-green' },
+  { value: 'neutral', label: 'Neutral', emoji: '😐', color: 'text-text-secondary' },
+  { value: 'anxious', label: 'Anxious', emoji: '😰', color: 'text-yellow-400' },
+  { value: 'fomo', label: 'FOMO', emoji: '🔥', color: 'text-orange-400' },
+  { value: 'revenge', label: 'Revenge', emoji: '😤', color: 'text-red-400' },
+  { value: 'frustrated', label: 'Frustrated', emoji: '😖', color: 'text-red-500' },
+];
+
+export const SETUP_TYPES: SetupType[] = [
+  'Supply Zone', 'Demand Zone', 'FVG Fill', 'Breakout', 'Breakdown',
+  'Scalp', 'Trend Follow', 'Mean Reversion', 'News Trade',
+  'Liquidity Sweep', 'Order Block', 'Other'
+];
+
 export interface JournalEntry {
   id: string;
   date: string;
@@ -67,6 +128,26 @@ export interface JournalEntry {
   exitPrice: number;
   pnl: number;
   notes: string;
+  emotion: Emotion;
+  setup: SetupType;
+  author: string;
+  riskPct?: number;       // Capital risk % (e.g. 1.5)
+  riskReward?: number;    // Risk-to-reward ratio (e.g. 3.0)
+  imageUrl?: string;      // Screenshot URL or uploaded image base64
+  accountId?: string;     // Associated trading account
+}
+
+export interface JournalSettings {
+  isPublic: boolean;
+}
+
+export interface TradeFeedback {
+  id: string;
+  tradeId: string;
+  author: string;
+  comment: string;
+  rating?: number;
+  createdAt: string;
 }
 
 // Initial Mock Data
@@ -83,7 +164,8 @@ const initialPosts: Post[] = [
       { id: 'c-1', author: 'SandhyaScalps', content: 'Preach! The 1.5% daily stop is the only thing keeping my account alive this month.', createdAt: '2026-05-20T14:30:00Z' },
       { id: 'c-2', author: 'RohanPips', content: 'Great post. News trading on FTMO is a recipe for slippage disasters.', createdAt: '2026-05-20T16:15:00Z' }
     ],
-    createdAt: '2026-05-20T12:00:00Z'
+    createdAt: '2026-05-20T12:00:00Z',
+    imageUrl: '/feed-images/trading-chart-gold.png'
   },
   {
     id: 'post-2',
@@ -96,7 +178,8 @@ const initialPosts: Post[] = [
     comments: [
       { id: 'c-3', author: 'GoldDiggerNP', content: 'Banks look undervalued but liquidity in the local market is still tight. Proceed with caution.', createdAt: '2026-05-21T02:00:00Z' }
     ],
-    createdAt: '2026-05-21T01:10:00Z'
+    createdAt: '2026-05-21T01:10:00Z',
+    imageUrl: '/feed-images/nepse-chart.png'
   },
   {
     id: 'post-3',
@@ -110,7 +193,8 @@ const initialPosts: Post[] = [
       { id: 'c-4', author: 'PrabeshFX', content: 'Congratulations bro! Well deserved. What pair did you trade during the payout cycle?', createdAt: '2026-05-21T04:20:00Z' },
       { id: 'c-5', author: 'BishalFX', content: 'Mainly XAUUSD buy scaling. Gold has been trending beautifully!', createdAt: '2026-05-21T04:35:00Z' }
     ],
-    createdAt: '2026-05-21T03:05:00Z'
+    createdAt: '2026-05-21T03:05:00Z',
+    imageUrl: '/feed-images/payout-confirmation.png'
   },
   {
     id: 'post-4',
@@ -121,7 +205,8 @@ const initialPosts: Post[] = [
     tags: ['Discipline', 'WinRate', 'Psychology'],
     upvotes: 31,
     comments: [],
-    createdAt: '2026-05-20T08:15:00Z'
+    createdAt: '2026-05-20T08:15:00Z',
+    imageUrl: '/feed-images/trading-journal.png'
   }
 ];
 
@@ -168,10 +253,10 @@ const initialProfiles: TraderProfile[] = [
 ];
 
 const initialPayouts: Payout[] = [
-  { id: 'p-1', trader: 'BishalFX', amount: 1240, propFirm: 'FundedNext', date: '2026-05-21', hash: 'TXN-9842183-NP' },
-  { id: 'p-2', trader: 'PrabeshFX', amount: 4550, propFirm: 'FTMO', date: '2026-05-18', hash: 'TXN-4190823-NP' },
-  { id: 'p-3', trader: 'SandhyaScalps', amount: 2890, propFirm: 'The 5%ers', date: '2026-05-15', hash: 'TXN-8371902-NP' },
-  { id: 'p-4', trader: 'RohanPips', amount: 3750, propFirm: 'FundedNext', date: '2026-05-10', hash: 'TXN-2839103-NP' }
+  { id: 'p-1', trader: 'BishalFX', amount: 1240, propFirm: 'FundedNext', date: '2026-05-21', hash: 'TXN-9842183-NP', verified: true, likes: ['PrabeshFX'], comments: [{ id: 'c-p1', author: 'PrabeshFX', content: 'Congrats Bishal! Big milestone.', createdAt: '2026-05-21T05:00:00Z' }] },
+  { id: 'p-2', trader: 'PrabeshFX', amount: 4550, propFirm: 'FTMO', date: '2026-05-18', hash: 'TXN-4190823-NP', verified: true, likes: ['SandhyaScalps', 'RohanPips'], comments: [] },
+  { id: 'p-3', trader: 'SandhyaScalps', amount: 2890, propFirm: 'The 5%ers', date: '2026-05-15', hash: 'TXN-8371902-NP', verified: true, likes: [], comments: [] },
+  { id: 'p-4', trader: 'RohanPips', amount: 3750, propFirm: 'FundedNext', date: '2026-05-10', hash: 'TXN-2839103-NP', verified: true, likes: [], comments: [] }
 ];
 
 const initialReviews: Review[] = [
@@ -213,13 +298,232 @@ const initialReviews: Review[] = [
   }
 ];
 
-const initialJournals: JournalEntry[] = [
-  { id: 'j-1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2415.50, exitPrice: 2427.80, pnl: 2460.00, notes: 'Broke out of Asian range. Golden cross on 15m. Perfect execution, closed at structural resistance.' },
-  { id: 'j-2', date: '2026-05-19', asset: 'EURUSD', direction: 'SELL', lots: 1.50, entryPrice: 1.08520, exitPrice: 1.08220, pnl: 450.00, notes: 'Fakeout at 1.0860 psychological level. MACD bearish crossover on 1h chart. Closed at key support.' },
-  { id: 'j-3', date: '2026-05-18', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39800, exitPrice: 39550, pnl: -125.00, notes: 'Impulse buy on US Open. Violated plan by trading inside range. Stopped out quickly.' }
+const initialModules: CourseModule[] = [
+  {
+    id: 'mod-1',
+    level: 'Beginner',
+    title: 'Prop Firm Fundamentals',
+    duration: '45 Mins',
+    desc: 'Understand how modern prop trading works, the differences between evaluation challenges, and how to select the right funding provider in Nepal.',
+    lessons: [
+      {
+        title: 'Introduction to Prop Capital',
+        content: 'Proprietary trading firms (prop firms) provide traders with access to large sums of capital in exchange for a percentage of the profits. This model allows talented traders to scale their income without risking their personal savings. In Nepal, prop trading has gained massive popularity as a path to financial freedom.',
+        mediaUrl: '/feed-images/trading-chart-gold.png',
+        mediaType: 'image'
+      },
+      {
+        title: 'Evaluation vs Instant Funding',
+        content: 'Evaluation challenges require traders to pass a two-phase test to prove their consistency and risk management skills. Instant funding bypasses this phase, but usually comes with smaller profit splits and higher initial fees. Select the structure that matches your trading timeline and risk tolerance.',
+        mediaUrl: '/feed-images/nepse-chart.png',
+        mediaType: 'image'
+      },
+      {
+        title: 'Understanding Evaluation Fee Refunds',
+        content: 'Most reputable prop firms (like FTMO and FundedNext) refund your challenge registration fee in full with your very first successful profit split payout. This ensures that once you prove consistency, your net initial cost becomes zero.',
+        mediaUrl: '/feed-images/payout-confirmation.png',
+        mediaType: 'image'
+      }
+    ]
+  },
+  {
+    id: 'mod-2',
+    level: 'Intermediate',
+    title: 'Mastering Strict Drawdown Rules',
+    duration: '1.5 Hours',
+    desc: 'The single most important skill. Learn details of balance-based vs equity-based drawdown, daily stop calculations, and news-trading restrictions.',
+    lessons: [
+      {
+        title: 'Equity vs Balance-Based Drawdowns',
+        content: 'Drawdown limit checks can be based on your starting day balance or floating equity. Balance-based is much safer, as it ignores intra-day floating profit peaks. Equity-based drawdown is sensitive to trade retracements and requires active stop management.',
+        mediaUrl: '/feed-images/trading-chart-gold.png',
+        mediaType: 'image'
+      },
+      {
+        title: 'Setting Daily Automatic Risk Stops',
+        content: 'The most effective way to protect your account is to calculate your daily limit (e.g. 5% max FTMO limit) and configure your broker or local journal tracker to alert or close trades automatically once you reach a 2% daily loss threshold.',
+        mediaUrl: '/feed-images/trading-journal.png',
+        mediaType: 'image'
+      },
+      {
+        title: 'Handling News Slippage Policies',
+        content: 'Trading during major economic announcements (CPI, FOMC, NFP) is highly restricted by many firms. Slippage can trigger massive losses that violate your drawdown targets. Always check the calendar and close swing positions prior to high-impact news releases.',
+        mediaUrl: '/feed-images/payout-confirmation.png',
+        mediaType: 'image'
+      }
+    ]
+  },
+  {
+    id: 'mod-3',
+    level: 'Advanced',
+    title: 'Smart Money Concepts & Liquidity',
+    duration: '2.5 Hours',
+    desc: 'Master the high-R:R setups required to pass evaluation profit targets (8-10%) quickly while maintaining extremely tight risk limits.',
+    lessons: [
+      {
+        title: 'Order Blocks & Fair Value Gaps (FVG)',
+        content: 'Smart Money Concepts (SMC) focus on institutional footprint entries. Look for strong impulse moves that leave behind Fair Value Gaps (FVG). Place limit orders in these imbalance zones for high-probability setups with tight stop losses.',
+        mediaUrl: '/feed-images/trading-chart-gold.png',
+        mediaType: 'image'
+      },
+      {
+        title: 'Identifying Asian Session Liquidity Sweeps',
+        content: 'The Asian session accumulates buy/sell orders that act as liquidity pools. During London or NY session open, wait for the market to run those highs/lows (sweeping liquidity) before entering in the opposite direction. This is a primary high-R:R setup.',
+        mediaUrl: '/feed-images/nepse-chart.png',
+        mediaType: 'image'
+      },
+      {
+        title: 'Risk Scaling on Win Streaks',
+        content: 'When you are in a streak of wins, do not increase your leverage. Scale down your risk percentage (e.g., from 1% to 0.5%) to lock in profits and protect your challenge drawdown buffers. Consistent sizing leads to successful payouts.',
+        mediaUrl: '/feed-images/trading-journal.png',
+        mediaType: 'image'
+      }
+    ]
+  }
 ];
 
+const initialAds: Ad[] = [
+  {
+    id: 'ad-propnepal',
+    text: 'Join PropNepal Elite community. Log journals, verify payouts, and master prop challenges with the ultimate Nepalese trading network!',
+    author: 'PropNepal Academy',
+    isSponsored: true,
+    logoUrl: '/logo-icon.svg'
+  },
+  { id: 'ad-1', text: "The goal of a successful trader is to make the best trades. Money is secondary.", author: "Alexander Elder", isSponsored: true },
+  { id: 'ad-2', text: "In this business, if you're good, you're right six times out of ten. You're never going to be right nine times out of ten.", author: "Peter Lynch", isSponsored: true },
+  { id: 'ad-3', text: "The stock market is filled with individuals who know the price of everything, but the value of nothing.", author: "Philip Fisher", isSponsored: true },
+  { id: 'ad-4', text: "Risk comes from not knowing what you're doing.", author: "Warren Buffett", isSponsored: true },
+  { id: 'ad-5', text: "Don't focus on making money; focus on protecting what you have.", author: "Paul Tudor Jones", isSponsored: true },
+  { id: 'ad-6', text: "The elements of good trading are: cutting losses, cutting losses, and cutting losses.", author: "Ed Seykota", isSponsored: true },
+  { id: 'ad-7', text: "It's not whether you're right or wrong that's important, but how much money you make when you're right and how much you lose when you're wrong.", author: "George Soros", isSponsored: true },
+  { id: 'ad-8', text: "Losers average losers. Cut your losses and let your winners run.", author: "Paul Tudor Jones", isSponsored: true },
+  { id: 'ad-9', text: "The market is a device for transferring money from the impatient to the patient.", author: "Warren Buffett", isSponsored: true },
+  { id: 'ad-10', text: "Trade what you see, not what you believe.", author: "Larry Williams", isSponsored: true },
+  { id: 'ad-11', text: "A peak performance trader is totally committed to being the best and doing whatever it takes to be the best.", author: "Van K. Tharp", isSponsored: true },
+  { id: 'ad-12', text: "Without discipline, a clear strategy is just a wish.", author: "Anonymous Trader", isSponsored: true }
+];
+
+// Demo journal entries — only loaded for quick-login demo accounts
+const demoJournals: Record<string, JournalEntry[]> = {
+  FTMO_Champ: [
+    { id: 'j-d1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2415.50, exitPrice: 2427.80, pnl: 2460.00, notes: 'Broke out of Asian range. Golden cross on 15m.', emotion: 'confident', setup: 'Breakout', author: 'FTMO_Champ', accountId: 'acc-d2' },
+    { id: 'j-d2', date: '2026-05-19', asset: 'EURUSD', direction: 'SELL', lots: 1.50, entryPrice: 1.08520, exitPrice: 1.08220, pnl: 450.00, notes: 'Fakeout at 1.0860 psychological level.', emotion: 'calm', setup: 'Supply Zone', author: 'FTMO_Champ', accountId: 'acc-d2' },
+    { id: 'j-d3', date: '2026-05-18', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39800, exitPrice: 39550, pnl: -125.00, notes: 'Impulse buy on US Open. Violated plan.', emotion: 'fomo', setup: 'Scalp', author: 'FTMO_Champ', accountId: 'acc-d1' },
+    { id: 'j-d4', date: '2026-05-17', asset: 'GBPUSD', direction: 'BUY', lots: 1.00, entryPrice: 1.27100, exitPrice: 1.27450, pnl: 350.00, notes: 'Clean demand zone bounce on H1.', emotion: 'calm', setup: 'Demand Zone', author: 'FTMO_Champ', accountId: 'acc-d2' },
+    { id: 'j-d5', date: '2026-05-16', asset: 'XAUUSD', direction: 'SELL', lots: 1.50, entryPrice: 2405.00, exitPrice: 2412.50, pnl: -1125.00, notes: 'Revenge trade after missing earlier entry.', emotion: 'revenge', setup: 'Supply Zone', author: 'FTMO_Champ', accountId: 'acc-d1' },
+    { id: 'j-d6', date: '2026-05-15', asset: 'NAS100', direction: 'BUY', lots: 0.30, entryPrice: 18950, exitPrice: 19080, pnl: 390.00, notes: 'FVG fill on 15m, clean trend follow.', emotion: 'confident', setup: 'FVG Fill', author: 'FTMO_Champ', accountId: 'acc-d2' },
+  ],
+  GoldHunter: [
+    { id: 'j-g1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 3.00, entryPrice: 2390.00, exitPrice: 2418.50, pnl: 8550.00, notes: 'Massive run on gold. Held through pullback.', emotion: 'confident', setup: 'Trend Follow', author: 'GoldHunter', accountId: 'acc-g1' },
+    { id: 'j-g2', date: '2026-05-19', asset: 'XAUUSD', direction: 'SELL', lots: 1.00, entryPrice: 2425.00, exitPrice: 2420.00, pnl: 500.00, notes: 'Quick scalp at resistance.', emotion: 'calm', setup: 'Scalp', author: 'GoldHunter', accountId: 'acc-g1' },
+    { id: 'j-g3', date: '2026-05-18', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2400.00, exitPrice: 2395.00, pnl: -1000.00, notes: 'Got stopped on news spike. Anxious entry.', emotion: 'anxious', setup: 'News Trade', author: 'GoldHunter', accountId: 'acc-g1' },
+  ],
+  NepaliScalper: [
+    { id: 'j-n1', date: '2026-05-20', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39750, exitPrice: 39820, pnl: 350.00, notes: 'NY open liquidity sweep.', emotion: 'calm', setup: 'Liquidity Sweep', author: 'NepaliScalper', accountId: 'acc-n1' },
+    { id: 'j-n2', date: '2026-05-19', asset: 'NAS100', direction: 'SELL', lots: 0.30, entryPrice: 19100, exitPrice: 19050, pnl: 150.00, notes: 'Order block rejection on 5m.', emotion: 'neutral', setup: 'Order Block', author: 'NepaliScalper', accountId: 'acc-n1' },
+  ],
+  PrabeshFX: [
+    { id: 'j-p1', date: '2026-05-20', asset: 'XAUUSD', direction: 'BUY', lots: 2.00, entryPrice: 2415.50, exitPrice: 2427.80, pnl: 2460.00, notes: 'Broke out of Asian range. Golden cross on 15m.', emotion: 'confident', setup: 'Breakout', author: 'PrabeshFX', accountId: 'acc-p1' },
+    { id: 'j-p2', date: '2026-05-19', asset: 'XAUUSD', direction: 'BUY', lots: 1.50, entryPrice: 2400.00, exitPrice: 2430.00, pnl: 4500.00, notes: 'Supply to demand flip.', emotion: 'confident', setup: 'Demand Zone', author: 'PrabeshFX', accountId: 'acc-p1' },
+    { id: 'j-p3', date: '2026-05-18', asset: 'GBPUSD', direction: 'SELL', lots: 1.00, entryPrice: 1.27500, exitPrice: 1.28700, pnl: -1200.00, notes: 'ECB news spike stopped me out.', emotion: 'anxious', setup: 'News Trade', author: 'PrabeshFX', accountId: 'acc-p1' },
+    { id: 'j-p4', date: '2026-05-17', asset: 'GBPUSD', direction: 'BUY', lots: 2.00, entryPrice: 1.27100, exitPrice: 1.28920, pnl: 3640.00, notes: 'Held through demand block bounce.', emotion: 'calm', setup: 'Demand Zone', author: 'PrabeshFX', accountId: 'acc-p1' },
+    { id: 'j-p5', date: '2026-05-16', asset: 'XAUUSD', direction: 'BUY', lots: 1.50, entryPrice: 2410.00, exitPrice: 2423.33, pnl: 2000.00, notes: 'H4 block test.', emotion: 'confident', setup: 'Order Block', author: 'PrabeshFX', accountId: 'acc-p1' }
+  ],
+  SandhyaScalps: [
+    { id: 'j-s1', date: '2026-05-20', asset: 'US30', direction: 'BUY', lots: 1.00, entryPrice: 39750, exitPrice: 39790, pnl: 4000.00, notes: 'US Open scalp sweep.', emotion: 'confident', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1' },
+    { id: 'j-s2', date: '2026-05-19', asset: 'NAS100', direction: 'SELL', lots: 0.50, entryPrice: 19100, exitPrice: 19038, pnl: 3100.00, notes: '5m order block rejection.', emotion: 'calm', setup: 'Order Block', author: 'SandhyaScalps', accountId: 'acc-s1' },
+    { id: 'j-s3', date: '2026-05-18', asset: 'US30', direction: 'BUY', lots: 0.80, entryPrice: 39800, exitPrice: 39775, pnl: -2000.00, notes: 'Impulse buy. High volatility sweep.', emotion: 'fomo', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1' },
+    { id: 'j-s4', date: '2026-05-17', asset: 'NAS100', direction: 'BUY', lots: 0.60, entryPrice: 18950, exitPrice: 19025, pnl: 4500.00, notes: 'FVG fill trend continuation.', emotion: 'confident', setup: 'FVG Fill', author: 'SandhyaScalps', accountId: 'acc-s1' },
+    { id: 'j-s5', date: '2026-05-16', asset: 'US30', direction: 'BUY', lots: 0.50, entryPrice: 39700, exitPrice: 39734, pnl: 1700.00, notes: 'NY Session close.', emotion: 'neutral', setup: 'Scalp', author: 'SandhyaScalps', accountId: 'acc-s1' },
+    { id: 'j-s6', date: '2026-05-15', asset: 'NAS100', direction: 'BUY', lots: 0.40, entryPrice: 18900, exitPrice: 18962.50, pnl: 2500.00, notes: 'Support zone double bottom.', emotion: 'calm', setup: 'Demand Zone', author: 'SandhyaScalps', accountId: 'acc-s1' }
+  ],
+  RohanPips: [
+    { id: 'j-r1', date: '2026-05-20', asset: 'EURUSD', direction: 'SELL', lots: 2.00, entryPrice: 1.08700, exitPrice: 1.08775, pnl: -1500.00, notes: 'Stopped out. Over-leveraged on CPI.', emotion: 'anxious', setup: 'News Trade', author: 'RohanPips', accountId: 'acc-r1' },
+    { id: 'j-r2', date: '2026-05-19', asset: 'GBPUSD', direction: 'BUY', lots: 1.50, entryPrice: 1.27000, exitPrice: 1.27233, pnl: 3500.00, notes: 'Macro trend alignment.', emotion: 'calm', setup: 'Trend Follow', author: 'RohanPips', accountId: 'acc-r1' },
+    { id: 'j-r3', date: '2026-05-18', asset: 'EURUSD', direction: 'BUY', lots: 2.50, entryPrice: 1.08200, exitPrice: 1.08284, pnl: 2100.00, notes: 'H4 demand zone bounce.', emotion: 'confident', setup: 'Demand Zone', author: 'RohanPips', accountId: 'acc-r1' },
+    { id: 'j-r4', date: '2026-05-17', asset: 'EURUSD', direction: 'BUY', lots: 2.00, entryPrice: 1.08100, exitPrice: 1.08205, pnl: 2100.00, notes: 'Order block test.', emotion: 'calm', setup: 'Order Block', author: 'RohanPips', accountId: 'acc-r1' }
+  ]
+};
+
+const DATA_VERSION = 'v5_admin_media_upgrade';
+
 export class MockSupabaseEngine {
+  constructor() {
+    if (typeof window !== 'undefined') {
+      const storedVersion = localStorage.getItem('propnepal_data_version');
+      if (storedVersion !== DATA_VERSION) {
+        // Wipe all cached propnepal items to load newly seeded structures
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('propnepal_')) {
+            localStorage.removeItem(key);
+          }
+        });
+        localStorage.setItem('propnepal_data_version', DATA_VERSION);
+      }
+
+      // Initialize demo profiles registration & settings to public
+      const demoRoles = ['FTMO_Champ', 'GoldHunter', 'NepaliScalper', 'PrabeshFX', 'SandhyaScalps', 'RohanPips', 'BishalFX'];
+      const usersKey = 'propnepal_registered_users';
+      const registeredUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
+      const updatedUsers = [...registeredUsers];
+      let changed = false;
+
+      const avatarMap: Record<string, string> = {
+        FTMO_Champ: '⚡',
+        GoldHunter: '🏆',
+        NepaliScalper: '🦅',
+        PrabeshFX: '📈',
+        SandhyaScalps: '🦉',
+        RohanPips: '🌊',
+        BishalFX: '💸'
+      };
+
+      // Seed admin user
+      const adminEmail = 'admin@propnepal.com';
+      if (!registeredUsers.some((u: { email: string }) => u.email === adminEmail)) {
+        const adminUser = {
+          id: 'user-admin',
+          email: adminEmail,
+          username: 'admin',
+          password: btoa('admin123'),
+          avatar: '👑',
+          createdAt: new Date().toISOString(),
+          isDemo: false
+        };
+        updatedUsers.push(adminUser);
+        changed = true;
+      }
+
+      demoRoles.forEach(role => {
+        const email = `${role.toLowerCase()}@propnepal.com`;
+        if (!registeredUsers.some((u: { email: string }) => u.email === email)) {
+          const newUser = {
+            id: `user-${role}`,
+            email,
+            username: role,
+            password: btoa('demo1234'),
+            avatar: avatarMap[role] || '👤',
+            createdAt: new Date().toISOString(),
+            isDemo: true
+          };
+          updatedUsers.push(newUser);
+          changed = true;
+        }
+
+        // Make demo journals public by default
+        const settingsKey = `propnepal_journal_settings_${role}`;
+        if (!localStorage.getItem(settingsKey)) {
+          localStorage.setItem(settingsKey, JSON.stringify({ isPublic: true }));
+        }
+      });
+
+      if (changed) {
+        localStorage.setItem(usersKey, JSON.stringify(updatedUsers));
+      }
+    }
+  }
+
   private getStorage<T>(key: string, initial: T): T {
     if (typeof window === 'undefined') return initial;
     const item = localStorage.getItem(key);
@@ -244,8 +548,68 @@ export class MockSupabaseEngine {
     this.setStorage('propnepal_posts', posts);
   }
 
-  getProfiles(): TraderProfile[] {
+  getRawProfiles(): TraderProfile[] {
     return this.getStorage<TraderProfile[]>('propnepal_profiles', initialProfiles);
+  }
+
+  saveProfiles(profiles: TraderProfile[]): void {
+    this.setStorage('propnepal_profiles', profiles);
+  }
+
+  getProfiles(): TraderProfile[] {
+    const profiles = this.getRawProfiles();
+    
+    const updatedProfiles = profiles.map(profile => {
+      const username = profile.handle.replace('@', '');
+      const journals = this.getJournals(username);
+      
+      if (journals.length > 0) {
+        const totalTrades = journals.length;
+        const winningTrades = journals.filter(j => j.pnl > 0).length;
+        const winRateVal = Math.round((winningTrades / totalTrades) * 100);
+        const totalProfit = journals.reduce((sum, j) => sum + j.pnl, 0);
+        
+        const accounts = this.getAccounts(username);
+        const maxBalance = accounts.length > 0 
+          ? `$${accounts.reduce((max, acc) => Math.max(max, acc.size), 0).toLocaleString()}` 
+          : profile.balance;
+
+        return {
+          ...profile,
+          winRate: `${winRateVal}%`,
+          balance: maxBalance,
+          journalCount: totalTrades,
+          totalProfit: totalProfit
+        };
+      }
+      
+      return {
+        ...profile,
+        journalCount: 0,
+        totalProfit: 0
+      };
+    });
+
+    // Custom ranking sort: journalCount (primary), totalProfit, winRate, profitSplit
+    updatedProfiles.sort((a, b) => {
+      const aCount = a.journalCount || 0;
+      const bCount = b.journalCount || 0;
+      if (aCount !== bCount) return bCount - aCount;
+
+      const aProfit = a.totalProfit || 0;
+      const bProfit = b.totalProfit || 0;
+      if (aProfit !== bProfit) return bProfit - aProfit;
+
+      const aWR = parseInt(a.winRate.replace('%', '')) || 0;
+      const bWR = parseInt(b.winRate.replace('%', '')) || 0;
+      if (aWR !== bWR) return bWR - aWR;
+
+      const aSplit = parseInt(a.profitSplit.replace('%', '')) || 0;
+      const bSplit = parseInt(b.profitSplit.replace('%', '')) || 0;
+      return bSplit - aSplit;
+    });
+
+    return updatedProfiles;
   }
 
   getPayouts(): Payout[] {
@@ -260,21 +624,266 @@ export class MockSupabaseEngine {
     return initialReviews; // Reviews are static references
   }
 
-  getJournals(): JournalEntry[] {
-    return this.getStorage<JournalEntry[]>('propnepal_journals', initialJournals);
+  getJournals(username?: string): JournalEntry[] {
+    if (!username) return [];
+    const key = `propnepal_journals_${username}`;
+    const defaultData = demoJournals[username] || [];
+    return this.getStorage<JournalEntry[]>(key, defaultData);
   }
 
-  saveJournals(journals: JournalEntry[]): void {
-    this.setStorage('propnepal_journals', journals);
+  saveJournals(username: string, journals: JournalEntry[]): void {
+    const key = `propnepal_journals_${username}`;
+    this.setStorage(key, journals);
   }
 
-  getCurrentUser(): { username: string; loggedIn: boolean; avatar: string; email: string } {
-    return this.getStorage('propnepal_user', { username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
+  // ── Trading Accounts Methods ──
+  getAccounts(username: string): TradingAccount[] {
+    const key = `propnepal_accounts_${username}`;
+    let initial: TradingAccount[] = [];
+    
+    if (username === 'FTMO_Champ') {
+      initial = [
+        { id: 'acc-d1', name: 'FTMO Challenge $100K', type: 'Challenge', propFirm: 'FTMO', size: 100000 },
+        { id: 'acc-d2', name: 'FTMO Funded $100K', type: 'Funded', propFirm: 'FTMO', size: 100000 }
+      ];
+    } else if (username === 'GoldHunter') {
+      initial = [
+        { id: 'acc-g1', name: 'FundedNext Challenge $50K', type: 'Challenge', propFirm: 'FundedNext', size: 50000 }
+      ];
+    } else if (username === 'NepaliScalper') {
+      initial = [
+        { id: 'acc-n1', name: 'The 5%ers Funded $24K', type: 'Funded', propFirm: 'The 5%ers', size: 24000 }
+      ];
+    } else if (username === 'PrabeshFX') {
+      initial = [
+        { id: 'acc-p1', name: 'FTMO Funded $100K', type: 'Funded', propFirm: 'FTMO', size: 100000 }
+      ];
+    } else if (username === 'SandhyaScalps') {
+      initial = [
+        { id: 'acc-s1', name: 'FTMO Funded $50K', type: 'Funded', propFirm: 'FTMO', size: 50000 }
+      ];
+    } else if (username === 'RohanPips') {
+      initial = [
+        { id: 'acc-r1', name: 'FundedNext Funded $200K', type: 'Funded', propFirm: 'FundedNext', size: 200000 }
+      ];
+    } else {
+      initial = [
+        { id: 'acc-initial', name: 'Primary Evaluation $100K', type: 'Challenge', propFirm: 'FTMO', size: 100000 }
+      ];
+    }
+    return this.getStorage<TradingAccount[]>(key, initial);
   }
 
-  setCurrentUser(user: { username: string; loggedIn: boolean; avatar: string; email: string }) {
+  saveAccounts(username: string, accounts: TradingAccount[]): void {
+    const key = `propnepal_accounts_${username}`;
+    this.setStorage(key, accounts);
+  }
+
+  getCurrentUser(): { username: string; loggedIn: boolean; avatar: string; email: string; isDemo?: boolean } {
+    return this.getStorage('propnepal_user', { username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '', isDemo: false });
+  }
+
+  setCurrentUser(user: { username: string; loggedIn: boolean; avatar: string; email: string; isDemo?: boolean }) {
     this.setStorage('propnepal_user', user);
   }
+
+  // ── Journal Settings ──
+
+  getJournalSettings(username: string): JournalSettings {
+    const key = `propnepal_journal_settings_${username}`;
+    return this.getStorage<JournalSettings>(key, { isPublic: false });
+  }
+
+  saveJournalSettings(username: string, settings: JournalSettings): void {
+    const key = `propnepal_journal_settings_${username}`;
+    this.setStorage(key, settings);
+  }
+
+  // ── Trade Feedback / Q&A ──
+
+  getTradeFeedback(tradeId: string): TradeFeedback[] {
+    const key = `propnepal_trade_feedback_${tradeId}`;
+    return this.getStorage<TradeFeedback[]>(key, []);
+  }
+
+  addTradeFeedback(tradeId: string, author: string, comment: string, rating?: number): TradeFeedback {
+    const key = `propnepal_trade_feedback_${tradeId}`;
+    const currentFeedback = this.getTradeFeedback(tradeId);
+    const newFeedback: TradeFeedback = {
+      id: `tf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      tradeId,
+      author,
+      comment,
+      rating,
+      createdAt: new Date().toISOString()
+    };
+    this.setStorage(key, [...currentFeedback, newFeedback]);
+    return newFeedback;
+  }
+
+  // ── User Registration & Authentication ──
+
+  getRegisteredUsers(): RegisteredUser[] {
+    return this.getStorage<RegisteredUser[]>('propnepal_registered_users', []);
+  }
+
+  private saveRegisteredUsers(users: RegisteredUser[]): void {
+    this.setStorage('propnepal_registered_users', users);
+  }
+
+  registerUser(email: string, username: string, password: string, isDemo?: boolean): { success: boolean; error?: string } {
+    const users = this.getRegisteredUsers();
+
+    // Check for duplicate email
+    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+      return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
+    }
+
+    // Check for duplicate username
+    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+      return { success: false, error: 'This username is already taken. Try a different one.' };
+    }
+
+    const newUser: RegisteredUser = {
+      id: `user-${Date.now()}`,
+      email: email.toLowerCase(),
+      username,
+      password: btoa(password), // Simple encoding for mock (not real hashing)
+      avatar: username.slice(0, 2).toUpperCase(),
+      createdAt: new Date().toISOString(),
+      isDemo
+    };
+
+    this.saveRegisteredUsers([...users, newUser]);
+
+    if (isDemo) {
+      const rawProfiles = this.getRawProfiles();
+      const newProfile: TraderProfile = {
+        id: `tp-${username.toLowerCase()}`,
+        name: 'Demo Trader',
+        handle: `@${username}`,
+        avatar: '⚡',
+        propFirms: ['Simulated Account'],
+        balance: '$100,000',
+        winRate: '0%',
+        profitSplit: '0%',
+        status: 'Active',
+        equityCurve: [0, 0, 0, 0, 0, 0, 0, 0],
+        bio: 'Demo simulation profile. Contains simulated trading data only.',
+        isDemo: true
+      };
+      this.saveProfiles([...rawProfiles, newProfile]);
+    }
+
+    return { success: true };
+  }
+
+  authenticateUser(email: string, password: string): { success: boolean; username?: string; avatar?: string; isDemo?: boolean; error?: string } {
+    const users = this.getRegisteredUsers();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (!user) {
+      return { success: false, error: 'No account found with this email. Please sign up first.' };
+    }
+
+    if (atob(user.password) !== password) {
+      return { success: false, error: 'Incorrect password. Please try again.' };
+    }
+
+    return { success: true, username: user.username, avatar: user.avatar, isDemo: user.isDemo };
+  }
+
+  deleteUserAccount(username: string): void {
+    // 1. Remove from registered users list
+    const users = this.getRegisteredUsers();
+    this.saveRegisteredUsers(users.filter(u => u.username !== username));
+
+    // 2. Remove journal and settings from local storage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`propnepal_journals_${username}`);
+      localStorage.removeItem(`propnepal_journal_settings_${username}`);
+      localStorage.removeItem(`propnepal_accounts_${username}`);
+    }
+
+    // 3. Remove profile from localStorage
+    const rawProfiles = this.getRawProfiles();
+    const updatedProfiles = rawProfiles.filter(p => p.handle.toLowerCase() !== `@${username.toLowerCase()}`);
+    this.saveProfiles(updatedProfiles);
+  }
+
+  getAds(): Ad[] {
+    return this.getStorage<Ad[]>('propnepal_ads', initialAds);
+  }
+
+  saveAds(ads: Ad[]): void {
+    this.setStorage('propnepal_ads', ads);
+  }
+
+  getAcademyModules(): CourseModule[] {
+    return this.getStorage<CourseModule[]>('propnepal_academy_modules', initialModules);
+  }
+
+  saveAcademyModules(modules: CourseModule[]): void {
+    this.setStorage('propnepal_academy_modules', modules);
+  }
+
+  adminUpdateProfile(updated: TraderProfile): void {
+    const rawProfiles = this.getRawProfiles();
+    const next = rawProfiles.map(p => p.id === updated.id ? updated : p);
+    this.saveProfiles(next);
+  }
+
+  adminCreateProfile(profile: TraderProfile): void {
+    const rawProfiles = this.getRawProfiles();
+    this.saveProfiles([...rawProfiles, profile]);
+  }
+
+  adminDeleteProfile(id: string): void {
+    const rawProfiles = this.getRawProfiles();
+    this.saveProfiles(rawProfiles.filter(p => p.id !== id));
+  }
+
+  getAllPublicTraders(): { username: string; avatar: string }[] {
+    const users = this.getRegisteredUsers();
+    return users
+      .filter(user => {
+        const settings = this.getJournalSettings(user.username);
+        return settings.isPublic;
+      })
+      .map(user => ({
+        username: user.username,
+        avatar: user.avatar
+      }));
+  }
+
+  getAllPublicJournals(): (JournalEntry & { avatar: string })[] {
+    const users = this.getRegisteredUsers();
+    let publicJournals: (JournalEntry & { avatar: string })[] = [];
+    
+    users.forEach(user => {
+      const settings = this.getJournalSettings(user.username);
+      if (settings.isPublic) {
+        const userJournals = this.getJournals(user.username);
+        const mapped = userJournals.map(journal => ({
+          ...journal,
+          avatar: user.avatar || '👤'
+        }));
+        publicJournals = [...publicJournals, ...mapped];
+      }
+    });
+    
+    return publicJournals.sort((a, b) => b.id.localeCompare(a.id));
+  }
+}
+
+export interface RegisteredUser {
+  id: string;
+  email: string;
+  username: string;
+  password: string; // base64 encoded (mock only)
+  avatar: string;
+  createdAt: string;
+  isDemo?: boolean;
 }
 
 export const db = new MockSupabaseEngine();
