@@ -24,7 +24,7 @@ const mapToTradingViewSymbol = (sym: string): string => {
   return map[sym] || sym;
 };
 
-export default function Topbar({ theme = 'dark', markets, watchlist }: TopbarProps) {
+export default function Topbar({ theme = 'dark', watchlist }: TopbarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

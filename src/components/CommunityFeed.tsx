@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Search, Flame, Clock, MessageSquare, ArrowUp, ArrowDown, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link, Smile } from 'lucide-react';
+import { Search, Flame, Clock, MessageSquare, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link } from 'lucide-react';
 import { db, Post, Comment } from '@/lib/supabase';
 import AdSlot from './AdSlot';
 
@@ -24,6 +24,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   const [posts, setPosts] = useState<Post[]>([]);
   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPosts(db.getPosts());
   }, []);
   const [searchQuery, setSearchQuery] = useState('');
@@ -529,6 +530,15 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                     {/* Header */}
                     <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-text-secondary font-mono">
                       <span className="text-text-muted">u/{post.author}</span>
+                      {(() => {
+                        const badges = db.getUserBadges(post.author);
+                        const unlocked = badges.filter(b => b.unlocked);
+                        return unlocked.map(b => (
+                          <span key={b.id} className="text-[10px]" title={b.name}>
+                            {b.emoji}
+                          </span>
+                        ));
+                      })()}
                       <span>•</span>
                       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                       <span>•</span>
@@ -759,6 +769,15 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                           <div key={comm.id} className="border-l border-border-theme pl-4 py-1 space-y-1">
                             <div className="flex items-center gap-2 text-[9px] font-mono font-bold text-text-secondary">
                               <span className="text-text-muted">u/{comm.author}</span>
+                              {(() => {
+                                const badges = db.getUserBadges(comm.author);
+                                const unlocked = badges.filter(b => b.unlocked);
+                                return unlocked.map(b => (
+                                  <span key={b.id} className="text-[9px]" title={b.name}>
+                                    {b.emoji}
+                                  </span>
+                                ));
+                              })()}
                               <span>•</span>
                               <span>{new Date(comm.createdAt).toLocaleDateString()}</span>
                             </div>

@@ -1,17 +1,17 @@
-// src/components/AdminPanel.tsx
+  // src/components/AdminPanel.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { 
   Award, ShieldCheck, Check, Trash2, Plus, Edit, BookOpen, 
-  MessageSquare, Users, X, Save, Volume2
+  MessageSquare, Users, X, Save, Volume2, Crown
 } from 'lucide-react';
 import { 
-  db, Payout, Post, TraderProfile, Ad, CourseModule, RegisteredUser, Lesson 
+  db, Payout, Post, TraderProfile, Ad, CourseModule, RegisteredUser, Lesson, PremiumAccess 
 } from '@/lib/supabase';
 
 export default function AdminPanel() {
-  const [activeSubTab, setActiveSubTab] = useState<'ads' | 'payouts' | 'posts' | 'profiles' | 'academy' | 'users'>('ads');
+  const [activeSubTab, setActiveSubTab] = useState<'ads' | 'payouts' | 'posts' | 'profiles' | 'academy' | 'users' | 'premium'>('ads');
 
   // Database States
   const [ads, setAds] = useState<Ad[]>([]);
@@ -20,6 +20,7 @@ export default function AdminPanel() {
   const [profiles, setProfiles] = useState<TraderProfile[]>([]);
   const [academyModules, setAcademyModules] = useState<CourseModule[]>([]);
   const [users, setUsers] = useState<RegisteredUser[]>([]);
+  const [premiumAccessList, setPremiumAccessList] = useState<PremiumAccess[]>([]);
 
   // Ads Form States
   const [adText, setAdText] = useState('');
@@ -60,6 +61,7 @@ export default function AdminPanel() {
     setProfiles(db.getRawProfiles() || []);
     setAcademyModules(db.getAcademyModules() || []);
     setUsers(db.getRegisteredUsers() || []);
+    setPremiumAccessList(db.getPremiumAccessList() || []);
   };
 
   // Load state on mount
@@ -384,6 +386,18 @@ export default function AdminPanel() {
         >
           <Users className="h-4 w-4" />
           <span>Registered Users ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveSubTab('premium'); setIsAddingProfile(false); setEditingProfileId(null); }}
+          className={`pb-2.5 border-b-2 transition-all flex items-center gap-1.5 flex-shrink-0 select-none cursor-pointer ${
+            activeSubTab === 'premium' 
+              ? 'border-yellow-400 text-yellow-400' 
+              : 'border-transparent text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          <Crown className="h-4 w-4" />
+          <span>Premium Access ({premiumAccessList.filter(a => a.status === 'pending').length})</span>
         </button>
       </div>
 
@@ -1266,6 +1280,148 @@ export default function AdminPanel() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SUBTAB: PREMIUM ACCESS MANAGEMENT ── */}
+        {activeSubTab === 'premium' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                <Crown className="h-4 w-4 text-yellow-400" />
+                Premium Subscription — eSewa Payment Verification
+              </h3>
+              <p className="text-[10px] text-text-muted mt-1">
+                Review eSewa transaction IDs submitted by users for premium strategy access. Verify legitimate payments and reject invalid ones.
+              </p>
+            </div>
+
+            {/* Stats Summary */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-center">
+                <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Pending</div>
+                <div className="text-2xl font-black text-yellow-400 mt-1">{premiumAccessList.filter(a => a.status === 'pending').length}</div>
+              </div>
+              <div className="rounded-xl border border-brand-green/20 bg-brand-green/5 p-4 text-center">
+                <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Verified</div>
+                <div className="text-2xl font-black text-brand-green mt-1">{premiumAccessList.filter(a => a.status === 'verified').length}</div>
+              </div>
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-center">
+                <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Rejected</div>
+                <div className="text-2xl font-black text-red-400 mt-1">{premiumAccessList.filter(a => a.status === 'rejected').length}</div>
+              </div>
+            </div>
+
+            {/* Pending Requests */}
+            {premiumAccessList.filter(a => a.status === 'pending').length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-yellow-400">⏳ Pending Verification</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {premiumAccessList.filter(a => a.status === 'pending').map((access) => (
+                    <div
+                      key={`${access.username}-${access.requestedAt}`}
+                      className="rounded-xl border border-yellow-500/20 bg-bg-card p-5 space-y-4"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-xs font-bold text-text-primary">u/{access.username}</div>
+                          <div className="text-[9px] text-text-muted mt-0.5">Requested: {new Date(access.requestedAt).toLocaleString()}</div>
+                        </div>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5">
+                          Pending
+                        </span>
+                      </div>
+
+                      <div className="rounded-lg bg-bg-secondary/60 border border-border-theme p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">eSewa Transaction ID</span>
+                        </div>
+                        <div className="text-sm font-mono font-bold text-yellow-400 tracking-wider break-all">
+                          {access.esewaTransactionId}
+                        </div>
+                        <div className="flex justify-between items-center pt-1 border-t border-border-theme/40">
+                          <span className="text-[10px] text-text-muted">Amount: <strong className="text-text-primary">Rs 1,500</strong></span>
+                          <span className="text-[10px] text-text-muted">Duration: <strong className="text-text-primary">3 Months</strong></span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            db.verifyPremiumAccess(access.username);
+                            loadAllData();
+                          }}
+                          className="flex-1 rounded-lg bg-brand-green py-2 text-[10px] font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          <span>Verify Payment</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!confirm(`Reject premium access for "${access.username}"?`)) return;
+                            db.rejectPremiumAccess(access.username);
+                            loadAllData();
+                          }}
+                          className="flex-1 rounded-lg bg-red-950/20 border border-red-900/30 text-red-500 py-2 text-[10px] font-bold uppercase tracking-wider hover:bg-red-500 hover:text-black hover:border-red-500 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Access Records Table */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary">All Subscription Records</h4>
+              <div className="rounded-xl border border-border-theme bg-bg-card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-border-theme bg-bg-secondary text-text-muted uppercase font-bold tracking-wider">
+                        <th className="py-3 px-4">Username</th>
+                        <th className="py-3 px-4">eSewa Transaction ID</th>
+                        <th className="py-3 px-4">Requested</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Verified At</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-theme/40 text-text-secondary">
+                      {premiumAccessList.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-text-muted italic">No premium access requests found.</td>
+                        </tr>
+                      ) : (
+                        premiumAccessList.map((access) => (
+                          <tr key={`${access.username}-${access.requestedAt}`} className="hover:bg-bg-hover/30 transition-colors">
+                            <td className="py-3 px-4 font-bold text-text-primary">u/{access.username}</td>
+                            <td className="py-3 px-4 font-mono text-yellow-400">{access.esewaTransactionId}</td>
+                            <td className="py-3 px-4 font-mono">{new Date(access.requestedAt).toLocaleDateString()}</td>
+                            <td className="py-3 px-4">
+                              <span className={`text-[9px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 ${
+                                access.status === 'verified'
+                                  ? 'bg-brand-green/10 text-brand-green'
+                                  : access.status === 'pending'
+                                    ? 'bg-yellow-500/10 text-yellow-500'
+                                    : 'bg-red-500/10 text-red-500'
+                              }`}>
+                                {access.status === 'verified' ? '✅ Verified' : access.status === 'pending' ? '⏳ Pending' : '❌ Rejected'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-mono">
+                              {access.verifiedAt ? new Date(access.verifiedAt).toLocaleDateString() : '—'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

@@ -21,6 +21,7 @@
   --accent-light: rgba(22, 163, 74, 0.1);
   --accent-border: rgba(22, 163, 74, 0.2);
   --accent-glow: rgba(22, 163, 74, 0.15);
+  --purple-glow: rgba(168, 85, 247, 0.22);
   --red: #ef4444;
   --red-light: rgba(239, 68, 68, 0.1);
   --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.6);
@@ -47,6 +48,7 @@
   --accent-light: rgba(22, 163, 74, 0.08);
   --accent-border: rgba(22, 163, 74, 0.25);
   --accent-glow: rgba(22, 163, 74, 0.12);
+  --purple-glow: rgba(168, 85, 247, 0.18);
   --red: #dc2626;
   --red-light: rgba(220, 38, 38, 0.08);
   --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
@@ -252,6 +254,10 @@ body {
 .glow-green,
 .glow-accent {
   box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px var(--purple-glow);
 }
 
 /* Live badge */

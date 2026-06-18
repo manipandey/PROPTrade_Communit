@@ -10,6 +10,31 @@ interface ToolsProps {
   defaultSubTab?: 'calendar' | 'news' | 'margin' | 'lotSize' | 'chart';
 }
 
+interface NewsArticle {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  time: string;
+  category: string;
+  thumbnail: string;
+  link: string;
+}
+
+interface TradingViewGlobal {
+  TradingView?: {
+    widget: new (config: Record<string, unknown>) => unknown;
+  };
+}
+
+interface RssItem {
+  title: string;
+  description?: string;
+  content?: string;
+  pubDate: string;
+  link: string;
+}
+
 interface CalendarEvent {
   id: string;
   time: string;
@@ -35,7 +60,7 @@ const INITIAL_EVENTS: CalendarEvent[] = [
   { id: '10', time: '04:45 PM', currency: 'GBP', event: 'BoE Interest Rate Decision', impact: 'High', forecast: '5.25%', previous: '5.25%', actual: '-', day: 'week' },
 ];
 
-const getNewsThumbnail = (title: string, category: string) => {
+const getNewsThumbnail = (title: string) => {
   const t = title.toLowerCase();
   if (t.includes('spacex') || t.includes('musk') || t.includes('space')) return 'https://images.unsplash.com/photo-1541185933-ef5d8ed016c2?w=600&auto=format&fit=crop&q=60';
   if (t.includes('gold') || t.includes('bullion')) return 'https://images.unsplash.com/photo-1618042164219-62c820f10723?w=600&auto=format&fit=crop&q=60';
@@ -94,14 +119,16 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
   const [subTab, setSubTab] = useState<'calendar' | 'news' | 'margin' | 'lotSize' | 'chart'>('calendar');
 
   // News States
-  const [news, setNews] = useState<any[]>([]);
+  const [news, setNews] = useState<NewsArticle[]>([]);
   const [newsLoading, setNewsLoading] = useState(true);
-  const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
 
   // Sync defaultSubTab when prop changes
   useEffect(() => {
     if (defaultSubTab) {
-      setSubTab(defaultSubTab as any);
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setSubTab(defaultSubTab);
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [defaultSubTab]);
 
@@ -113,7 +140,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
         const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.cnbc.com%2Fid%2F100003114%2Fdevice%2Frss%2Frss.html');
         const data = await res.json();
         if (data.status === 'ok' && Array.isArray(data.items)) {
-          const items = data.items.map((item: any, idx: number) => {
+          const items = data.items.map((item: RssItem, idx: number) => {
             let category = 'Market News';
             const titleLower = item.title.toLowerCase();
             if (titleLower.includes('spacex') || titleLower.includes('musk')) category = 'Tech & Corporate';
@@ -134,7 +161,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
                 minute: '2-digit'
               }),
               category,
-              thumbnail: getNewsThumbnail(item.title, category),
+              thumbnail: getNewsThumbnail(item.title),
               link: item.link
             };
           });
@@ -142,7 +169,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
         } else {
           setNews(INITIAL_NEWS_ARTICLES);
         }
-      } catch (err) {
+      } catch {
         setNews(INITIAL_NEWS_ARTICLES);
       } finally {
         setNewsLoading(false);
@@ -185,10 +212,8 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     script.type = 'text/javascript';
     script.async = true;
     script.onload = () => {
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.TradingView) {
-        // @ts-ignore
-        new window.TradingView.widget({
+      if (typeof window !== 'undefined' && (window as unknown as TradingViewGlobal).TradingView) {
+        new (window as unknown as Required<TradingViewGlobal>).TradingView.widget({
           autosize: true,
           symbol: tvSymbol,
           interval: 'D',
@@ -509,6 +534,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
                     <div>
                       {/* Image Thumbnail */}
                       <div className="h-44 w-full overflow-hidden relative bg-bg-secondary">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={art.thumbnail} 
                           alt={art.title}
@@ -852,6 +878,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
 
             {/* Thumbnail */}
             <div className="h-64 w-full overflow-hidden rounded-xl relative bg-bg-secondary">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={selectedArticle.thumbnail} 
                 alt={selectedArticle.title}

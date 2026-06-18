@@ -224,11 +224,22 @@ export default function PayoutShowcase() {
                           {payout.trader.slice(0, 2)}
                         </div>
                         <div>
-                          <div 
-                            className="font-bold text-text-primary text-xs cursor-pointer hover:text-brand-green hover:underline transition-all"
-                            onClick={() => setSelectedTraderPayouts(payout.trader)}
-                          >
-                            u/{payout.trader}
+                          <div className="flex items-center gap-1.5">
+                            <div 
+                              className="font-bold text-text-primary text-xs cursor-pointer hover:text-brand-green hover:underline transition-all"
+                              onClick={() => setSelectedTraderPayouts(payout.trader)}
+                            >
+                              u/{payout.trader}
+                            </div>
+                            {(() => {
+                              const badges = db.getUserBadges(payout.trader);
+                              const unlocked = badges.filter(b => b.unlocked);
+                              return unlocked.map(b => (
+                                <span key={b.id} className="text-[10px]" title={b.name}>
+                                  {b.emoji}
+                                </span>
+                              ));
+                            })()}
                           </div>
                           <div className="text-[9px] text-text-muted font-mono leading-none mt-0.5">{payout.hash}</div>
                         </div>
@@ -283,7 +294,18 @@ export default function PayoutShowcase() {
                           <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                             {payout.comments.map((comment) => (
                               <div key={comment.id} className="text-[11px] leading-relaxed rounded bg-bg-secondary/40 p-2 border border-border-theme/40">
-                                <span className="font-bold text-text-primary block">{comment.author}</span>
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span className="font-bold text-text-primary text-xs">{comment.author}</span>
+                                  {(() => {
+                                    const badges = db.getUserBadges(comment.author);
+                                    const unlocked = badges.filter(b => b.unlocked);
+                                    return unlocked.map(b => (
+                                      <span key={b.id} className="text-[9px]" title={b.name}>
+                                        {b.emoji}
+                                      </span>
+                                    ));
+                                  })()}
+                                </div>
                                 <span className="text-text-secondary">{comment.content}</span>
                               </div>
                             ))}
@@ -485,7 +507,18 @@ export default function PayoutShowcase() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-text-primary">Trader Payout Profile</h3>
-                  <p className="text-xs text-brand-green font-semibold">u/{selectedTraderPayouts}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <p className="text-xs text-brand-green font-semibold">u/{selectedTraderPayouts}</p>
+                    {(() => {
+                      const badges = db.getUserBadges(selectedTraderPayouts);
+                      const unlocked = badges.filter(b => b.unlocked);
+                      return unlocked.map(b => (
+                        <span key={b.id} className="text-[10px]" title={b.name}>
+                          {b.emoji}
+                        </span>
+                      ));
+                    })()}
+                  </div>
                 </div>
               </div>
               <button 

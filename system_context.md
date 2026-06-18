@@ -1,12 +1,3 @@
-# PROPTrade Community - System Context
-
-## Trading Journals
-- The journal contains a date selection for entries, risk percentage (how much capital was risked), risk-to-reward ratio, result (profit or loss), and an emotional check.
-- Traders can upload screenshots of their trades so other traders in the community can see the setups and learn from them.
-- Community members can ask questions about trade setups, post answers, rate trades, and provide constructive feedback.
-- Journal visibility can be toggled between public and private.
-
-## Demo Profiles
-- Signing up for a demo account automatically creates a demo profile.
-- Demo profiles contain only simulated trading data and statistics (no personal details).
-- Deleting a demo account automatically deletes the associated demo profile and data.
+I want a landing page which will be shown before loggin in the system, current we are directly at the home page of the website, i want a interactive landing page which will highlight the features of the website and then user can login and register to the sytem
+in the landing page focus more on jounal, reviews, roadmap and tools  dont show payout proofs, intead focus on trusting the process, journaling sharing and learning 
+Also add some interactive elements to the landing page which will make the user feel engaged and want to register to the system, with some clean and modern UI with some animation effects 

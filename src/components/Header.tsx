@@ -2,8 +2,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, LogIn, LogOut, Menu, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react';
+import { LogIn, LogOut, Menu, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react';
 import { db } from '@/lib/supabase';
+
+interface BinanceTicker {
+  symbol: string;
+  lastPrice: string;
+  priceChangePercent: string;
+}
+
+interface ForexData {
+  result: string;
+  rates: Record<string, number>;
+}
 
 interface HeaderProps {
   currentUser: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
@@ -55,11 +66,28 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
   useEffect(() => {
     const fetchLivePrices = async () => {
       try {
-        const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT"]');
-        const cryptoData = await cryptoRes.json();
-        
-        const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
-        const forexData = await forexRes.json();
+        let cryptoData: BinanceTicker[] = [];
+        try {
+          const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT"]');
+          if (cryptoRes.ok) {
+            const data = await cryptoRes.json();
+            if (Array.isArray(data)) {
+              cryptoData = data;
+            }
+          }
+        } catch (e) {
+          console.warn('Could not fetch live crypto prices from Binance in header:', e);
+        }
+
+        let forexData: ForexData | null = null;
+        try {
+          const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
+          if (forexRes.ok) {
+            forexData = await forexRes.json();
+          }
+        } catch (e) {
+          console.warn('Could not fetch live forex rates in header:', e);
+        }
         
         if (forexData?.result === 'success' && forexData.rates) {
           const rates = forexData.rates;
@@ -70,7 +98,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
               let liveChange = item.changeValue;
               
               if (item.symbol === 'BTCUSD') {
-                const btc = cryptoData.find((it: any) => it.symbol === 'BTCUSDT');
+                const btc = cryptoData.find((it) => it.symbol === 'BTCUSDT');
                 if (btc) {
                   livePrice = parseFloat(btc.lastPrice);
                   liveChange = parseFloat(btc.priceChangePercent);
@@ -92,7 +120,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
           );
         }
       } catch (error) {
-        console.error('Error fetching live header prices:', error);
+        console.warn('Error updating live header prices:', error);
       }
     };
 
@@ -154,12 +182,8 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-green to-emerald-600 shadow-[0_0_15px_rgba(34,197,94,0.3)]">
-              <Shield className="h-5 w-5 text-black stroke-[2.5]" />
-              <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border border-bg bg-red-600 flex items-center justify-center text-[8px] font-bold text-white leading-none">
-                🇳🇵
-              </div>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-icon.svg" className="h-10 w-10 object-contain" alt="PropNepal Logo" />
             <div>
               <span className="text-lg font-black tracking-tight text-text-primary uppercase font-sans">
                 Prop<span className="text-brand-green">Nepal</span>

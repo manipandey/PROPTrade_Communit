@@ -1,0 +1,263 @@
+
+> propnepal@0.1.0 lint
+> eslint
+
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/app/page.tsx
+   63:25  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   76:24  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:52  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:52  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  172:16  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/CommunityFeed.tsx
+   5:47   warning  'ArrowUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   5:56   warning  'ArrowDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   5:148  warning  'Smile' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  27:5    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/CommunityFeed.tsx:27:5
+  25 |   
+  26 |   useEffect(() => {
+> 27 |     setPosts(db.getPosts());
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  28 |   }, []);
+  29 |   const [searchQuery, setSearchQuery] = useState('');
+  30 |   const [selectedCategory, setSelectedCategory] = useState('All');  react-hooks/set-state-in-effect
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/Header.tsx
+    5:10  warning  'Shield' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   58:25  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   71:24  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   90:50  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  174:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx
+     6:19   warning  'TrendingUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+     7:33   warning  'BarChart2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+    38:7    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:38:7
+  36 |       timeout = setTimeout(() => setCharIdx(c => c - 1), speed / 2);
+  37 |     } else {
+> 38 |       setDeleting(false);
+     |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  39 |       setWordIdx(i => (i + 1) % words.length);
+  40 |     }
+  41 |                                                                                  react-hooks/set-state-in-effect
+   199:5    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:199:5
+  197 |       opacity: 0.08 + Math.random() * 0.12,
+  198 |     }));
+> 199 |     setParticles(list);
+      |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  200 |   }, []);
+  201 |
+  202 |   return (                                                                                                                                          react-hooks/set-state-in-effect
+   743:13   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @next/next/no-img-element
+   877:21   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:877:21
+  875 |         {/* ══════════════════ INTERACTIVE FEATURE TABS ══════════════════ */}
+  876 |         <section id="journal" className="py-28 px-6">
+> 877 |           <div ref={feat1.ref}
+      |                     ^^^^^^^^^ Cannot access ref value during render
+  878 |             className={`max-w-6xl mx-auto transition-all duration-700 ${feat1.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+  879 |
+  880 |             <div className="text-center mb-14 space-y-3">                                                                                                                                                                                                                      react-hooks/refs
+   878:73   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:878:73
+  876 |         <section id="journal" className="py-28 px-6">
+  877 |           <div ref={feat1.ref}
+> 878 |             className={`max-w-6xl mx-auto transition-all duration-700 ${feat1.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+      |                                                                         ^^^^^^^^^^^^^ Cannot access ref value during render
+  879 |
+  880 |             <div className="text-center mb-14 space-y-3">
+  881 |               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest"                                                                                                 react-hooks/refs
+   987:21   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:987:21
+  985 |           <div className="absolute inset-0 pointer-events-none"
+  986 |             style={{ background: 'linear-gradient(180deg,transparent 0%,rgba(22,163,74,.025) 50%,transparent 100%)' }} />
+> 987 |           <div ref={feat2.ref}
+      |                     ^^^^^^^^^ Cannot access ref value during render
+  988 |             className={`max-w-6xl mx-auto transition-all duration-700 ${feat2.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+  989 |
+  990 |             <div className="text-center mb-14 space-y-3">                                                                                                                                                                 react-hooks/refs
+   988:73   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:988:73
+  986 |             style={{ background: 'linear-gradient(180deg,transparent 0%,rgba(22,163,74,.025) 50%,transparent 100%)' }} />
+  987 |           <div ref={feat2.ref}
+> 988 |             className={`max-w-6xl mx-auto transition-all duration-700 ${feat2.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+      |                                                                         ^^^^^^^^^^^^^ Cannot access ref value during render
+  989 |
+  990 |             <div className="text-center mb-14 space-y-3">
+  991 |               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest"                             react-hooks/refs
+  1043:21   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:1043:21
+  1041 |         {/* ══════════════════ REVIEWS SECTION ══════════════════ */}
+  1042 |         <section id="reviews" className="py-28 px-6">
+> 1043 |           <div ref={feat3.ref}
+       |                     ^^^^^^^^^ Cannot access ref value during render
+  1044 |             className={`max-w-5xl mx-auto transition-all duration-700 ${feat3.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+  1045 |
+  1046 |             <div className="text-center mb-14 space-y-3">                                                                                                                                                                                                                       react-hooks/refs
+  1044:73   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:1044:73
+  1042 |         <section id="reviews" className="py-28 px-6">
+  1043 |           <div ref={feat3.ref}
+> 1044 |             className={`max-w-5xl mx-auto transition-all duration-700 ${feat3.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+       |                                                                         ^^^^^^^^^^^^^ Cannot access ref value during render
+  1045 |
+  1046 |             <div className="text-center mb-14 space-y-3">
+  1047 |               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest"                                                                                         react-hooks/refs
+  1182:21   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:1182:21
+  1180 |         {/* ══════════════════ STREAK SIMULATOR SECTION ══════════════════ */}
+  1181 |         <section id="streak-simulator" className="py-28 px-6 border-t" style={{ borderColor: 'var(--border)' }}>
+> 1182 |           <div ref={featStreak.ref}
+       |                     ^^^^^^^^^^^^^^ Cannot access ref value during render
+  1183 |             className={`max-w-5xl mx-auto transition-all duration-700 ${featStreak.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+  1184 |             
+  1185 |             <div className="text-center mb-16 space-y-3">                                                                                                                       react-hooks/refs
+  1183:73   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:1183:73
+  1181 |         <section id="streak-simulator" className="py-28 px-6 border-t" style={{ borderColor: 'var(--border)' }}>
+  1182 |           <div ref={featStreak.ref}
+> 1183 |             className={`max-w-5xl mx-auto transition-all duration-700 ${featStreak.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}>
+       |                                                                         ^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  1184 |             
+  1185 |             <div className="text-center mb-16 space-y-3">
+  1186 |               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest"  react-hooks/refs
+  1210:21   error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:1210:21
+  1208 |           </div>
+  1209 |
+> 1210 |           <div ref={ctaReveal.ref}
+       |                     ^^^^^^^^^^^^^ Cannot access ref value during render
+  1211 |             className={`max-w-2xl mx-auto text-center space-y-7 relative z-10 transition-all duration-700 ${ctaReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
+  1212 |
+  1213 |             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-semibold"                                                                                                                                                                                                                          react-hooks/refs
+  1211:109  error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/LandingPage.tsx:1211:109
+  1209 |
+  1210 |           <div ref={ctaReveal.ref}
+> 1211 |             className={`max-w-2xl mx-auto text-center space-y-7 relative z-10 transition-all duration-700 ${ctaReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
+       |                                                                                                             ^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  1212 |
+  1213 |             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-semibold"
+  1214 |               style={{ backgroundColor: 'rgba(22,163,74,.08)', borderColor: 'rgba(22,163,74,.22)', color: '#22c55e' }}>                      react-hooks/refs
+  1251:15   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @next/next/no-img-element
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/RightPanel.tsx
+   5:10  warning  'TrendingUp' is defined but never used                      @typescript-eslint/no-unused-vars
+   5:22  warning  'TrendingDown' is defined but never used                    @typescript-eslint/no-unused-vars
+  32:7   warning  'ALL_AVAILABLE_MARKETS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/Sidebar.tsx
+    6:9   warning  'MessageSquare' is defined but never used                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   52:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  198:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/StreakSimulator.tsx
+   64:9   warning  'winRate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  200:50  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/Tools.tsx
+   38:42  warning  'category' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+   97:36  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+   99:58  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+  104:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/Tools.tsx:104:7
+  102 |   useEffect(() => {
+  103 |     if (defaultSubTab) {
+> 104 |       setSubTab(defaultSubTab as any);
+      |       ^^^^^^^^^ Avoid calling setState() directly within an effect
+  105 |     }
+  106 |   }, [defaultSubTab]);
+  107 |  react-hooks/set-state-in-effect
+  104:34  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+  116:47  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+  145:16  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  188:7   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/ban-ts-comment
+  190:9   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/ban-ts-comment
+  512:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @next/next/no-img-element
+  855:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @next/next/no-img-element
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/Topbar.tsx
+  27:50  warning  'markets' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/TraderProfiles.tsx
+  12:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/manirajpandey/.gemini/antigravity/scratch/frvp_reclaim_ea/PROPTrade Community/src/components/TraderProfiles.tsx:12:5
+  10 |
+  11 |   useEffect(() => {
+> 12 |     setProfiles(db.getProfiles());
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  13 |   }, []);
+  14 |   const [selectedProfile, setSelectedProfile] = useState<TraderProfile | null>(null);
+  15 |   const [cheeredTraders, setCheeredTraders] = useState<Record<string, boolean>>({});  react-hooks/set-state-in-effect
+
+✖ 51 problems (29 errors, 22 warnings)
+

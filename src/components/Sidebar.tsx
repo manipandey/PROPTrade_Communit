@@ -3,8 +3,8 @@
 
 import React from 'react';
 import {
-  Home, MessageSquare, Users, Trophy, BookOpen,
-  Shield, GraduationCap, LogIn, LogOut, Sun, Moon, Trash2, Menu, X, LineChart, ShieldCheck
+  Home, Users, Trophy, BookOpen,
+  Shield, GraduationCap, LogIn, LogOut, Sun, Moon, Trash2, Menu, X, LineChart, ShieldCheck, Gamepad2, MessageSquare, Globe
 } from 'lucide-react';
 import { db } from '@/lib/supabase';
 
@@ -21,14 +21,17 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { id: 'home',     label: 'Home',             icon: Home },
-  { id: 'journals', label: 'Trading Journals',  icon: BookOpen },
-  { id: 'tools',    label: 'Trading Tools',     icon: LineChart },
-  { id: 'profiles', label: 'Top Traders',       icon: Users },
-  { id: 'payouts',  label: 'Payout Showcase',   icon: Trophy },
-  { id: 'reviews',  label: 'Prop Firm Reviews', icon: Shield },
-  { id: 'academy',  label: 'Learning Hub',      icon: GraduationCap },
-  { id: 'admin',    label: 'Admin Panel',       icon: ShieldCheck }
+  { id: 'home',        label: 'Home',             icon: Home },
+  { id: 'journals',    label: 'Trading Journals',  icon: BookOpen },
+  { id: 'community',   label: 'Community Feed',    icon: Globe },
+  { id: 'communities', label: 'Instrument Groups', icon: MessageSquare },
+  { id: 'tools',       label: 'Trading Tools',     icon: LineChart },
+  { id: 'game',        label: 'Trading Arcade',    icon: Gamepad2 },
+  { id: 'profiles',    label: 'Top Traders',       icon: Users },
+  { id: 'payouts',     label: 'Payout Showcase',   icon: Trophy },
+  { id: 'reviews',     label: 'Prop Firm Reviews', icon: Shield },
+  { id: 'academy',     label: 'Learning Hub',      icon: GraduationCap },
+  { id: 'admin',       label: 'Admin Panel',       icon: ShieldCheck }
 ];
 
 export default function Sidebar({
@@ -49,18 +52,14 @@ export default function Sidebar({
           className="flex items-center gap-2.5 cursor-pointer"
           onClick={() => handleNav('home')}
         >
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0"
-            style={{ backgroundColor: 'var(--accent)' }}
-          >
-            <Shield className="h-4.5 w-4.5 text-white" strokeWidth={2.5} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" className="h-9 w-9 object-contain" alt="PropNepal Logo" />
           <div>
             <div className="text-[15px] font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
               Prop<span style={{ color: 'var(--accent)' }}>Nepal</span>
             </div>
             <div className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Elite Community
+              Learn, Record, Connect
             </div>
           </div>
         </div>
@@ -200,9 +199,8 @@ export default function Sidebar({
         }}
       >
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: 'var(--accent)' }}>
-            <Shield className="h-4 w-4 text-white" strokeWidth={2.5} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" className="h-8 w-8 object-contain" alt="PropNepal Logo" />
           <span className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>
             Prop<span style={{ color: 'var(--accent)' }}>Nepal</span>
           </span>

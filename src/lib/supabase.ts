@@ -125,7 +125,7 @@ export interface PremiumAccess {
 }
 
 export type Emotion = 'calm' | 'confident' | 'anxious' | 'fomo' | 'revenge' | 'frustrated' | 'neutral';
-export type SetupType = 'Supply Zone' | 'Demand Zone' | 'FVG Fill' | 'Breakout' | 'Breakdown' | 'Scalp' | 'Trend Follow' | 'Mean Reversion' | 'News Trade' | 'Liquidity Sweep' | 'Order Block' | 'Other';
+export type SetupType = 'Supply Zone' | 'Demand Zone' | 'FVG Fill' | 'Breakout' | 'Breakdown' | 'Scalp' | 'Trend Follow' | 'Mean Reversion' | 'News Trade' | 'Liquidity Sweep' | 'Order Block' | 'No Setup' | 'Other';
 export type TradingSession = 'Asian' | 'London' | 'New York';
 
 export const EMOTIONS: { value: Emotion; label: string; emoji: string; color: string }[] = [
@@ -141,7 +141,7 @@ export const EMOTIONS: { value: Emotion; label: string; emoji: string; color: st
 export const SETUP_TYPES: SetupType[] = [
   'Supply Zone', 'Demand Zone', 'FVG Fill', 'Breakout', 'Breakdown',
   'Scalp', 'Trend Follow', 'Mean Reversion', 'News Trade',
-  'Liquidity Sweep', 'Order Block', 'Other'
+  'Liquidity Sweep', 'Order Block', 'No Setup', 'Other'
 ];
 
 export const TRADING_SESSIONS: TradingSession[] = ['Asian', 'London', 'New York'];
@@ -181,6 +181,15 @@ export interface TradeFeedback {
   comment: string;
   rating?: number;
   createdAt: string;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  unlocked: boolean;
+  progress: { current: number; target: number };
 }
 
 // Initial Mock Data
@@ -336,24 +345,42 @@ const initialModules: CourseModule[] = [
     id: 'mod-1',
     level: 'Beginner',
     title: 'Prop Firm Fundamentals',
-    duration: '45 Mins',
+    duration: '1.5 Hours',
     desc: 'Understand how modern prop trading works, the differences between evaluation challenges, and how to select the right funding provider in Nepal.',
     lessons: [
       {
-        title: 'Introduction to Prop Capital',
-        content: 'Proprietary trading firms (prop firms) provide traders with access to large sums of capital in exchange for a percentage of the profits. This model allows talented traders to scale their income without risking their personal savings. In Nepal, prop trading has gained massive popularity as a path to financial freedom.',
+        title: '1. Introduction to Prop Capital',
+        content: 'Proprietary trading firms (prop firms) provide traders with access to large sums of capital in exchange for a percentage of the profits. This model allows talented traders to scale their income without risking their personal savings.\n\nKey Concepts:\n• Leverage: Instead of risking your own limited money, you trade the firm\'s funds (from $5,000 up to $200,000+).\n• Profit-Sharing: You keep 80% to 90% of the profits you generate. The firm takes the remaining 10-20% split.\n• Buying Power: In Nepal, accessing substantial trading capital is difficult due to foreign currency limits. Prop firms resolve this by acting as liquidity backers.',
         mediaUrl: '/feed-images/trading-chart-gold.png',
         mediaType: 'image'
       },
       {
-        title: 'Evaluation vs Instant Funding',
-        content: 'Evaluation challenges require traders to pass a two-phase test to prove their consistency and risk management skills. Instant funding bypasses this phase, but usually comes with smaller profit splits and higher initial fees. Select the structure that matches your trading timeline and risk tolerance.',
+        title: '2. NRB Prepaid Dollar Card & Payments',
+        content: 'In Nepal, making international purchases is restricted. To buy a prop firm challenge, you must navigate local payment channels.\n\nPrepaid Dollar Card Steps:\n1. Open a bank account at any Class A Commercial Bank in Nepal (e.g., Nabil Bank, Global IME, NIC Asia).\n2. Apply for a PAN Card (Permanent Account Number) at the nearest Inland Revenue Office (IRO).\n3. Submit your PAN Card, Citizenship/Passport, and bank application for a Nepal Rastra Bank (NRB) Prepaid Dollar Card. The annual spending limit is $500 USD.\n4. Load NPR into your account; the bank converts it to USD on the card for a small fee (~Rs 500 card fee).\n\nAlternative Payments:\n• Relatives Abroad: You can have a friend/relative abroad pay for your challenge via credit card or PayPal.\n• eSewa / Local Brokers: Some prop firms (e.g., FundedNext) support local payment gateways, allowing direct payments.\n• Crypto: Using cryptocurrency (USDT, BTC) is another popular method supported by modern prop firms.',
+        mediaUrl: '/feed-images/nepal-dollar-card.png',
+        mediaType: 'image'
+      },
+      {
+        title: '3. Evaluation vs Instant Funding',
+        content: 'Prop firms offer different challenge types. Understanding their targets and rules is crucial before starting.\n\n1. Evaluation (2-Phase) Model:\n• Phase 1: Profit target is usually 8% to 10% within no time limit (or 30 days historically). Daily drawdown limit is 5%, and overall drawdown limit is 10%.\n• Phase 2: Profit target is reduced to 5% to prove consistency. Same drawdown limits apply.\n• Refund: The registration fee is fully refunded with your first successful payout split.\n\n2. Instant Funding Model:\n• Skip the test phase and trade live capital immediately.\n• Cons: Much higher initial registration fees, lower profit splits (50% to 60%), and tighter drawdown rules (usually 5% maximum total drawdown).',
         mediaUrl: '/feed-images/nepse-chart.png',
         mediaType: 'image'
       },
       {
-        title: 'Understanding Evaluation Fee Refunds',
-        content: 'Most reputable prop firms (like FTMO and FundedNext) refund your challenge registration fee in full with your very first successful profit split payout. This ensures that once you prove consistency, your net initial cost becomes zero.',
+        title: '4. Understanding Bid, Ask, Spread & Commissions',
+        content: 'When you trade on platforms like MT5, you do not buy or sell at a single price. You trade between two prices: the Bid and the Ask.\n\nKey Definitions:\n• Bid Price: The price the market is willing to pay to buy from you (the price you sell/short at).\n• Ask Price: The price the market asks you to pay to buy from it (the price you buy/long at).\n• Spread: The difference between the Ask price and the Bid price. Spread is the transaction cost charged by the broker.\n• Spread Formula: Spread = Ask Price - Bid Price. For example, if EURUSD Ask is 1.0852 and Bid is 1.0850, the spread is 2 pips.\n\nProp Firm Relevance:\nProp firms offer Raw Spread accounts with extremely low spreads (near 0.0 pips) but charge a flat Commission (e.g. $3 to $7 per lot) on every trade. Be careful: during market rollover (2:45 AM NST), spreads widen massively. If your stop loss is close, the wide spread can trigger your stop and breach your daily drawdown limit, even if the candlestick chart doesn\'t show price reaching that level!',
+        mediaUrl: '/feed-images/bid-ask-spread.png',
+        mediaType: 'image'
+      },
+      {
+        title: '5. Setting Up MT5, cTrader & DXTrade',
+        content: 'Once you sign up, the prop firm will email you your trading account credentials. You must connect them to a trading platform.\n\nStep-by-Step Platform Setup:\n1. Download the Platform: Download MetaTrader 5 (MT5), cTrader, or DxTrade for your PC, iOS, or Android devices.\n2. Choose Server: Look up the exact broker server name provided by the firm (e.g., "FundedNext-Server" or "FTMO-Demo"). Do not select the default MetaQuotes server.\n3. Login Credentials: Enter the Account ID (Login) and Master Password. Make sure not to use the Investor Password (which is read-only).\n4. Position Sizing: lot sizes differ across assets. On currency pairs, 1 lot = $10 per pip. On Gold (XAUUSD), 1 lot = $10 per point. Always use a position size calculator to verify your stop-loss risk aligns with less than 1% of your daily drawdown limit.',
+        mediaUrl: '/feed-images/mt5-setup-guide.png',
+        mediaType: 'image'
+      },
+      {
+        title: '6. KYC Verification & NPR Payouts',
+        content: 'Once you pass your challenge or earn profits on a funded account, you can request withdrawals directly to Nepal.\n\nKYC (Know Your Customer) Verification:\n• Identity: Upload your Nepali Citizenship Card (colored scan, front and back) or Passport. Some firms require English translation if the text is strictly in Devanagari.\n• Address: Upload a bank statement showing your name and home address with a clear bank stamp, or a utility bill (electricity, water, internet) not older than 3 months.\n\nReceiving Payouts in Nepal:\n• Payout Portals: Most firms use Rise or Deel portals to manage contracts and payouts.\n• NPR Bank Transfer: You can withdraw directly from Rise/Deel to your local Nepalese bank account (NPR bank transfers) via SWIFT or local payout partners.\n• Crypto: Withdraw in USDT (TRC20 or ERC20) directly to your digital wallets.',
         mediaUrl: '/feed-images/payout-confirmation.png',
         mediaType: 'image'
       }
@@ -367,20 +394,20 @@ const initialModules: CourseModule[] = [
     desc: 'The single most important skill. Learn details of balance-based vs equity-based drawdown, daily stop calculations, and news-trading restrictions.',
     lessons: [
       {
-        title: 'Equity vs Balance-Based Drawdowns',
-        content: 'Drawdown limit checks can be based on your starting day balance or floating equity. Balance-based is much safer, as it ignores intra-day floating profit peaks. Equity-based drawdown is sensitive to trade retracements and requires active stop management.',
-        mediaUrl: '/feed-images/trading-chart-gold.png',
+        title: '1. Equity vs Balance-Based Drawdowns',
+        content: 'Firms track your losses relative to two main reference points: starting balance or starting equity. Knowing how they calculate this is the difference between keeping or losing your account.\n\nBalance-Based Drawdown:\n• Calculated relative to your cash balance at the daily reset time (typically 5:00 PM EST / 2:45 AM NST).\n• Example: If your day starts with $100,000, your 5% limit is $95,000. If you have a trade floating at +$4,000 and it reverses to -$1,000, your cash balance was never closed at +$4,000, so your daily boundary remains $95,000. You are safe!\n\nEquity-Based Drawdown (Tighter):\n• Calculated relative to your highest floating equity peak.\n• Example: If your day starts with $100,000, your 5% limit is $95,000. But if your trade floats up to +$4,000, your daily peak is $104,000. Your daily drawdown limit adjusts to $99,000 ($104,000 - $5,000). If that trade pulls back to -$1,000 (equity becomes $99,000), your account is violated! Always close running trades near structural targets to avoid equity trailing breaches.',
+        mediaUrl: '/feed-images/drawdown-guide.png',
         mediaType: 'image'
       },
       {
-        title: 'Setting Daily Automatic Risk Stops',
-        content: 'The most effective way to protect your account is to calculate your daily limit (e.g. 5% max FTMO limit) and configure your broker or local journal tracker to alert or close trades automatically once you reach a 2% daily loss threshold.',
+        title: '2. Setting Daily Automatic Risk Stops',
+        content: 'Relying on human willpower to stop trading during a drawdown is a primary cause of failed evaluations. Successful traders automate their risk rules.\n\nPractical Risk Stop Guidelines:\n• Hard Broker Stops: Configure automated alerts on MetaTrader 5 or install a local risk manager EA (Expert Advisor) that automatically closes all active positions if your daily loss hits 4% (giving you a 1% safety buffer before the firm\'s 5% limit).\n• Daily Target Alerts: Set alert sounds on your phone for structural price targets so you don\'t sit staring at charts, which encourages FOMO or revenge trading.\n• Capital Allocation: Never risk more than 0.5% to 1% per trade. If your daily maximum drawdown is 5%, you must have at least 5 consecutive losses before losing your account.',
         mediaUrl: '/feed-images/trading-journal.png',
         mediaType: 'image'
       },
       {
-        title: 'Handling News Slippage Policies',
-        content: 'Trading during major economic announcements (CPI, FOMC, NFP) is highly restricted by many firms. Slippage can trigger massive losses that violate your drawdown targets. Always check the calendar and close swing positions prior to high-impact news releases.',
+        title: '3. Handling News Slippage Policies',
+        content: 'Firms strictly limit trading during high-impact news reports (e.g., NFP, FOMC, CPI) because massive volatility can trigger "slippage."\n\nNews Trading Realities:\n• What is Slippage?: During news events, liquidity drops, and spreads widen. If you set a stop loss at 2030 on Gold and news drops, the next available market price might be 2020. Your trade gets closed at 2020 instead of 2030, doubling your intended risk and violating your drawdown limits.\n• The 2-Minute Rule: Most prop firms ban opening or closing trades within 2 minutes before and after high-impact news releases. Swing trades are exempt in swing account types, but scalping is strictly forbidden. Always close your short-term positions at least 5 minutes prior to news events.',
         mediaUrl: '/feed-images/payout-confirmation.png',
         mediaType: 'image'
       }
@@ -394,20 +421,20 @@ const initialModules: CourseModule[] = [
     desc: 'Master the high-R:R setups required to pass evaluation profit targets (8-10%) quickly while maintaining extremely tight risk limits.',
     lessons: [
       {
-        title: 'Order Blocks & Fair Value Gaps (FVG)',
-        content: 'Smart Money Concepts (SMC) focus on institutional footprint entries. Look for strong impulse moves that leave behind Fair Value Gaps (FVG). Place limit orders in these imbalance zones for high-probability setups with tight stop losses.',
+        title: '1. Order Blocks & Fair Value Gaps (FVG)',
+        content: 'To clear an evaluation challenge, you must achieve high Risk-to-Reward (R:R) ratios. Smart Money Concepts (SMC) help locate institutional footprints to trade with tight stop losses.\n\nFair Value Gap (FVG):\n• Occurs when a highly displaced candle leaves behind an imbalance. It is marked as the empty gap between the wick high of Candle 1 and the wick low of Candle 3 in a 3-candle sequence.\n• Institutions often return price to fill these imbalances before continuing the trend. Mark these on your M15/H1 charts.\n\nOrder Blocks (OB):\n• A zone representing institutional order accumulation. It is the final bearish candle before a displacement bullish run that breaks market structure, or the final bearish run that breaks market structure. Set limit entries at the open or 50% equilibrium level of the Order Block.',
         mediaUrl: '/feed-images/trading-chart-gold.png',
         mediaType: 'image'
       },
       {
-        title: 'Identifying Asian Session Liquidity Sweeps',
-        content: 'The Asian session accumulates buy/sell orders that act as liquidity pools. During London or NY session open, wait for the market to run those highs/lows (sweeping liquidity) before entering in the opposite direction. This is a primary high-R:R setup.',
-        mediaUrl: '/feed-images/nepse-chart.png',
+        title: '2. Identifying Asian Session Liquidity Sweeps',
+        content: 'The Asian session consolidation range behaves as a major pool of buy/sell stop liquidity. Institutional algorithms hunt these levels before the true trend begins during London or New York sessions.\n\nStep-by-Step Liquidity Sweep Strategy:\n1. Mark Range: Box the consolidation high and low during the Tokyo session (00:00 to 08:00 UTC / 5:45 AM to 1:45 PM NST).\n2. Wait for the Sweep: Watch price spike above the consolidation high or below the low during the London open (1:45 PM NST) to hunt retail stop losses.\n3. Spot displacement: Wait for a sharp rejection wick on M15/M5 back inside the range, creating a Change of Character (CHoCH).\n4. Entry: Enter on the retest of the newly formed FVG. Place stop-loss 2 pips beyond the sweep wick. Target the opposite side of the range for a high R:R ratio (usually 1:3+).',
+        mediaUrl: '/feed-images/smc-liquidity-sweep.png',
         mediaType: 'image'
       },
       {
-        title: 'Risk Scaling on Win Streaks',
-        content: 'When you are in a streak of wins, do not increase your leverage. Scale down your risk percentage (e.g., from 1% to 0.5%) to lock in profits and protect your challenge drawdown buffers. Consistent sizing leads to successful payouts.',
+        title: '3. Risk Scaling on Win Streaks',
+        content: 'Psychological pitfalls usually occur when a trader is close to passing the evaluation. Learn how to adjust position sizing near targets.\n\nRisk Scaling Blueprint:\n• Reverse Scale: If you are at 7.5% profit on a $100,000 account and need only $500 (0.5%) to clear Phase 1, reduce your risk from 1% down to 0.25%. This gives you 2 chances to secure the remaining target, rather than risking a single trade that could return you to breakeven or drawdown.\n• Buffer Management: Once you pass Phase 1, reset your psychological counter. Treat Phase 2 as a brand new challenge with smaller profit targets (5%). Always keep your risk small and focus on consistency over speedy passing.',
         mediaUrl: '/feed-images/trading-journal.png',
         mediaType: 'image'
       }
@@ -796,6 +823,110 @@ export class MockSupabaseEngine {
     return newFeedback;
   }
 
+  getUserBadges(username: string): Badge[] {
+    const journals = this.getJournals(username) || [];
+    const payouts = this.getPayouts() || [];
+
+    // 1. Consistency Streak (🔥): Log at least 3 consecutive calendar days
+    const uniqueDates = Array.from(new Set(journals.map(j => j.date))).sort();
+    let currentStreak = 0;
+    let maxStreak = 0;
+    if (uniqueDates.length > 0) {
+      currentStreak = 1;
+      maxStreak = 1;
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const prevDate = new Date(uniqueDates[i - 1]);
+        const currDate = new Date(uniqueDates[i]);
+        const diffTime = Math.abs(currDate.getTime() - prevDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          currentStreak += 1;
+          if (currentStreak > maxStreak) maxStreak = currentStreak;
+        } else if (diffDays > 1) {
+          currentStreak = 1;
+        }
+      }
+    }
+
+    // 2. Risk Manager (🛡️): risk <= 1% for last 5 trades
+    const sortedJournals = [...journals].sort((a, b) => b.id.localeCompare(a.id));
+    let consecutiveRiskOk = 0;
+    for (const j of sortedJournals) {
+      if (j.riskPct !== undefined && j.riskPct <= 1.0 && j.riskPct > 0) {
+        consecutiveRiskOk += 1;
+        if (consecutiveRiskOk >= 5) break;
+      } else {
+        break; // consecutive broken
+      }
+    }
+
+    // 3. Mindful Trader (🧘): checklist complete for last 5 trades
+    let consecutiveMindfulOk = 0;
+    for (const j of sortedJournals) {
+      if (j.newsChecked && j.riskSet && j.mindsetReady) {
+        consecutiveMindfulOk += 1;
+        if (consecutiveMindfulOk >= 5) break;
+      } else {
+        break; // consecutive broken
+      }
+    }
+
+    // 4. Payout Pioneer (💰): at least 1 verified payout
+    const traderPayouts = payouts.filter(
+      p => p.trader.toLowerCase() === username.toLowerCase() && p.verified
+    );
+    const hasPayout = traderPayouts.length > 0;
+
+    // 5. SMC Scholar (🎓): positive net P&L on SMC setups
+    const smcSetups = ['Supply Zone', 'Demand Zone', 'FVG Fill', 'Liquidity Sweep', 'Order Block'];
+    const smcTrades = journals.filter(j => smcSetups.includes(j.setup));
+    const smcPnl = smcTrades.reduce((acc, j) => acc + j.pnl, 0);
+    const hasSmcProfit = smcTrades.length > 0 && smcPnl > 0;
+
+    return [
+      {
+        id: 'streak',
+        name: 'Consistency Streak',
+        emoji: '🔥',
+        description: 'Log trades on at least 3 consecutive days to build momentum.',
+        unlocked: maxStreak >= 3,
+        progress: { current: Math.min(maxStreak, 3), target: 3 }
+      },
+      {
+        id: 'risk_manager',
+        name: 'Risk Manager',
+        emoji: '🛡️',
+        description: 'Keep capital risk strictly at or below 1% for 5 consecutive trades.',
+        unlocked: consecutiveRiskOk >= 5,
+        progress: { current: Math.min(consecutiveRiskOk, 5), target: 5 }
+      },
+      {
+        id: 'mindful_trader',
+        name: 'Mindful Trader',
+        emoji: '🧘',
+        description: 'Check news, define risk, and prepare mindset for 5 consecutive trades.',
+        unlocked: consecutiveMindfulOk >= 5,
+        progress: { current: Math.min(consecutiveMindfulOk, 5), target: 5 }
+      },
+      {
+        id: 'payout_pioneer',
+        name: 'Payout Pioneer',
+        emoji: '💰',
+        description: 'Earn and showcase your first verified prop firm payout.',
+        unlocked: hasPayout,
+        progress: { current: hasPayout ? 1 : 0, target: 1 }
+      },
+      {
+        id: 'smc_scholar',
+        name: 'SMC Scholar',
+        emoji: '🎓',
+        description: 'Earn a positive net profit across Smart Money Concepts setups.',
+        unlocked: hasSmcProfit,
+        progress: { current: hasSmcProfit ? 1 : 0, target: 1 }
+      }
+    ];
+  }
+
   // ── User Registration & Authentication ──
 
   getRegisteredUsers(): RegisteredUser[] {
@@ -895,7 +1026,18 @@ export class MockSupabaseEngine {
   }
 
   getAcademyModules(): CourseModule[] {
-    return this.getStorage<CourseModule[]>('propnepal_academy_modules', initialModules);
+    const cached = this.getStorage<CourseModule[]>('propnepal_academy_modules', initialModules);
+    const mod1 = cached.find(m => m.id === 'mod-1');
+    const mod2 = cached.find(m => m.id === 'mod-2');
+    const mod3 = cached.find(m => m.id === 'mod-3');
+    const isStale = !mod1 || mod1.lessons.length < 6 ||
+                    !mod2 || mod2.lessons.length < 3 || !mod2.lessons[0].title.startsWith('1.') ||
+                    !mod3 || mod3.lessons.length < 3 || !mod3.lessons[0].title.startsWith('1.');
+    if (isStale) {
+      this.saveAcademyModules(initialModules);
+      return initialModules;
+    }
+    return cached;
   }
 
   saveAcademyModules(modules: CourseModule[]): void {

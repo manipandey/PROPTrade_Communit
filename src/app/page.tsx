@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/supabase';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
+import HomeDashboard from '@/components/HomeDashboard';
 import Hero from '@/components/Hero';
 import RightPanel from '@/components/RightPanel';
 import CommunityFeed from '@/components/CommunityFeed';
@@ -18,6 +19,9 @@ import Roadmap from '@/components/Roadmap';
 import AuthModal from '@/components/AuthModal';
 import AdSlot from '@/components/AdSlot';
 import AdminPanel from '@/components/AdminPanel';
+import LandingPage from '@/components/LandingPage';
+import InstrumentCommunities from '@/components/InstrumentCommunities';
+import TradingGame from '@/components/TradingGame';
 
 export interface MarketItem {
   name: string;
@@ -41,6 +45,17 @@ const ALL_AVAILABLE_MARKETS: MarketItem[] = [
   { name: 'Crude Oil',  symbol: 'USOIL',    priceValue: 78.45,     changeValue: -1.20, icon: '🛢️', category: 'Commodities' },
 ];
 
+interface BinanceTicker {
+  symbol: string;
+  lastPrice: string;
+  priceChangePercent: string;
+}
+
+interface ForexData {
+  result: string;
+  rates: Record<string, number>;
+}
+
 type Theme = 'dark' | 'light';
 
 export default function Home() {
@@ -53,16 +68,34 @@ export default function Home() {
   } | null>(null);
   const [markets, setMarkets] = useState<MarketItem[]>(ALL_AVAILABLE_MARKETS);
   const [watchlist, setWatchlist] = useState<string[]>(['NAS100', 'XAUUSD', 'EURUSD', 'BTCUSD']);
+  const [showLanding, setShowLanding] = useState(true);
 
   // Fetch real-time market data from APIs
   useEffect(() => {
     const fetchLivePrices = async () => {
       try {
-        const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]');
-        const cryptoData = await cryptoRes.json();
-        
-        const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
-        const forexData = await forexRes.json();
+        let cryptoData: BinanceTicker[] = [];
+        try {
+          const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]');
+          if (cryptoRes.ok) {
+            const data = await cryptoRes.json();
+            if (Array.isArray(data)) {
+              cryptoData = data;
+            }
+          }
+        } catch (e) {
+          console.warn('Could not fetch live crypto prices from Binance:', e);
+        }
+
+        let forexData: ForexData | null = null;
+        try {
+          const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
+          if (forexRes.ok) {
+            forexData = await forexRes.json();
+          }
+        } catch (e) {
+          console.warn('Could not fetch live forex rates:', e);
+        }
         
         if (forexData?.result === 'success' && forexData.rates) {
           const rates = forexData.rates;
@@ -73,13 +106,13 @@ export default function Home() {
               let liveChange = m.changeValue;
               
               if (m.symbol === 'BTCUSD') {
-                const btc = cryptoData.find((item: any) => item.symbol === 'BTCUSDT');
+                const btc = cryptoData.find((item) => item.symbol === 'BTCUSDT');
                 if (btc) {
                   livePrice = parseFloat(btc.lastPrice);
                   liveChange = parseFloat(btc.priceChangePercent);
                 }
               } else if (m.symbol === 'ETHUSD') {
-                const eth = cryptoData.find((item: any) => item.symbol === 'ETHUSDT');
+                const eth = cryptoData.find((item) => item.symbol === 'ETHUSDT');
                 if (eth) {
                   livePrice = parseFloat(eth.lastPrice);
                   liveChange = parseFloat(eth.priceChangePercent);
@@ -103,7 +136,7 @@ export default function Home() {
           );
         }
       } catch (error) {
-        console.error('Error fetching live market data:', error);
+        console.warn('Error updating live market data:', error);
       }
     };
 
@@ -139,6 +172,9 @@ export default function Home() {
     document.documentElement.setAttribute('data-theme', stored);
     setCurrentUser(user);
     setTheme(stored);
+    if (user.loggedIn) {
+      setShowLanding(false);
+    }
 
     const saved = localStorage.getItem('propnepal_watchlist');
     if (saved) {
@@ -147,7 +183,7 @@ export default function Home() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setWatchlist(parsed);
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -174,12 +210,17 @@ export default function Home() {
   };
 
   const handleAuthSuccess = () => {
-    setCurrentUser(db.getCurrentUser());
+    const user = db.getCurrentUser();
+    setCurrentUser(user);
+    if (user.loggedIn) {
+      setShowLanding(false);
+    }
   };
 
   const handleLogout = () => {
     db.setCurrentUser({ username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
     setCurrentUser(db.getCurrentUser());
+    setShowLanding(true);
   };
 
   const handleMobileToggle = () => {
@@ -191,6 +232,23 @@ export default function Home() {
     setActiveTab(tab);
     setMobileMenuOpen(false);
   };
+
+  // Show landing page for unauthenticated users who haven't chosen to browse as guest
+  if (showLanding && !currentUser?.loggedIn) {
+    return (
+      <>
+        <LandingPage
+          onOpenAuth={() => setAuthOpen(true)}
+          onEnterApp={() => setShowLanding(false)}
+        />
+        <AuthModal
+          isOpen={authOpen}
+          onClose={() => setAuthOpen(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
@@ -221,8 +279,48 @@ export default function Home() {
               <div className="flex gap-6 animate-fade-in">
                 {/* Left: Main content */}
                 <div className="flex-1 min-w-0 space-y-6">
+                  <HomeDashboard
+                    onOpenJournal={() => handleSetActiveTab('journals')}
+                    onOpenAuth={() => setAuthOpen(true)}
+                    currentUser={currentUser}
+                  />
+
+                  {/* Live Trading Feed preview */}
+                  <div className="space-y-3 pt-4 border-t border-border-theme">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+                        Live Trading Feed
+                      </h2>
+                    </div>
+                    <CommunityFeed currentUser={currentUser} onOpenAuth={() => setAuthOpen(true)} />
+                  </div>
+
+                  <Roadmap />
+                </div>
+
+                {/* Right Panel */}
+                <div className="hidden xl:block">
+                  <div className="sticky top-6 space-y-4">
+                    <RightPanel
+                      onNavigate={handleSetActiveTab}
+                      markets={markets}
+                      watchlist={watchlist}
+                      onToggleWatchlist={handleToggleWatchlist}
+                      theme={theme}
+                    />
+                    <AdSlot variant="sidebar" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── COMMUNITY FEED ── */}
+            {activeTab === 'community' && (
+              <div className="flex gap-6 animate-fade-in">
+                {/* Left: Main content */}
+                <div className="flex-1 min-w-0 space-y-6">
                   <Hero
-                    onBrowseFeed={() => handleSetActiveTab('home')}
+                    onBrowseFeed={() => handleSetActiveTab('community')}
                     onOpenJournal={() => handleSetActiveTab('journals')}
                     onOpenAuth={() => setAuthOpen(true)}
                     isLoggedIn={currentUser?.loggedIn || false}
@@ -290,6 +388,17 @@ export default function Home() {
               </div>
             )}
 
+            {/* ── INSTRUMENT COMMUNITIES ── */}
+            {activeTab === 'communities' && (
+              <div className="animate-fade-in space-y-5">
+                <InstrumentCommunities
+                  currentUser={currentUser}
+                  onOpenAuth={() => setAuthOpen(true)}
+                />
+                <AdSlot variant="banner" className="mt-4" />
+              </div>
+            )}
+
             {/* ── TRADING JOURNALS ── */}
             {activeTab === 'journals' && (
               <div className="animate-fade-in space-y-5">
@@ -305,6 +414,14 @@ export default function Home() {
             {activeTab === 'tools' && (
               <div className="animate-fade-in space-y-5">
                 <Tools theme={theme} />
+                <AdSlot variant="banner" className="mt-4" />
+              </div>
+            )}
+
+            {/* ── TRADING GAME ── */}
+            {activeTab === 'game' && (
+              <div className="animate-fade-in space-y-5">
+                <TradingGame theme={theme} />
                 <AdSlot variant="banner" className="mt-4" />
               </div>
             )}
@@ -336,7 +453,7 @@ export default function Home() {
                     Master SMC, FVG fills, liquidity sweeps and evaluation strategies
                   </p>
                 </div>
-                <LearningHub />
+                <LearningHub currentUser={currentUser} onOpenAuth={() => setAuthOpen(true)} />
                 <AdSlot variant="banner" className="mt-4" />
               </div>
             )}

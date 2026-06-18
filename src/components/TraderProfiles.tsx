@@ -9,6 +9,7 @@ export default function TraderProfiles() {
   const [profiles, setProfiles] = useState<TraderProfile[]>([]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfiles(db.getProfiles());
   }, []);
   const [selectedProfile, setSelectedProfile] = useState<TraderProfile | null>(null);
@@ -85,6 +86,21 @@ export default function TraderProfiles() {
                       {firm}
                     </span>
                   ))}
+                  {(() => {
+                    const username = profile.handle.replace('@', '');
+                    const badges = db.getUserBadges(username);
+                    const unlocked = badges.filter(b => b.unlocked);
+                    return unlocked.map(b => (
+                      <span
+                        key={b.id}
+                        className="inline-flex items-center gap-1 rounded bg-brand-green/10 border border-brand-green/20 px-2 py-0.5 text-[9px] font-mono font-bold text-brand-green"
+                        title={`${b.name}: ${b.description}`}
+                      >
+                        <span>{b.emoji}</span>
+                        <span>{b.name}</span>
+                      </span>
+                    ));
+                  })()}
                 </div>
 
                 {/* Bio Excerpt */}
@@ -173,7 +189,40 @@ export default function TraderProfiles() {
             </div>
 
             {/* Bio & Tactics */}
-            <div className="space-y-4 text-left">
+            <div className="space-y-5 text-left">
+              {/* Unlocked Badges */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-1 mb-2">
+                  <Award className="h-3.5 w-3.5 text-brand-green" />
+                  <span>Discipline Achievements & Badges</span>
+                </h4>
+                {(() => {
+                  const username = selectedProfile.handle.replace('@', '');
+                  const badges = db.getUserBadges(username);
+                  const unlocked = badges.filter(b => b.unlocked);
+                  if (unlocked.length === 0) {
+                    return (
+                      <p className="text-[10px] text-text-muted italic bg-bg-input/20 border border-border-theme rounded-lg p-3">
+                        No discipline badges unlocked yet. Logging trades consistently with low risk unlocks achievements.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="grid grid-cols-2 gap-2">
+                      {unlocked.map(b => (
+                        <div key={b.id} className="flex items-center gap-2 bg-brand-green/5 border border-brand-green/10 rounded-lg p-2.5">
+                          <span className="text-lg">{b.emoji}</span>
+                          <div>
+                            <div className="text-[10px] font-black text-text-primary leading-tight">{b.name}</div>
+                            <div className="text-[9px] text-text-muted mt-0.5">{b.description}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-1">
                   <Brain className="h-3.5 w-3.5 text-brand-green" />

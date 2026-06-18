@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, Trophy, Users, Settings, Check } from 'lucide-react';
+import { Trophy, Users, Settings, Check } from 'lucide-react';
 
 interface MarketItem {
   name: string;
@@ -29,18 +29,6 @@ const mapToTradingViewSymbol = (sym: string): string => {
   return map[sym] || sym;
 };
 
-const ALL_AVAILABLE_MARKETS: MarketItem[] = [
-  { name: 'NASDAQ 100', symbol: 'NAS100',  priceValue: 18940.20, changeValue: 0.82,  icon: '📈', category: 'Indices' },
-  { name: 'XAUUSD', symbol: 'XAUUSD',  priceValue: 2428.50,  changeValue: -0.15, icon: '🪙', category: 'Commodities' },
-  { name: 'EUR/USD',    symbol: 'EURUSD',   priceValue: 1.0842,    changeValue: 0.24,  icon: '💱', category: 'Forex' },
-  { name: 'S&P 500',    symbol: 'SPX500',   priceValue: 5431.10,   changeValue: 0.45,  icon: '📊', category: 'Indices' },
-  { name: 'US30 (Dow)',  symbol: 'US30',     priceValue: 39820.00,  changeValue: -0.08, icon: '🏢', category: 'Indices' },
-  { name: 'Bitcoin',    symbol: 'BTCUSD',   priceValue: 67250.00,  changeValue: 2.10,  icon: '🪙', category: 'Crypto' },
-  { name: 'Ethereum',   symbol: 'ETHUSD',   priceValue: 3512.40,   changeValue: 1.45,  icon: '💎', category: 'Crypto' },
-  { name: 'GBP/USD',    symbol: 'GBPUSD',   priceValue: 1.2715,    changeValue: -0.04, icon: '💱', category: 'Forex' },
-  { name: 'USD/JPY',    symbol: 'USDJPY',   priceValue: 156.82,    changeValue: 0.12,  icon: '💴', category: 'Forex' },
-  { name: 'Crude Oil',  symbol: 'USOIL',    priceValue: 78.45,     changeValue: -1.20, icon: '🛢️', category: 'Commodities' },
-];
 
 const TOP_TRADERS = [
   { rank: 1, name: 'Samir R. Shah',   winRate: '72%', profit: '$24.5k', avatar: 'SR' },

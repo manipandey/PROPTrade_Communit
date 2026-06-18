@@ -2,8 +2,9 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck, CheckSquare, Square } from 'lucide-react';
+import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck, CheckSquare, Award, Eye, AlertTriangle, HelpCircle } from 'lucide-react';
 import { db, JournalEntry, EMOTIONS, SETUP_TYPES, Emotion, SetupType, TradeFeedback, TradingAccount, TradingSession, TRADING_SESSIONS } from '@/lib/supabase';
+import StreakSimulator from '@/components/StreakSimulator';
 
 interface PublicJournalEntry extends JournalEntry {
   avatar: string;
@@ -19,15 +20,134 @@ interface TradingJournalsProps {
   onOpenAuth: () => void;
 }
 
+export interface AlignmentResult {
+  hasPlan: boolean;
+  status: 'aligned' | 'violated' | 'no_plan';
+  violations: string[];
+  matches: string[];
+  checklistCount: number;
+  checklistComplete: boolean;
+  planNotes?: string;
+  planBias?: string;
+  planMaxRisk?: string;
+}
+
+export const checkPlanAlignment = (
+  tradeDate: string,
+  direction: 'BUY' | 'SELL',
+  riskPct: number | undefined,
+  username: string
+): AlignmentResult => {
+  if (typeof window === 'undefined') {
+    return {
+      hasPlan: false,
+      status: 'no_plan',
+      violations: [],
+      matches: [],
+      checklistCount: 0,
+      checklistComplete: false,
+    };
+  }
+
+  const savedPlan = localStorage.getItem(`propnepal_plan_${username}_${tradeDate}`);
+  const savedChecklist = localStorage.getItem(`propnepal_checklist_${username}_${tradeDate}`);
+
+  let plan = null;
+  if (savedPlan) {
+    try {
+      plan = JSON.parse(savedPlan);
+    } catch {}
+  }
+
+  let checklist = null;
+  if (savedChecklist) {
+    try {
+      checklist = JSON.parse(savedChecklist);
+    } catch {}
+  }
+
+  const defaultItems = [
+    { id: 'news' }, { id: 'risk_invalid' }, { id: 'risk_percent' },
+    { id: 'psych_fomo' }, { id: 'psych_calm' }, { id: 'rules_fit' }
+  ];
+  const totalChecklistItems = defaultItems.length;
+  const checkedCount = checklist ? defaultItems.filter(item => checklist[item.id]).length : 0;
+  const checklistComplete = checkedCount === totalChecklistItems;
+
+  const violations: string[] = [];
+  const matches: string[] = [];
+
+  if (!plan || !plan.committed) {
+    return {
+      hasPlan: false,
+      status: 'no_plan',
+      violations: ['No Daily Trading Plan was locked for this date.'],
+      matches: [],
+      checklistCount: checkedCount,
+      checklistComplete,
+    };
+  }
+
+  // 1. Bias match check
+  if (plan.bias) {
+    if (plan.bias === 'bullish' && direction === 'SELL') {
+      violations.push('Traded SELL when Daily Bias was Bullish 🐂');
+    } else if (plan.bias === 'bearish' && direction === 'BUY') {
+      violations.push('Traded BUY when Daily Bias was Bearish 🐻');
+    } else if (plan.bias === 'range') {
+      matches.push('Traded Neutral/Range bias 🔄');
+    } else {
+      matches.push(`Traded in direction of Daily Bias (${plan.bias === 'bullish' ? 'Bullish 🐂' : 'Bearish 🐻'})`);
+    }
+  }
+
+  // 2. Risk check
+  if (riskPct !== undefined && !isNaN(riskPct) && plan.maxRisk) {
+    const planRiskVal = parseFloat(plan.maxRisk);
+    if (!isNaN(planRiskVal) && riskPct > planRiskVal) {
+      violations.push(`Risked ${riskPct}% exceeding Daily Max Risk limit of ${plan.maxRisk} 🛡️`);
+    } else {
+      matches.push(`Risk kept under Daily Max Risk limit (${riskPct}% / ${plan.maxRisk})`);
+    }
+  }
+
+  // 3. Checklist check
+  if (!checklistComplete) {
+    violations.push(`Pre-Trade Checklist incomplete (${checkedCount}/${totalChecklistItems} checked) 🧘`);
+  } else {
+    matches.push('Completed full Pre-Trade Checklist prior to trading 🧘');
+  }
+
+  const status = violations.length === 0 ? 'aligned' : 'violated';
+
+  return {
+    hasPlan: true,
+    status,
+    violations,
+    matches,
+    checklistCount: checkedCount,
+    checklistComplete,
+    planNotes: plan.notes,
+    planBias: plan.bias,
+    planMaxRisk: plan.maxRisk,
+  };
+};
+
 export default function TradingJournals({ currentUser, onOpenAuth }: TradingJournalsProps) {
   const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [isLoggingTrade, setIsLoggingTrade] = useState(false);
+  const [openAlignmentId, setOpenAlignmentId] = useState<string | null>(null);
 
   // Accounts state
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [selectedAccountFilter, setSelectedAccountFilter] = useState('all');
+  const [selectedAccountTypeFilter, setSelectedAccountTypeFilter] = useState<'all' | 'Challenge' | 'Funded'>('all');
   const [isManagingAccounts, setIsManagingAccounts] = useState(false);
+
+  // Validation / feedback states
+  const [formError, setFormError] = useState('');
+  const [successToast, setSuccessToast] = useState<{ message: string; subMessage?: string } | null>(null);
 
   // Form state for new account
   const [newAccName, setNewAccName] = useState('');
@@ -50,15 +170,18 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   const [riskPct, setRiskPct] = useState('');
   const [riskReward, setRiskReward] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [newsChecked, setNewsChecked] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [riskSet, setRiskSet] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [mindsetReady, setMindsetReady] = useState(false);
   const [sentiment, setSentiment] = useState<'Bullish' | 'Bearish' | 'Neutral' | null>(null);
 
   // Uploader / Visibility / Community Subtab States
   const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
   const [isDragging, setIsDragging] = useState(false);
-  const [journalSubTab, setJournalSubTab] = useState<'my' | 'community' | 'ai'>('my');
+  const [journalSubTab, setJournalSubTab] = useState<'my' | 'community' | 'ai' | 'streak'>('my');
   const [journalSettings, setJournalSettings] = useState<{ isPublic: boolean }>({ isPublic: false });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +200,8 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   // Load user journals dynamically — syncing from external localStorage store
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
+    setSelectedAccountFilter('all');
+    setSelectedAccountTypeFilter('all');
     if (currentUser?.loggedIn) {
       setJournals(db.getJournals(currentUser.username));
       setJournalSettings(db.getJournalSettings(currentUser.username));
@@ -159,39 +284,81 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   // Handle Trade Submission
   const handleLogTradeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+    setSuccessToast(null);
+
     if (!currentUser || !currentUser.loggedIn) {
       onOpenAuth();
       return;
     }
-    if (!asset || !entryPrice || !exitPrice || !pnl) return;
+
+    const isNoSetup = setup === 'No Setup';
+
+    // Explicit validation feedback instead of silent return
+    if (!isNoSetup && !asset.trim()) {
+      setFormError('Please enter an Asset/Pair (e.g., XAUUSD).');
+      return;
+    }
+    if (!isNoSetup && (!entryPrice || parseFloat(entryPrice) <= 0)) {
+      setFormError('Please enter a valid Entry Price greater than 0.');
+      return;
+    }
+    if (!isNoSetup && (!exitPrice || parseFloat(exitPrice) <= 0)) {
+      setFormError('Please enter a valid Exit Price greater than 0.');
+      return;
+    }
+    if (!isNoSetup && (!pnl || isNaN(parseFloat(pnl)))) {
+      setFormError('Please enter a valid Net Profit / Loss amount.');
+      return;
+    }
 
     const newTrade: JournalEntry = {
       id: `j-${Date.now()}`,
       date,
-      asset: asset.toUpperCase(),
-      direction,
-      lots: parseFloat(lots) || 0.1,
-      entryPrice: parseFloat(entryPrice) || 0,
-      exitPrice: parseFloat(exitPrice) || 0,
-      pnl: parseFloat(pnl) || 0,
+      asset: isNoSetup ? 'NO SETUP' : asset.toUpperCase(),
+      direction: isNoSetup ? 'BUY' : direction,
+      lots: isNoSetup ? 0 : (parseFloat(lots) || 0.1),
+      entryPrice: isNoSetup ? 0 : (parseFloat(entryPrice) || 0),
+      exitPrice: isNoSetup ? 0 : (parseFloat(exitPrice) || 0),
+      pnl: isNoSetup ? 0 : (parseFloat(pnl) || 0),
       notes,
       emotion,
       setup,
       author: currentUser.username,
-      riskPct: riskPct ? parseFloat(riskPct) : undefined,
-      riskReward: riskReward ? parseFloat(riskReward) : undefined,
-      imageUrl: imageUrl || undefined,
+      riskPct: isNoSetup ? undefined : (riskPct ? parseFloat(riskPct) : undefined),
+      riskReward: isNoSetup ? undefined : (riskReward ? parseFloat(riskReward) : undefined),
+      imageUrl: isNoSetup ? undefined : (imageUrl || undefined),
       accountId: selectedAccountId || undefined,
       session,
-      newsChecked,
-      riskSet,
-      mindsetReady,
-      sentiment: sentiment || undefined
+      newsChecked: true,
+      riskSet: true,
+      mindsetReady: true,
+      sentiment: isNoSetup ? undefined : (sentiment || undefined)
     };
 
     const updatedJournals = [newTrade, ...journals];
     setJournals(updatedJournals);
     db.saveJournals(currentUser.username, updatedJournals);
+
+    // Compute helpful filter notification if trade is hidden under current view
+    let subMessage = undefined;
+    if (selectedAccountFilter !== 'all' && selectedAccountId !== selectedAccountFilter) {
+      const loggedAcc = accounts.find(a => a.id === selectedAccountId);
+      const filteredAcc = accounts.find(a => a.id === selectedAccountFilter);
+      const loggedName = loggedAcc ? loggedAcc.name : 'No Account';
+      const filteredName = filteredAcc ? filteredAcc.name : 'Selected Account';
+      subMessage = `Note: This position was logged to "${loggedName}". However, your active dashboard filter is set to "${filteredName}". Switch the filter dropdown to "All Accounts" or "${loggedName}" to view this entry in the table.`;
+    }
+
+    setSuccessToast({
+      message: `Position for ${asset.toUpperCase()} logged successfully!`,
+      subMessage
+    });
+
+    // Auto-dismiss success toast after 8 seconds
+    setTimeout(() => {
+      setSuccessToast(null);
+    }, 8000);
 
     // Reset Form
     setDate(new Date().toISOString().split('T')[0]);
@@ -213,6 +380,42 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
     setMindsetReady(false);
     setSentiment(null);
     setIsLoggingTrade(false);
+  };
+
+  // Helper to calculate P&L automatically based on lots, entry/exit price, and asset multiplier rules
+  const calculateEstimatedPnl = () => {
+    const entry = parseFloat(entryPrice);
+    const exit = parseFloat(exitPrice);
+    const lotSize = parseFloat(lots) || 0.1;
+    if (isNaN(entry) || isNaN(exit)) return;
+
+    const dirMultiplier = direction === 'BUY' ? 1 : -1;
+    const cleanAsset = asset.toUpperCase().trim();
+    let calculated = 0;
+
+    if (cleanAsset.includes('XAU') || cleanAsset.includes('GOLD')) {
+      // Gold: $100 per 1 lot per $1 price move
+      calculated = (exit - entry) * dirMultiplier * lotSize * 100;
+    } else if (cleanAsset.includes('EUR') || cleanAsset.includes('GBP') || cleanAsset.includes('USD')) {
+      // Major Forex: standard lot is 100,000 units
+      if (cleanAsset.includes('JPY')) {
+        // USDJPY, EURJPY etc: 1 pip = 0.01 JPY, lot size 100k
+        calculated = ((exit - entry) * dirMultiplier * lotSize * 100000) / exit;
+      } else {
+        // EURUSD, GBPUSD: 1 pip = 0.0001, lot size 100k
+        calculated = (exit - entry) * dirMultiplier * lotSize * 100000;
+      }
+    } else if (cleanAsset.includes('NAS') || cleanAsset.includes('SPX') || cleanAsset.includes('US30') || cleanAsset.includes('GER')) {
+      // Indices: standard contract sizes
+      const mult = cleanAsset.includes('SPX') ? 10 : cleanAsset.includes('NAS') ? 20 : 1;
+      calculated = (exit - entry) * dirMultiplier * lotSize * mult;
+    } else {
+      // Generic fallback
+      calculated = (exit - entry) * dirMultiplier * lotSize * 100;
+    }
+
+    setPnl(calculated.toFixed(2));
+    setFormError('');
   };
 
   // Submit Feedback / Rating / Question
@@ -239,8 +442,16 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
 
   // Aggregated Stats
   const activeJournals = useMemo(() => {
-    return journals.filter(j => selectedAccountFilter === 'all' || j.accountId === selectedAccountFilter);
-  }, [journals, selectedAccountFilter]);
+    return journals.filter(j => {
+      const matchAccount = selectedAccountFilter === 'all' || j.accountId === selectedAccountFilter;
+      let matchType = true;
+      if (selectedAccountTypeFilter !== 'all') {
+        const acc = accounts.find(a => a.id === j.accountId);
+        matchType = acc?.type === selectedAccountTypeFilter;
+      }
+      return matchAccount && matchType;
+    });
+  }, [journals, selectedAccountFilter, selectedAccountTypeFilter, accounts]);
 
   const stats = useMemo(() => {
     if (activeJournals.length === 0) {
@@ -397,6 +608,18 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 ))}
               </select>
 
+              {/* Account Type Filter */}
+              <select
+                id="journal-account-type-filter"
+                value={selectedAccountTypeFilter}
+                onChange={(e) => setSelectedAccountTypeFilter(e.target.value as 'all' | 'Challenge' | 'Funded')}
+                className="rounded-lg border border-border-theme bg-bg-card py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+              >
+                <option value="all">All Types</option>
+                <option value="Challenge">Challenge Accounts</option>
+                <option value="Funded">Funded Accounts</option>
+              </select>
+
               {/* Manage Accounts Button */}
               <button
                 id="journal-manage-accounts-btn"
@@ -418,7 +641,11 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     onOpenAuth();
                   }
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-brand-green px-4 py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
+                  isLoggingTrade
+                    ? 'bg-brand-green text-black border border-brand-green shadow-[0_0_25px_rgba(168,85,247,0.7)] scale-[1.03] ring-2 ring-purple-500/40'
+                    : 'bg-brand-green text-black hover:bg-brand-green/90 border border-transparent glow-purple'
+                }`}
               >
                 <PlusCircle className="h-4 w-4" />
                 <span>Log New Trade</span>
@@ -428,8 +655,29 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
         </div>
       </div>
 
+      {/* Success Toast */}
+      {successToast && (
+        <div className="mx-auto max-w-xl w-full flex items-start gap-3 rounded-xl bg-brand-green/10 border border-brand-green/35 p-4 text-xs text-text-primary animate-fade-in relative shadow-[0_4px_12px_rgba(34,197,94,0.08)] text-left">
+          <div className="rounded-full bg-brand-green/20 p-1.5 text-brand-green flex-shrink-0">
+            <CheckSquare className="h-4 w-4" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <div className="font-extrabold text-brand-green uppercase tracking-wide text-[9px]">Success</div>
+            <div className="font-bold text-text-primary">{successToast.message}</div>
+            {successToast.subMessage && <p className="text-text-secondary leading-relaxed mt-1 text-[11px]">{successToast.subMessage}</p>}
+          </div>
+          <button 
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            className="text-text-muted hover:text-text-primary absolute top-3.5 right-3.5 transition-colors p-1"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Subtab Navigation Bar */}
-      <div className="flex border border-border-theme bg-bg-input/45 p-1 rounded-xl max-w-md mx-auto">
+      <div className="flex border border-border-theme bg-bg-input/45 p-1 rounded-xl max-w-2xl mx-auto">
         <button
           onClick={() => setJournalSubTab('my')}
           className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
@@ -439,6 +687,17 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
           }`}
         >
           My Journal Logbook
+        </button>
+        <button
+          onClick={() => setJournalSubTab('streak')}
+          className={`flex-1 py-2 text-center text-xs font-bold uppercase tracking-wider rounded-lg transition-all inline-flex items-center justify-center gap-1 ${
+            journalSubTab === 'streak'
+              ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-brand-green border border-brand-green/20 shadow-sm'
+              : 'text-text-secondary hover:text-text-primary'
+          }`}
+        >
+          <Award className="h-3.5 w-3.5" />
+          Streak Simulator
         </button>
         <button
           onClick={() => setJournalSubTab('community')}
@@ -588,6 +847,56 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
             </div>
           )}
 
+          {/* Discipline Badges & Achievements Panel */}
+          {currentUser?.loggedIn && (
+            <div className="rounded-xl border border-border-theme bg-bg-card p-5 space-y-4 animate-fade-in text-left">
+              <div className="flex items-center justify-between border-b border-border-theme pb-3" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center gap-2">
+                  <Star className="h-4.5 w-4.5 text-yellow-400 fill-yellow-400" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-text-primary">Discipline Badges & Achievements</h3>
+                </div>
+                <div className="text-[10px] font-bold text-text-muted">
+                  Score: <span className="text-brand-green">{db.getUserBadges(currentUser.username).filter(b => b.unlocked).length} / 5 Unlocked</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                {db.getUserBadges(currentUser.username).map(badge => (
+                  <div
+                    key={badge.id}
+                    className={`rounded-lg border p-3.5 space-y-2 flex flex-col justify-between transition-all duration-300 ${
+                      badge.unlocked
+                        ? 'bg-brand-green/5 border-brand-green/20'
+                        : 'bg-bg-input/20 border-border-theme opacity-60'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{badge.emoji}</span>
+                        <span className="text-xs font-black text-text-primary">{badge.name}</span>
+                      </div>
+                      <p className="text-[10px] text-text-muted leading-relaxed mt-1">{badge.description}</p>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-border-theme/40">
+                      <div className="flex justify-between text-[8px] font-mono font-bold text-text-muted">
+                        <span>PROGRESS</span>
+                        <span>{badge.progress.current} / {badge.progress.target}</span>
+                      </div>
+                      <div className="w-full bg-bg-secondary h-1.5 rounded-full overflow-hidden border border-border-theme/20">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            badge.unlocked ? 'bg-brand-green' : 'bg-text-muted'
+                          }`}
+                          style={{ width: `${(badge.progress.current / badge.progress.target) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Accounts Management UI Panel */}
           {isManagingAccounts && currentUser?.loggedIn && (
             <div className="rounded-xl border border-border-theme bg-bg-card p-6 space-y-5 glow-accent animate-fade-in text-left">
@@ -732,13 +1041,19 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
 
           {/* Log Trade Form Drawer */}
           {isLoggingTrade && currentUser?.loggedIn && (
-            <form onSubmit={handleLogTradeSubmit} className="rounded-xl border border-border-theme bg-bg-secondary p-6 space-y-4 glow-accent animate-fade-in text-left">
+            <form onSubmit={handleLogTradeSubmit} className="rounded-xl border border-border-theme bg-bg-secondary p-6 space-y-4 glow-purple animate-fade-in text-left">
               <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
                 <PlusCircle className="h-4.5 w-4.5 text-brand-green" />
                 <span>Enter Trade Details</span>
               </h3>
 
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              {formError && (
+                <div className="flex items-start gap-2.5 rounded-lg bg-red-950/50 border border-red-800/60 p-3.5 text-xs text-red-200 animate-fade-in">
+                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Account</label>
                   <select
@@ -747,11 +1062,17 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     onChange={(e) => setSelectedAccountId(e.target.value)}
                     className="mt-1.5 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
                   >
-                    {accounts.map(acc => (
-                      <option key={acc.id} value={acc.id} className="bg-bg-input text-text-primary">
-                        {acc.name}
+                    {accounts.length === 0 ? (
+                      <option value="" disabled className="bg-bg-input text-text-muted">
+                        No accounts created (Create one in Accounts Manager)
                       </option>
-                    ))}
+                    ) : (
+                      accounts.map(acc => (
+                        <option key={acc.id} value={acc.id} className="bg-bg-input text-text-primary">
+                          {acc.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -763,42 +1084,6 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Asset/Pair</label>
-                  <input
-                    type="text"
-                    required
-                    value={asset}
-                    onChange={(e) => setAsset(e.target.value)}
-                    placeholder="e.g. XAUUSD"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Direction</label>
-                  <select
-                    value={direction}
-                    onChange={(e) => setDirection(e.target.value as 'BUY' | 'SELL')}
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
-                  >
-                    <option value="BUY" className="bg-bg-input text-brand-green font-bold">BUY (Long)</option>
-                    <option value="SELL" className="bg-bg-input text-red-500 font-bold">SELL (Short)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Lot Size</label>
-                  <input
-                    type="text"
-                    required
-                    value={lots}
-                    onChange={(e) => setLots(e.target.value)}
-                    placeholder="1.00"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
                   />
                 </div>
 
@@ -816,50 +1101,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     ))}
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Entry Price</label>
-                  <input
-                    type="number"
-                    step="any"
-                    required
-                    value={entryPrice}
-                    onChange={(e) => setEntryPrice(e.target.value)}
-                    placeholder="e.g. 2350.50"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Exit Price</label>
-                  <input
-                    type="number"
-                    step="any"
-                    required
-                    value={exitPrice}
-                    onChange={(e) => setExitPrice(e.target.value)}
-                    placeholder="e.g. 2362.80"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Net Profit ($)</label>
-                  <input
-                    type="number"
-                    step="any"
-                    required
-                    value={pnl}
-                    onChange={(e) => setPnl(e.target.value)}
-                    placeholder="e.g. 1230 or -450"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Setup Tactic</label>
                   <select
@@ -889,241 +1131,342 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Risk %</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={riskPct}
-                    onChange={(e) => setRiskPct(e.target.value)}
-                    placeholder="e.g. 1.0"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Planned R:R Ratio</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={riskReward}
-                    onChange={(e) => setRiskReward(e.target.value)}
-                    placeholder="e.g. 3.0"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                  />
-                </div>
               </div>
 
-              {/* Screenshot Upload / Attachment Section */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                    <span className="inline-flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" /> Attach Chart/Screenshot (optional)</span>
-                  </label>
-                  <div className="flex rounded-md border border-border-theme bg-bg-input p-0.5 text-[9px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setImageMode('upload')}
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded transition-all uppercase tracking-wider ${
-                        imageMode === 'upload' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
-                      }`}
-                    >
-                      <Upload className="h-2.5 w-2.5" />
-                      Upload
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setImageMode('url')}
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded transition-all uppercase tracking-wider ${
-                        imageMode === 'url' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
-                      }`}
-                    >
-                      <Link className="h-2.5 w-2.5" />
-                      URL
-                    </button>
-                  </div>
+              {setup === 'No Setup' ? (
+                <div className="rounded-xl border border-dashed border-blue-500/25 bg-blue-500/5 p-5 text-center space-y-1.5">
+                  <div className="text-xs font-bold text-blue-400 uppercase tracking-wider">No Setup Day Log</div>
+                  <p className="text-[11px] text-text-secondary leading-relaxed">
+                    Recording a No Setup Day. This represents high execution discipline — observing the charts and choosing not to trade. Your record will be saved with $0.00 P&L and 0 lots to preserve your consistency streak.
+                  </p>
                 </div>
-
-                {imageMode === 'url' && (
-                  <input
-                    type="text"
-                    placeholder="Paste image URL here... (e.g. https://i.imgur.com/chart.png)"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full rounded-lg border border-border-theme bg-bg-input py-2.5 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
-                  />
-                )}
-
-                {imageMode === 'upload' && !imageUrl && (
-                  <div
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 px-4 cursor-pointer transition-all duration-200 ${
-                      isDragging
-                        ? 'border-brand-green bg-brand-green/5 shadow-inner'
-                        : 'border-border-theme bg-bg-input/40 hover:border-border-hover hover:bg-bg-input/65'
-                    }`}
-                  >
-                    <div className={`rounded-full p-2 transition-colors ${
-                      isDragging ? 'bg-brand-green/10 text-brand-green' : 'bg-bg-secondary text-text-secondary'
-                    }`}>
-                      <Upload className="h-4 w-4" />
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Asset/Pair</label>
+                      <input
+                        type="text"
+                        required={(setup as string) !== 'No Setup'}
+                        value={asset}
+                        onChange={(e) => {
+                          setAsset(e.target.value);
+                          setFormError('');
+                        }}
+                        placeholder="e.g. XAUUSD"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
                     </div>
-                    <div className="text-center">
-                      <p className="text-[11px] font-bold text-text-secondary">
-                        {isDragging ? 'Drop your screenshot here' : 'Click or Drag trade screenshot here'}
-                      </p>
-                      <p className="text-[9px] text-text-muted mt-0.5">PNG, JPG up to 3MB</p>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Direction</label>
+                      <select
+                        value={direction}
+                        onChange={(e) => setDirection(e.target.value as 'BUY' | 'SELL')}
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none transition-all"
+                      >
+                        <option value="BUY" className="bg-bg-input text-brand-green font-bold">BUY (Long)</option>
+                        <option value="SELL" className="bg-bg-input text-red-500 font-bold">SELL (Short)</option>
+                      </select>
                     </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file);
-                        e.target.value = '';
-                      }}
-                    />
-                  </div>
-                )}
 
-                {imageUrl && (
-                  <div className="relative rounded-xl border border-border-theme bg-bg-input overflow-hidden max-w-sm group">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imageUrl}
-                      alt="Screenshot Preview"
-                      className="w-full max-h-32 object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImageUrl('');
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                      className="absolute top-2 right-2 rounded bg-bg/70 border border-border-theme p-1 text-text-secondary hover:text-red-400 transition-all"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-              </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Lot Size</label>
+                      <input
+                        type="text"
+                        required={(setup as string) !== 'No Setup'}
+                        value={lots}
+                        onChange={(e) => setLots(e.target.value)}
+                        placeholder="1.00"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
+                    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-border-theme/60">
-                {/* Left side: The Protocol */}
-                <div className="rounded-xl border border-border-theme bg-bg-secondary/40 p-4 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-widest text-text-primary">
-                    The Protocol
-                  </h4>
-                  
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setNewsChecked(!newsChecked)}
-                      className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-border-theme/40 bg-bg-input/20 hover:bg-bg-input/40 transition-all text-xs text-text-secondary hover:text-text-primary"
-                    >
-                      {newsChecked ? (
-                        <CheckSquare className="h-4 w-4 text-brand-green flex-shrink-0" />
-                      ) : (
-                        <Square className="h-4 w-4 text-text-muted flex-shrink-0" />
-                      )}
-                      <span className="font-semibold">News Checked</span>
-                    </button>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Risk %</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={riskPct}
+                        onChange={(e) => setRiskPct(e.target.value)}
+                        placeholder="e.g. 1.0"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setRiskSet(!riskSet)}
-                      className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-border-theme/40 bg-bg-input/20 hover:bg-bg-input/40 transition-all text-xs text-text-secondary hover:text-text-primary"
-                    >
-                      {riskSet ? (
-                        <CheckSquare className="h-4 w-4 text-brand-green flex-shrink-0" />
-                      ) : (
-                        <Square className="h-4 w-4 text-text-muted flex-shrink-0" />
-                      )}
-                      <span className="font-semibold">Risk Set (Max 1%)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMindsetReady(!mindsetReady)}
-                      className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-border-theme/40 bg-bg-input/20 hover:bg-bg-input/40 transition-all text-xs text-text-secondary hover:text-text-primary"
-                    >
-                      {mindsetReady ? (
-                        <CheckSquare className="h-4 w-4 text-brand-green flex-shrink-0" />
-                      ) : (
-                        <Square className="h-4 w-4 text-text-muted flex-shrink-0" />
-                      )}
-                      <span className="font-semibold">Mindset Ready</span>
-                    </button>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Planned R:R Ratio</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={riskReward}
+                        onChange={(e) => setRiskReward(e.target.value)}
+                        placeholder="e.g. 3.0"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
+                    </div>
                   </div>
 
-                  {/* Session Readiness */}
-                  {(() => {
-                    const pct = Math.round(([newsChecked, riskSet, mindsetReady].filter(Boolean).length / 3) * 100);
-                    return (
-                      <div className="space-y-1.5 pt-2">
-                        <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-text-muted">
-                          <span>Session Readiness</span>
-                          <span className="font-mono text-brand-green">{pct}%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-bg-input rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-brand-green transition-all duration-300 rounded-full"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Entry Price</label>
+                      <input
+                        type="number"
+                        step="any"
+                        required={(setup as string) !== 'No Setup'}
+                        value={entryPrice}
+                        onChange={(e) => {
+                          setEntryPrice(e.target.value);
+                          setFormError('');
+                        }}
+                        placeholder="e.g. 2350.50"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
+                    </div>
 
-                {/* Right side: Sentiment & Notes */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Market Sentiment</label>
-                    <div className="flex gap-2 mt-1.5">
-                      {(['Bullish', 'Bearish', 'Neutral'] as const).map((s) => {
-                        let activeClass = 'bg-bg-input border-border-theme text-text-secondary';
-                        if (sentiment === s) {
-                          if (s === 'Bullish') activeClass = 'bg-brand-green/20 border-brand-green/40 text-brand-green';
-                          if (s === 'Bearish') activeClass = 'bg-red-500/20 border-red-500/40 text-red-500';
-                          if (s === 'Neutral') activeClass = 'bg-bg-hover border-border-hover text-text-primary';
-                        }
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Exit Price</label>
+                      <input
+                        type="number"
+                        step="any"
+                        required={(setup as string) !== 'No Setup'}
+                        value={exitPrice}
+                        onChange={(e) => {
+                          setExitPrice(e.target.value);
+                          setFormError('');
+                        }}
+                        placeholder="e.g. 2362.80"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
+                    </div>
 
-                        return (
+                    <div>
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted font-mono">Net Profit ($)</label>
+                        {entryPrice && exitPrice && (
                           <button
-                            key={s}
                             type="button"
-                            onClick={() => setSentiment(s)}
-                            className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition-all ${activeClass}`}
+                            onClick={calculateEstimatedPnl}
+                            className="text-[9px] font-extrabold text-brand-green hover:underline cursor-pointer transition-colors uppercase tracking-wider bg-transparent border-0 p-0"
                           >
-                            {s}
+                            Auto-Calc
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        step="any"
+                        required={(setup as string) !== 'No Setup'}
+                        value={pnl}
+                        onChange={(e) => {
+                          setPnl(e.target.value);
+                          setFormError('');
+                        }}
+                        placeholder="e.g. 1230 or -450"
+                        className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trade Setup & Notes</label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Enter your thoughts on today's price action and emotional state..."
-                      rows={3}
-                      className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input/30 py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all resize-none"
-                    />
+                  {/* Screenshot Upload / Attachment Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                        <span className="inline-flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" /> Attach Chart/Screenshot (optional)</span>
+                      </label>
+                      <div className="flex rounded-md border border-border-theme bg-bg-input p-0.5 text-[9px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setImageMode('upload')}
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded transition-all uppercase tracking-wider ${
+                            imageMode === 'upload' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                          }`}
+                        >
+                          <Upload className="h-2.5 w-2.5" />
+                          Upload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageMode('url')}
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded transition-all uppercase tracking-wider ${
+                            imageMode === 'url' ? 'bg-bg-hover text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                          }`}
+                        >
+                          <Link className="h-2.5 w-2.5" />
+                          URL
+                        </button>
+                      </div>
+                    </div>
+
+                    {imageMode === 'url' && (
+                      <input
+                        type="text"
+                        placeholder="Paste image URL here... (e.g. https://i.imgur.com/chart.png)"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="w-full rounded-lg border border-border-theme bg-bg-input py-2.5 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+                      />
+                    )}
+
+                    {imageMode === 'upload' && !imageUrl && (
+                      <div
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 px-4 cursor-pointer transition-all duration-200 ${
+                          isDragging
+                            ? 'border-brand-green bg-brand-green/5 shadow-inner'
+                            : 'border-border-theme bg-bg-input/40 hover:border-border-hover hover:bg-bg-input/65'
+                        }`}
+                      >
+                        <div className={`rounded-full p-2 transition-colors ${
+                          isDragging ? 'bg-brand-green/10 text-brand-green' : 'bg-bg-secondary text-text-secondary'
+                        }`}>
+                          <Upload className="h-4 w-4" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[11px] font-bold text-text-secondary">
+                            {isDragging ? 'Drop your screenshot here' : 'Click or Drag trade screenshot here'}
+                          </p>
+                          <p className="text-[9px] text-text-muted mt-0.5">PNG, JPG up to 3MB</p>
+                        </div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {imageUrl && (
+                      <div className="relative rounded-xl border border-border-theme bg-bg-input overflow-hidden max-w-sm group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrl}
+                          alt="Screenshot Preview"
+                          className="w-full max-h-32 object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageUrl('');
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                          className="absolute top-2 right-2 rounded bg-bg/70 border border-border-theme p-1 text-text-secondary hover:text-red-400 transition-all"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
+                </>
+              )}
+
+              <div className="pt-2 border-t border-border-theme/60">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trade Setup & Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Enter your thoughts on today's price action and emotional state..."
+                  rows={4}
+                  className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input/30 py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all resize-none"
+                />
               </div>
+
+              {currentUser?.loggedIn && (
+                (() => {
+                  const alignment = checkPlanAlignment(
+                    date,
+                    direction,
+                    riskPct ? parseFloat(riskPct) : undefined,
+                    currentUser.username
+                  );
+
+                  return (
+                    <div className="rounded-xl border border-border-theme bg-bg-card p-4 space-y-3">
+                      <div className="flex items-center justify-between border-b border-border-theme pb-2">
+                        <div className="flex items-center gap-2">
+                          <Brain className="h-4 w-4 text-purple-400" />
+                          <h4 className="text-xs font-black uppercase tracking-wider text-text-primary">
+                            Pre-Execution Plan Conformance
+                          </h4>
+                        </div>
+                        {alignment.hasPlan && (
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                            alignment.status === 'aligned'
+                              ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
+                              : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                          }`}>
+                            {alignment.status === 'aligned' ? 'Fully Aligned' : 'Plan Violations'}
+                          </span>
+                        )}
+                      </div>
+
+                      {!alignment.hasPlan ? (
+                        <div className="text-xs text-text-muted space-y-1">
+                          <p className="font-semibold text-text-secondary">⚠️ No Daily Trading Plan has been committed for {date}.</p>
+                          <p className="text-[10px]">Commit to a plan and pre-trade checklist on the Home Dashboard to track discipline scores.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-muted text-[10px] uppercase font-bold tracking-wider">Bias vs Direction</span>
+                              <span className={`font-bold ${
+                                alignment.violations.some(v => v.includes('Bias')) ? 'text-red-500' : 'text-brand-green'
+                              }`}>
+                                Bias: {alignment.planBias?.toUpperCase()} &rarr; Direction: {direction}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-muted text-[10px] uppercase font-bold tracking-wider">Risk vs Daily Cap</span>
+                              <span className={`font-bold font-mono ${
+                                alignment.violations.some(v => v.includes('Risk')) ? 'text-red-500' : 'text-brand-green'
+                              }`}>
+                                Cap: {alignment.planMaxRisk} &rarr; Trade: {riskPct ? `${riskPct}%` : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-muted text-[10px] uppercase font-bold tracking-wider">Pre-Trade Checklist</span>
+                              <span className={`font-bold ${alignment.checklistComplete ? 'text-brand-green' : 'text-yellow-500'}`}>
+                                {alignment.checklistCount}/6 Items Checked
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg bg-bg-input p-2.5 space-y-1 border border-border-theme/60">
+                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Locked Daily Guidelines</span>
+                            <p className="text-[10px] text-text-secondary leading-relaxed italic line-clamp-3">
+                              &ldquo;{alignment.planNotes || 'No custom guidelines entered.'}&rdquo;
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {alignment.hasPlan && alignment.violations.length > 0 && (
+                        <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-2.5 text-[11px] text-red-200 space-y-1">
+                          <span className="font-extrabold uppercase text-[8px] tracking-wider text-red-400 block">Plan Breaches Identified:</span>
+                          <ul className="list-disc pl-4 space-y-0.5">
+                            {alignment.violations.map((v, i) => (
+                              <li key={i}>{v}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
@@ -1156,10 +1499,47 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
 
           {/* Journal History Table */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5 border-b border-border-theme pb-3">
-              <BookOpen className="h-5 w-5 text-brand-green" />
-              <span>Active Trade Log History</span>
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-theme pb-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
+                <BookOpen className="h-5 w-5 text-brand-green" />
+                <span>Active Trade Log History</span>
+              </h3>
+
+              {currentUser?.loggedIn && (
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Account:</span>
+                    <select
+                      id="table-account-filter"
+                      value={selectedAccountFilter}
+                      onChange={(e) => setSelectedAccountFilter(e.target.value)}
+                      className="rounded-lg border border-border-theme bg-bg-input py-1.5 px-3 text-[11px] text-text-secondary focus:border-brand-green focus:outline-none transition-all cursor-pointer hover:border-brand-green/30"
+                    >
+                      <option value="all">All Accounts</option>
+                      {accounts.map(acc => (
+                        <option key={acc.id} value={acc.id} className="bg-bg-secondary text-text-primary">
+                          {acc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Type:</span>
+                    <select
+                      id="table-account-type-filter"
+                      value={selectedAccountTypeFilter}
+                      onChange={(e) => setSelectedAccountTypeFilter(e.target.value as 'all' | 'Challenge' | 'Funded')}
+                      className="rounded-lg border border-border-theme bg-bg-input py-1.5 px-3 text-[11px] text-text-secondary focus:border-brand-green focus:outline-none transition-all cursor-pointer hover:border-brand-green/30"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="Challenge" className="bg-bg-secondary text-text-primary">Challenge</option>
+                      <option value="Funded" className="bg-bg-secondary text-text-primary">Funded</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="rounded-xl border border-border-theme bg-bg-card overflow-hidden">
               {activeJournals.length === 0 ? (
@@ -1180,6 +1560,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                         <th className="py-3 px-4 text-right">Entry / Exit</th>
                         <th className="py-3 px-4 text-center">Risk / RR</th>
                         <th className="py-3 px-4 text-center">Mindset</th>
+                        <th className="py-3 px-4 text-center">Discipline</th>
                         <th className="py-3 px-4 text-right">Net P&L</th>
                         <th className="py-3 px-4 max-w-[150px] hidden lg:table-cell">Notes</th>
                         <th className="py-3 px-4 text-center">Action</th>
@@ -1214,18 +1595,34 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
-                              j.direction === 'BUY' 
-                                ? 'bg-brand-green/10 text-brand-green border border-brand-green/15' 
-                                : 'bg-red-950/20 text-red-500 border border-red-900/15'
-                            }`}>
-                              {j.direction}
-                            </span>
+                            {j.setup === 'No Setup' ? (
+                              <span className="text-text-muted font-bold">—</span>
+                            ) : (
+                              <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
+                                j.direction === 'BUY' 
+                                  ? 'bg-brand-green/10 text-brand-green border border-brand-green/15' 
+                                  : 'bg-red-950/20 text-red-500 border border-red-900/15'
+                              }`}>
+                                {j.direction}
+                              </span>
+                            )}
                           </td>
-                          <td className="py-3.5 px-4 text-center text-text-secondary font-mono">{j.lots.toFixed(2)}</td>
+                          <td className="py-3.5 px-4 text-center text-text-secondary font-mono">
+                            {j.setup === 'No Setup' ? (
+                              <span className="text-text-muted">—</span>
+                            ) : (
+                              j.lots.toFixed(2)
+                            )}
+                          </td>
                           <td className="py-3.5 px-4 text-right text-text-secondary font-mono leading-none">
-                            <div>{j.entryPrice.toLocaleString()}</div>
-                            <div className="text-[9px] text-text-muted mt-1">{j.exitPrice.toLocaleString()}</div>
+                            {j.setup === 'No Setup' ? (
+                              <span className="text-text-muted block text-center">—</span>
+                            ) : (
+                              <>
+                                  <div>{j.entryPrice.toLocaleString()}</div>
+                                  <div className="text-[9px] text-text-muted mt-1">{j.exitPrice.toLocaleString()}</div>
+                              </>
+                            )}
                           </td>
                           <td className="py-3.5 px-4 text-center text-text-secondary font-mono text-xs">
                             {j.riskPct !== undefined ? (
@@ -1248,20 +1645,192 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                               );
                             })()}
                           </td>
-                          <td className={`py-3.5 px-4 text-right font-black font-mono ${j.pnl >= 0 ? 'text-brand-green' : 'text-red-500'}`}>
-                            {j.pnl >= 0 ? '+' : ''}${j.pnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          <td className="py-3.5 px-4 text-center relative">
+                            {(() => {
+                              const alignment = checkPlanAlignment(j.date, j.direction, j.riskPct, j.author);
+                              const isDropdownOpen = openAlignmentId === j.id;
+
+                              return (
+                                <div className="inline-block relative">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenAlignmentId(isDropdownOpen ? null : j.id);
+                                    }}
+                                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${
+                                      alignment.status === 'aligned'
+                                        ? 'bg-brand-green/10 text-brand-green border-brand-green/20 hover:bg-brand-green/20'
+                                        : alignment.status === 'violated'
+                                          ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20'
+                                          : 'bg-bg-secondary text-text-secondary border-border-theme hover:bg-bg-hover'
+                                    }`}
+                                  >
+                                    {alignment.status === 'aligned' ? (
+                                      <>
+                                        <ShieldCheck className="h-3 w-3 text-brand-green" />
+                                        <span>Aligned</span>
+                                      </>
+                                    ) : alignment.status === 'violated' ? (
+                                      <>
+                                        <AlertTriangle className="h-3 w-3 text-red-500" />
+                                        <span>Violated ({alignment.violations.length})</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <HelpCircle className="h-3 w-3 text-text-muted" />
+                                        <span>No Plan</span>
+                                      </>
+                                    )}
+                                  </button>
+
+                                  {isDropdownOpen && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-20 cursor-default"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenAlignmentId(null);
+                                        }}
+                                      />
+                                      <div 
+                                        className="absolute z-30 right-1/2 translate-x-1/2 sm:right-0 sm:translate-x-0 top-full mt-2 w-72 bg-bg-card border border-border-theme p-4 rounded-xl shadow-2xl space-y-3 text-left animate-fade-in"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <div className="flex items-center justify-between border-b border-border-theme/60 pb-2">
+                                          <div className="flex items-center gap-1.5">
+                                            <Brain className="h-3.5 w-3.5 text-purple-400" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-text-primary">Discipline Scorecard</span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => setOpenAlignmentId(null)}
+                                            className="text-text-muted hover:text-text-primary p-0.5"
+                                          >
+                                            <X className="h-3.5 w-3.5" />
+                                          </button>
+                                        </div>
+
+                                        {!alignment.hasPlan ? (
+                                          <div className="space-y-1.5 py-1 text-xs">
+                                            <p className="font-semibold text-text-secondary">No Daily Plan Locked</p>
+                                            <p className="text-[10px] text-text-muted leading-relaxed">
+                                              There was no committed daily trading plan or checklist saved in localStorage for this date ({j.date}).
+                                            </p>
+                                          </div>
+                                        ) : (
+                                          <div className="space-y-3 text-xs">
+                                            {/* Checklist checks */}
+                                            <div className="space-y-1">
+                                              <div className="flex justify-between items-center text-[10px] font-bold text-text-muted uppercase">
+                                                <span>Checklist Complete</span>
+                                                <span className={alignment.checklistComplete ? 'text-brand-green' : 'text-yellow-500'}>
+                                                  {alignment.checklistCount}/6 Checked
+                                                </span>
+                                              </div>
+                                              <div className="w-full bg-bg-secondary h-1.5 rounded-full overflow-hidden border border-border-theme/20">
+                                                <div 
+                                                  className={`h-full ${alignment.checklistComplete ? 'bg-brand-green' : 'bg-yellow-500'}`} 
+                                                  style={{ width: `${(alignment.checklistCount / 6) * 100}%` }}
+                                                />
+                                              </div>
+                                            </div>
+
+                                            {/* Alignment criteria list */}
+                                            <div className="space-y-1.5 border-t border-border-theme/40 pt-2">
+                                              <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Conformance Items</span>
+                                              
+                                              {/* Bias alignment */}
+                                              <div className="flex items-start gap-2 text-[11px]">
+                                                {alignment.violations.some(v => v.includes('Bias')) ? (
+                                                  <span className="text-red-500 flex-shrink-0">❌</span>
+                                                ) : (
+                                                  <span className="text-brand-green flex-shrink-0">✅</span>
+                                                )}
+                                                <div>
+                                                  <span className="font-bold">Market Bias: </span>
+                                                  <span className="text-text-secondary">
+                                                    Bias was {alignment.planBias || 'Neutral/Range'}. Logged {j.direction}.
+                                                  </span>
+                                                </div>
+                                              </div>
+
+                                              {/* Risk alignment */}
+                                              <div className="flex items-start gap-2 text-[11px]">
+                                                {alignment.violations.some(v => v.includes('Risk')) ? (
+                                                  <span className="text-red-500 flex-shrink-0">❌</span>
+                                                ) : (
+                                                  <span className="text-brand-green flex-shrink-0">✅</span>
+                                                )}
+                                                <div>
+                                                  <span className="font-bold">Risk Allocation: </span>
+                                                  <span className="text-text-secondary">
+                                                    Cap was {alignment.planMaxRisk}. Logged {j.riskPct ? `${j.riskPct}%` : 'N/A'}.
+                                                  </span>
+                                                </div>
+                                              </div>
+
+                                              {/* Checklist alignment */}
+                                              <div className="flex items-start gap-2 text-[11px]">
+                                                {!alignment.checklistComplete ? (
+                                                  <span className="text-red-500 flex-shrink-0">❌</span>
+                                                ) : (
+                                                  <span className="text-brand-green flex-shrink-0">✅</span>
+                                                )}
+                                                <div>
+                                                  <span className="font-bold">Checklist Clearance: </span>
+                                                  <span className="text-text-secondary">
+                                                    {!alignment.checklistComplete ? 'Traded before satisfy checklist' : 'Checklist fully cleared'}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {/* Guidelines rules */}
+                                            <div className="bg-bg-input p-2.5 rounded-lg border border-border-theme/60 space-y-1">
+                                              <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Locked Daily Rules</span>
+                                              <p className="text-[10px] text-text-secondary italic leading-relaxed whitespace-pre-wrap">
+                                                {alignment.planNotes || 'No custom rules written.'}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          <td className={`py-3.5 px-4 text-right font-black font-mono ${
+                            j.setup === 'No Setup' 
+                              ? 'text-text-muted' 
+                              : j.pnl >= 0 
+                                ? 'text-brand-green' 
+                                : 'text-red-500'
+                          }`}>
+                            {j.setup === 'No Setup' ? '—' : `${j.pnl >= 0 ? '+' : ''}$${j.pnl.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                           </td>
                           <td className="py-3.5 px-4 text-text-secondary max-w-[150px] truncate hidden lg:table-cell" title={j.notes}>
                             {j.notes || '-'}
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <button
-                              onClick={() => handleDeleteTrade(j.id)}
-                              className="text-text-muted hover:text-red-500 transition-colors p-1"
-                              title="Delete Position Entry"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => setSelectedTrade({ ...j, avatar: currentUser?.avatar || '👤' })}
+                                className="text-text-muted hover:text-brand-green transition-colors p-1"
+                                title="View Details & Discussion"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTrade(j.id)}
+                                className="text-text-muted hover:text-red-500 transition-colors p-1"
+                                title="Delete Position Entry"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1312,7 +1881,18 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                             {j.avatar}
                           </div>
                           <div>
-                            <span className="text-xs font-bold text-text-primary block">{j.author}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-text-primary">{j.author}</span>
+                              {(() => {
+                                const badges = db.getUserBadges(j.author);
+                                const unlocked = badges.filter(b => b.unlocked);
+                                return unlocked.map(b => (
+                                  <span key={b.id} className="text-[10px]" title={b.name}>
+                                    {b.emoji}
+                                  </span>
+                                ));
+                              })()}
+                            </div>
                             <span className="text-[9px] text-text-muted block font-mono">{j.date}</span>
                           </div>
                         </div>
@@ -1515,6 +2095,98 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 </div>
               </div>
 
+              {/* Plan & Checklist Alignment details */}
+              {(() => {
+                const alignment = checkPlanAlignment(
+                  selectedTrade.date,
+                  selectedTrade.direction,
+                  selectedTrade.riskPct,
+                  selectedTrade.author
+                );
+
+                return (
+                  <div className="rounded-xl border border-border-theme bg-bg-input/20 p-4 space-y-3.5 text-left">
+                    <div className="flex items-center justify-between border-b border-border-theme/40 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Brain className="h-4.5 w-4.5 text-purple-400" />
+                        <h4 className="text-xs font-black uppercase tracking-wider text-text-primary">
+                          Daily Plan & Checklist Alignment
+                        </h4>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
+                        !alignment.hasPlan
+                          ? 'bg-bg-secondary text-text-secondary border-border-theme'
+                          : alignment.status === 'aligned'
+                            ? 'bg-brand-green/10 text-brand-green border-brand-green/20'
+                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                      }`}>
+                        {!alignment.hasPlan ? 'No Plan Locked' : alignment.status === 'aligned' ? 'Fully Aligned' : 'Violations Detected'}
+                      </span>
+                    </div>
+
+                    {!alignment.hasPlan ? (
+                      <p className="text-[11px] text-text-muted italic leading-relaxed">
+                        No Daily Trading Plan or Pre-Trade Checklist was committed by {selectedTrade.author} for this date.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          {/* Left Details Checklist */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-muted text-[10px] uppercase font-bold tracking-wider">Market Bias</span>
+                              <span className={`font-bold flex items-center gap-1 ${
+                                alignment.violations.some(v => v.includes('Bias')) ? 'text-red-500' : 'text-brand-green'
+                              }`}>
+                                {alignment.violations.some(v => v.includes('Bias')) ? '❌' : '✅'}
+                                Plan: {alignment.planBias?.toUpperCase()} &rarr; Trade: {selectedTrade.direction}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-muted text-[10px] uppercase font-bold tracking-wider">Risk Allocation</span>
+                              <span className={`font-bold flex items-center gap-1 font-mono ${
+                                alignment.violations.some(v => v.includes('Risk')) ? 'text-red-500' : 'text-brand-green'
+                              }`}>
+                                {alignment.violations.some(v => v.includes('Risk')) ? '❌' : '✅'}
+                                Max: {alignment.planMaxRisk} &rarr; Trade: {selectedTrade.riskPct !== undefined ? `${selectedTrade.riskPct}%` : 'N/A'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-muted text-[10px] uppercase font-bold tracking-wider">Pre-Trade Checklist</span>
+                              <span className={`font-bold flex items-center gap-1 ${alignment.checklistComplete ? 'text-brand-green' : 'text-yellow-500'}`}>
+                                {alignment.checklistComplete ? '✅' : '⚠️'}
+                                {alignment.checklistCount}/6 Checked
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right Guidelines */}
+                          <div className="rounded-lg bg-bg-input p-3 border border-border-theme/60 space-y-1">
+                            <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Locked Daily Rules</span>
+                            <p className="text-[10px] text-text-secondary leading-relaxed italic whitespace-pre-wrap">
+                              {alignment.planNotes || 'No custom rules logged.'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {alignment.violations.length > 0 && (
+                          <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-[11px] text-red-200 space-y-1.5 text-left">
+                            <span className="font-extrabold uppercase text-[8px] tracking-wider text-red-400 block">Identified Breaches:</span>
+                            <ul className="list-disc pl-4 space-y-1">
+                              {alignment.violations.map((v, i) => (
+                                <li key={i}>{v}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Q&A & Feedback list */}
               <div className="space-y-4 border-t border-border-theme/60 pt-5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
@@ -1530,7 +2202,18 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     {tradeFeedbacks.map((fb) => (
                       <div key={fb.id} className="rounded-lg bg-bg/40 border border-border-theme p-3 space-y-1.5">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-text-primary">{fb.author}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-text-primary">{fb.author}</span>
+                            {(() => {
+                              const badges = db.getUserBadges(fb.author);
+                              const unlocked = badges.filter(b => b.unlocked);
+                              return unlocked.map(b => (
+                                <span key={b.id} className="text-[9px]" title={b.name}>
+                                  {b.emoji}
+                                </span>
+                              ));
+                            })()}
+                          </div>
                           <span className="text-[9px] text-text-muted font-mono">
                             {new Date(fb.createdAt).toLocaleDateString()}
                           </span>
@@ -1913,6 +2596,29 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
               </div>
             );
           })()}
+        </div>
+      )}
+      {/* ── STREAK SIMULATOR ── */}
+      {journalSubTab === 'streak' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          <div className="flex items-center gap-3 border-b border-border-theme pb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-brand-green/20">
+              <Award className="h-5 w-5 text-brand-green" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-text-primary">Journaling Streak Simulator</h3>
+              <p className="text-[10px] text-text-muted">Simulate and analyze your trading consistency, habits, and discipline scores.</p>
+            </div>
+          </div>
+          <StreakSimulator 
+            journals={activeJournals} 
+            currentUser={currentUser}
+            onRefresh={() => {
+              if (currentUser?.loggedIn) {
+                setJournals(db.getJournals(currentUser.username));
+              }
+            }}
+          />
         </div>
       )}
     </div>
