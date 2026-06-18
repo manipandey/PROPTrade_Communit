@@ -637,6 +637,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 onClick={() => {
                   if (currentUser?.loggedIn) {
                     setIsLoggingTrade(!isLoggingTrade);
+                    setIsManagingAccounts(false);
                   } else {
                     onOpenAuth();
                   }
@@ -897,9 +898,10 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
             </div>
           )}
 
-          {/* Accounts Management UI Panel */}
+          {/* Accounts Management UI Modal */}
           {isManagingAccounts && currentUser?.loggedIn && (
-            <div className="rounded-xl border border-border-theme bg-bg-card p-6 space-y-5 glow-accent animate-fade-in text-left">
+            <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md animate-fade-in p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+              <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl p-6 shadow-2xl space-y-5 glow-accent text-left max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
               <div className="flex justify-between items-center border-b border-border-theme pb-3" style={{ borderColor: 'var(--border)' }}>
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">
@@ -1000,17 +1002,13 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
 
                     <div>
                       <label className="block text-[9px] font-bold uppercase tracking-wider text-text-muted">Size of Account (USD)</label>
-                      <select
+                      <input
+                        type="number"
                         value={newAccSize}
                         onChange={(e) => setNewAccSize(e.target.value)}
+                        placeholder="100000"
                         className="mt-1.5 w-full rounded-lg border border-border-theme bg-bg-input py-1.5 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
-                      >
-                        <option value="10000">10,000</option>
-                        <option value="25000">25,000</option>
-                        <option value="50000">50,000</option>
-                        <option value="100000">100,000</option>
-                        <option value="200000">200,000</option>
-                      </select>
+                      />
                     </div>
 
                     <button
@@ -1036,6 +1034,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           )}
 

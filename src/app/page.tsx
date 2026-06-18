@@ -268,7 +268,7 @@ export default function Home() {
       {/* Main Area (right of sidebar) */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Top Bar */}
-        <Topbar theme={theme} markets={markets} watchlist={watchlist} />
+        <Topbar theme={theme} markets={markets} watchlist={watchlist} currentUser={currentUser} />
 
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg)' }}>

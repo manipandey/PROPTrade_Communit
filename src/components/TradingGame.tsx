@@ -525,31 +525,47 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
       ctx.stroke();
     }
 
-    // Chart Gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, height);
-    grad.addColorStop(0, 'rgba(34, 197, 94, 0.12)');
-    grad.addColorStop(1, 'rgba(34, 197, 94, 0)');
-
-    ctx.beginPath();
+    // Draw Candlesticks
+    const candleWidth = (width / propPriceHistory.length) * 0.7;
+    const spacing = (width / propPriceHistory.length);
+    
     propPriceHistory.forEach((price, idx) => {
-      const x = (width / (propPriceHistory.length - 1)) * idx;
-      const y = height - ((price - minVal) / range) * height;
-      if (idx === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      if (idx === 0) return;
+      const prevPrice = propPriceHistory[idx - 1];
+      
+      // Pseudo candle generation for a smooth ticker chart
+      const open = prevPrice;
+      const close = price;
+      // Add a slight wick to make it look like a real candle
+      const volatility = Math.abs(close - open) * 0.5 + (range * 0.05);
+      const high = Math.max(open, close) + (Math.sin(idx) * volatility * 0.5 + volatility * 0.5);
+      const low = Math.min(open, close) - (Math.cos(idx) * volatility * 0.5 + volatility * 0.5);
+
+      const x = spacing * idx;
+      
+      const openY = height - ((open - minVal) / range) * height;
+      const closeY = height - ((close - minVal) / range) * height;
+      const highY = height - ((high - minVal) / range) * height;
+      const lowY = height - ((low - minVal) / range) * height;
+
+      const isBull = close >= open;
+      const color = isBull ? '#22c55e' : '#ef4444';
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 1.5;
+
+      // Draw Wick
+      ctx.beginPath();
+      ctx.moveTo(x, highY);
+      ctx.lineTo(x, lowY);
+      ctx.stroke();
+
+      // Draw Body
+      const bodyY = Math.min(openY, closeY);
+      const bodyHeight = Math.max(Math.abs(openY - closeY), 2);
+      ctx.fillRect(x - candleWidth / 2, bodyY, candleWidth, bodyHeight);
     });
-
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 2.5;
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = 'rgba(34, 197, 94, 0.4)';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    ctx.lineTo(width, height);
-    ctx.lineTo(0, height);
-    ctx.closePath();
-    ctx.fillStyle = grad;
-    ctx.fill();
 
     // Draw active position line
     if (propPosition) {
@@ -907,7 +923,7 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
   const currentQuizLevel = QUIZ_LEVELS[paQuizLevelIdx];
 
   const handleQuizAnswer = (option: string) => {
-    if (paQuizState !== 'unanswered') return;
+    if (paQuizState !== 'unanswered' && paQuizState !== 'part1_wrong') return;
     setSelectedPaOption(option);
 
     if (option === currentQuizLevel.correctAnswer) {
@@ -920,7 +936,7 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
   };
 
   const handleQuizAnswerPart2 = (option: string) => {
-    if (paQuizState !== 'part1_correct') return;
+    if (paQuizState !== 'part1_correct' && paQuizState !== 'part2_wrong') return;
     setSelectedPaOption(option);
 
     if (option === currentQuizLevel.correctAnswer2) {
@@ -2062,7 +2078,7 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
                     {/* Question option box */}
                     <div className="space-y-4 text-left">
                       {/* Part 1: Identify Pattern Name */}
-                      {paQuizState === 'unanswered' && (
+                      {(paQuizState === 'unanswered' || paQuizState === 'part1_wrong') && (
                         <div className="space-y-3">
                           <h4 className="text-xs font-black uppercase text-text-primary tracking-wide">
                             {currentQuizLevel.question}
@@ -2070,14 +2086,17 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
                           <div className="grid grid-cols-2 gap-3">
                             {currentQuizLevel.options.map(opt => {
                               const isSelected = selectedPaOption === opt;
+                              const isWrong = paQuizState === 'part1_wrong' && isSelected;
                               return (
                                 <button
                                   key={opt}
                                   onClick={() => handleQuizAnswer(opt)}
-                                  className={`w-full text-left bg-bg-input p-3 rounded-xl text-xs font-bold text-text-secondary transition-all hover:scale-[1.01] border ${
-                                    isSelected 
-                                      ? 'border-brand-green text-brand-green' 
-                                      : 'border-border-theme hover:border-brand-green/40'
+                                  className={`w-full text-left p-3 rounded-xl text-xs font-bold transition-all hover:scale-[1.01] border ${
+                                    isWrong
+                                      ? 'bg-red-950/20 border-red-500/50 text-red-500'
+                                      : isSelected 
+                                        ? 'bg-bg-input border-brand-green text-brand-green' 
+                                        : 'bg-bg-input border-border-theme text-text-secondary hover:border-brand-green/40'
                                   }`}
                                 >
                                   {opt}
@@ -2085,35 +2104,20 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
                               );
                             })}
                           </div>
-                        </div>
-                      )}
-
-                      {/* Part 1 Failed feedback */}
-                      {paQuizState === 'part1_wrong' && (
-                        <div className="bg-red-950/20 border border-red-500/30 rounded-xl p-4 space-y-3 animate-fade-in">
-                          <div className="flex items-center gap-2 text-red-400 text-xs font-black uppercase">
-                            <XCircle className="h-4.5 w-4.5" />
-                            <span>Wrong Identification</span>
-                          </div>
-                          <p className="text-xs text-text-secondary">
-                            That candle shape does not match your selection. Think about the wicks and body height limits.
-                          </p>
-                          <button
-                            onClick={() => {
-                              setSelectedPaOption(null);
-                              setPaQuizState('unanswered');
-                            }}
-                            className="w-full bg-red-500 text-white border border-red-500 hover:bg-transparent hover:text-red-500 py-2 rounded-lg text-xs font-black transition-all"
-                          >
-                            Try Again
-                          </button>
+                          
+                          {paQuizState === 'part1_wrong' && (
+                            <div className="text-[10px] font-bold text-red-400 mt-2 flex items-center gap-1.5 animate-fade-in">
+                              <XCircle className="h-3.5 w-3.5" />
+                              <span>Incorrect! Click another option to try again. Think about the wicks and body height limits.</span>
+                            </div>
+                          )}
                         </div>
                       )}
 
                       {/* Part 2: Bias implication */}
                       {(paQuizState === 'part1_correct' || paQuizState === 'part2_wrong') && (
                         <div className="space-y-3 animate-fade-in">
-                          <div className="flex items-center gap-1.5 text-green-400 text-[10px] font-black uppercase">
+                          <div className="flex items-center gap-1.5 text-green-400 text-[10px] font-black uppercase mb-4">
                             <CheckCircle2 className="h-4 w-4" />
                             <span>Part 1 Correct: {currentQuizLevel.correctAnswer}</span>
                           </div>
@@ -2123,14 +2127,17 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
                           <div className="grid grid-cols-2 gap-3">
                             {currentQuizLevel.options2.map(opt => {
                               const isSelected = selectedPaOption === opt;
+                              const isWrong = paQuizState === 'part2_wrong' && isSelected;
                               return (
                                 <button
                                   key={opt}
                                   onClick={() => handleQuizAnswerPart2(opt)}
-                                  className={`w-full text-left bg-bg-input p-3 rounded-xl text-xs font-bold text-text-secondary transition-all hover:scale-[1.01] border ${
-                                    isSelected 
-                                      ? 'border-brand-green text-brand-green' 
-                                      : 'border-border-theme hover:border-brand-green/40'
+                                  className={`w-full text-left p-3 rounded-xl text-xs font-bold transition-all hover:scale-[1.01] border ${
+                                    isWrong
+                                      ? 'bg-red-950/20 border-red-500/50 text-red-500'
+                                      : isSelected 
+                                        ? 'bg-bg-input border-brand-green text-brand-green' 
+                                        : 'bg-bg-input border-border-theme text-text-secondary hover:border-brand-green/40'
                                   }`}
                                 >
                                   {opt}
@@ -2139,8 +2146,9 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
                             })}
                           </div>
                           {paQuizState === 'part2_wrong' && (
-                            <div className="text-[10px] font-bold text-red-400 mt-2">
-                              Incorrect Implication. Consider if this pattern represents buyers stepping in at support or sellers taking back the high.
+                            <div className="text-[10px] font-bold text-red-400 mt-2 flex items-center gap-1.5 animate-fade-in">
+                              <XCircle className="h-3.5 w-3.5" />
+                              <span>Incorrect! Click another option. Consider if this pattern represents buyers stepping in at support or sellers taking back the high.</span>
                             </div>
                           )}
                         </div>

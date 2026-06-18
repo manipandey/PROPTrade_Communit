@@ -47,18 +47,7 @@ interface CalendarEvent {
   day: 'today' | 'tomorrow' | 'week';
 }
 
-const INITIAL_EVENTS: CalendarEvent[] = [
-  { id: '1', time: '12:15 PM', currency: 'EUR', event: 'French Flash Services PMI', impact: 'Medium', forecast: '49.8', previous: '49.3', actual: '49.1', day: 'today' },
-  { id: '2', time: '06:15 PM', currency: 'USD', event: 'Core CPI MoM', impact: 'High', forecast: '0.3%', previous: '0.4%', actual: '0.3%', day: 'today' },
-  { id: '3', time: '06:15 PM', currency: 'USD', event: 'CPI YoY', impact: 'High', forecast: '3.4%', previous: '3.5%', actual: '3.4%', day: 'today' },
-  { id: '4', time: '08:00 PM', currency: 'USD', event: 'FOMC Economic Projections', impact: 'High', forecast: '-', previous: '-', actual: '-', day: 'today' },
-  { id: '5', time: '08:00 PM', currency: 'USD', event: 'FOMC Press Conference', impact: 'High', forecast: '-', previous: '-', actual: '-', day: 'today' },
-  { id: '6', time: '09:15 AM', currency: 'AUD', event: 'Employment Change', impact: 'High', forecast: '25.0K', previous: '38.5K', actual: '-', day: 'tomorrow' },
-  { id: '7', time: '06:15 PM', currency: 'USD', event: 'Unemployment Claims', impact: 'Medium', forecast: '220K', previous: '215K', actual: '-', day: 'tomorrow' },
-  { id: '8', time: '06:15 PM', currency: 'USD', event: 'PPI MoM', impact: 'Medium', forecast: '0.1%', previous: '0.5%', actual: '-', day: 'tomorrow' },
-  { id: '9', time: '11:45 AM', currency: 'CHF', event: 'SNB Policy Rate & Statement', impact: 'High', forecast: '1.25%', previous: '1.50%', actual: '-', day: 'week' },
-  { id: '10', time: '04:45 PM', currency: 'GBP', event: 'BoE Interest Rate Decision', impact: 'High', forecast: '5.25%', previous: '5.25%', actual: '-', day: 'week' },
-];
+const INITIAL_EVENTS: CalendarEvent[] = [];
 
 const getNewsThumbnail = (title: string) => {
   const t = title.toLowerCase();
@@ -137,23 +126,23 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     const fetchNews = async () => {
       setNewsLoading(true);
       try {
-        const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.cnbc.com%2Fid%2F100003114%2Fdevice%2Frss%2Frss.html');
+        const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.fxstreet.com%2Frss');
         const data = await res.json();
         if (data.status === 'ok' && Array.isArray(data.items)) {
           const items = data.items.map((item: RssItem, idx: number) => {
-            let category = 'Market News';
+            let category = 'Forex News';
             const titleLower = item.title.toLowerCase();
-            if (titleLower.includes('spacex') || titleLower.includes('musk')) category = 'Tech & Corporate';
-            else if (titleLower.includes('fed') || titleLower.includes('inflation') || titleLower.includes('rates') || titleLower.includes('warsh')) category = 'Macro / Fed';
-            else if (titleLower.includes('gold') || titleLower.includes('oil') || titleLower.includes('gas') || titleLower.includes('energy')) category = 'Commodities';
-            else if (titleLower.includes('crypto') || titleLower.includes('bitcoin') || titleLower.includes('blockchain')) category = 'Crypto';
-            else if (titleLower.includes('stock') || titleLower.includes('oracle') || titleLower.includes('earnings')) category = 'Equities';
+            if (titleLower.includes('fed') || titleLower.includes('inflation') || titleLower.includes('rates') || titleLower.includes('ecb') || titleLower.includes('boe')) category = 'Macro / Central Banks';
+            else if (titleLower.includes('gold') || titleLower.includes('oil') || titleLower.includes('silver') || titleLower.includes('commodity')) category = 'Commodities';
+            else if (titleLower.includes('crypto') || titleLower.includes('bitcoin') || titleLower.includes('eth')) category = 'Crypto';
+            else if (titleLower.includes('stock') || titleLower.includes('spx') || titleLower.includes('nasdaq')) category = 'Equities';
             
             return {
               id: `live-news-${idx}`,
               title: item.title,
-              summary: item.description || item.content || 'Click read full article to view details.',
-              source: 'CNBC',
+              // Clean up HTML tags if present in description
+              summary: (item.description || item.content || '').replace(/<[^>]*>?/gm, '').substring(0, 150) + '... Click read full article to view details.',
+              source: 'FXStreet',
               time: new Date(item.pubDate.replace(/-/g, '/')).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -179,9 +168,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     fetchNews();
   }, []);
 
-  // Calendar States
-  const [calFilterDay, setCalFilterDay] = useState<'all' | 'today' | 'tomorrow' | 'week'>('all');
-  const [calFilterImpact, setCalFilterImpact] = useState<'all' | 'high'>('all');
+
 
   // Margin Calculator States
   const [calcPair, setCalcPair] = useState('EURUSD');
@@ -311,12 +298,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     setCalculatedLots(lotSize);
   };
 
-  // Filter Calendar Events
-  const filteredEvents = INITIAL_EVENTS.filter(e => {
-    const dayMatch = calFilterDay === 'all' || e.day === calFilterDay;
-    const impactMatch = calFilterImpact === 'all' || e.impact === 'High';
-    return dayMatch && impactMatch;
-  });
+
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
@@ -405,102 +387,28 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
         {/* ── ECONOMIC CALENDAR ── */}
         {subTab === 'calendar' && (
           <div className="space-y-4">
-            {/* Calendar Filters */}
-            <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-border-theme bg-bg-card">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Show Date:</span>
-                {(['all', 'today', 'tomorrow', 'week'] as const).map((day) => (
-                  <button
-                    key={day}
-                    id={`cal-filter-day-${day}`}
-                    onClick={() => setCalFilterDay(day)}
-                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md border transition-all ${
-                      calFilterDay === day
-                        ? 'bg-brand-green/15 border-brand-green/45 text-brand-green'
-                        : 'border-border-theme bg-bg-secondary text-text-muted hover:border-border-hover'
-                    }`}
-                  >
-                    {day === 'week' ? 'Later This Week' : day}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Impact:</span>
-                <button
-                  id="cal-filter-impact"
-                  onClick={() => setCalFilterImpact(prev => prev === 'all' ? 'high' : 'all')}
-                  className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md border transition-all flex items-center gap-1.5 ${
-                    calFilterImpact === 'high'
-                      ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.05)]'
-                      : 'border-border-theme bg-bg-secondary text-text-muted hover:border-border-hover'
-                  }`}
-                >
-                  <Bell className="h-3.5 w-3.5" />
-                  <span>High Impact Only</span>
-                </button>
-              </div>
+            <div className="rounded-xl border border-border-theme bg-bg-card overflow-hidden h-[600px] w-full relative">
+              {/* TradingView Economic Calendar Widget */}
+              <div id="tradingview-economic-calendar" className="w-full h-full" ref={(el) => {
+                if (!el || el.innerHTML) return;
+                const script = document.createElement('script');
+                script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
+                script.type = 'text/javascript';
+                script.async = true;
+                script.innerHTML = JSON.stringify({
+                  "colorTheme": theme === 'dark' ? "dark" : "light",
+                  "isTransparent": true,
+                  "width": "100%",
+                  "height": "100%",
+                  "locale": "en",
+                  "importanceFilter": "-1,0,1",
+                  "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu"
+                });
+                el.appendChild(script);
+              }} />
             </div>
 
-            {/* Calendar List */}
-            <div className="rounded-xl border border-border-theme bg-bg-card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-border-theme bg-bg-input/40 text-[10px] font-bold uppercase tracking-widest text-text-muted">
-                      <th className="py-3 px-4">Time</th>
-                      <th className="py-3 px-4 text-center">Cur.</th>
-                      <th className="py-3 px-4">Event Description</th>
-                      <th className="py-3 px-4 text-center">Impact</th>
-                      <th className="py-3 px-4 text-right">Forecast</th>
-                      <th className="py-3 px-4 text-right">Previous</th>
-                      <th className="py-3 px-4 text-right">Actual</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-theme/40">
-                    {filteredEvents.length > 0 ? (
-                      filteredEvents.map((e) => {
-                        const impactColors = {
-                          High: 'bg-red-500/10 border-red-500/30 text-red-500',
-                          Medium: 'bg-orange-500/10 border-orange-500/30 text-orange-500',
-                          Low: 'bg-bg-input border-border-theme text-text-muted',
-                        };
 
-                        return (
-                          <tr key={e.id} className="hover:bg-bg-hover/30 transition-colors">
-                            <td className="py-3 px-4 font-mono font-medium text-text-secondary">{e.time}</td>
-                            <td className="py-3 px-4 text-center font-bold text-text-primary font-mono">{e.currency}</td>
-                            <td className="py-3 px-4 font-bold text-text-primary">{e.event}</td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`inline-flex px-2 py-0.5 text-[8px] font-bold uppercase rounded border ${impactColors[e.impact]}`}>
-                                {e.impact}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-right font-mono text-text-secondary">{e.forecast}</td>
-                            <td className="py-3 px-4 text-right font-mono text-text-secondary">{e.previous}</td>
-                            <td className={`py-3 px-4 text-right font-mono font-bold ${
-                              e.actual === '-' 
-                                ? 'text-text-muted' 
-                                : parseFloat(e.actual) < parseFloat(e.forecast) 
-                                  ? 'text-red-500' 
-                                  : 'text-brand-green'
-                            }`}>
-                              {e.actual}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-text-muted font-medium">
-                          No economic releases match the selected filters.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
             
             <div className="flex items-center gap-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl text-yellow-500 text-[10px] leading-relaxed">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />

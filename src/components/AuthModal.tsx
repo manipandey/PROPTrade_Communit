@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, Sparkles, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, Lock, Mail, User, Sparkles, CheckCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { db } from '@/lib/supabase';
 
 interface AuthModalProps {
@@ -15,6 +15,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [isDemoAccount, setIsDemoAccount] = useState(false);
   const [error, setError] = useState('');
@@ -262,12 +263,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                 <Lock className="h-4 w-4" />
               </span>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="t-input w-full py-2.5 pl-10 pr-4 text-sm"
+                className="t-input w-full py-2.5 pl-10 pr-10 text-sm"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 hover:text-text-primary transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 

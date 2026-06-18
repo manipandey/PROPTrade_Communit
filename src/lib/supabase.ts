@@ -933,8 +933,14 @@ export class MockSupabaseEngine {
     return this.getStorage<RegisteredUser[]>('propnepal_registered_users', []);
   }
 
-  private saveRegisteredUsers(users: RegisteredUser[]): void {
+  saveRegisteredUsers(users: RegisteredUser[]): void {
     this.setStorage('propnepal_registered_users', users);
+  }
+
+  updatePassword(username: string, newPass: string): void {
+    const users = this.getRegisteredUsers();
+    const updated = users.map(u => u.username === username ? { ...u, password: btoa(newPass) } : u);
+    this.saveRegisteredUsers(updated);
   }
 
   registerUser(email: string, username: string, password: string, isDemo?: boolean): { success: boolean; error?: string } {
