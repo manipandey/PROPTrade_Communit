@@ -211,14 +211,22 @@ body {
   background-color: var(--accent-light);
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* Scrollbar - Premium MacOS Style */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-hover);
   border-radius: 9999px;
+  border: 2px solid var(--bg);
 }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Selection */
+::selection {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
 
 /* ── Animations ── */
 @keyframes fade-in {

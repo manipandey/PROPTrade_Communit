@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  CheckSquare, Square, BookOpen, AlertTriangle, 
+  Check, BookOpen, AlertTriangle, 
   RotateCcw, ShieldCheck, PenTool,
-  Calendar, Zap, Sparkles 
+  Calendar, Zap, Sparkles, Globe, Target, ShieldAlert, Percent, Brain, Coffee
 } from 'lucide-react';
 
 interface HomeDashboardProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
+  currentUser: { id?: string; username: string; loggedIn: boolean; avatar: string; isDemo?: boolean; email?: string; } | null;
   onOpenJournal: () => void;
   onOpenAuth: () => void;
 }
@@ -34,12 +34,12 @@ interface PlanData {
 }
 
 const DEFAULT_CHECKLIST_ITEMS = [
-  { id: 'news', category: 'Market Context', text: 'Checked Economic Calendar for high-impact news (CPI, FOMC, NFP, etc.) within 2 hours.' },
-  { id: 'risk_invalid', category: 'Risk Management', text: 'Clearly identified stop-loss level and trade invalidation criteria.' },
-  { id: 'risk_percent', category: 'Risk Management', text: 'Confirmed capital risk for this setup is restricted to 0.5% - 1.0%.' },
-  { id: 'psych_fomo', category: 'Psychology & Rules', text: 'Free from FOMO: Price is inside my execution zone; I did not chase.' },
-  { id: 'psych_calm', category: 'Psychology & Rules', text: 'Mindset check: Feeling calm, detached, and free of revenge-trading urge.' },
-  { id: 'rules_fit', category: 'Psychology & Rules', text: 'Setup conforms perfectly with my documented trading rules and patterns.' },
+  { id: 'news', category: 'Market Context', title: 'Check News', text: 'No high-impact news (CPI, NFP) within 2 hours.', icon: Globe },
+  { id: 'rules_fit', category: 'Market Context', title: 'Valid Setup', text: 'Setup matches my trading playbook perfectly.', icon: Target },
+  { id: 'risk_invalid', category: 'Risk Management', title: 'Stop Loss Set', text: 'I know exactly where my trade is wrong.', icon: ShieldAlert },
+  { id: 'risk_percent', category: 'Risk Management', title: 'Risk Limit', text: 'Risking only 0.5% - 1.0% of my capital.', icon: Percent },
+  { id: 'psych_fomo', category: 'Psychology', title: 'No FOMO', text: 'Price is in my zone. I am not chasing.', icon: Brain },
+  { id: 'psych_calm', category: 'Psychology', title: 'Calm Mind', text: 'I am calm, focused, and not revenge-trading.', icon: Coffee },
 ];
 
 export default function HomeDashboard({ currentUser, onOpenJournal, onOpenAuth }: HomeDashboardProps) {
@@ -260,34 +260,43 @@ export default function HomeDashboard({ currentUser, onOpenJournal, onOpenAuth }
             </div>
 
             {/* Checklist items by category */}
-            <div className="space-y-3">
-              {['Market Context', 'Risk Management', 'Psychology & Rules'].map((category) => (
+            <div className="space-y-4 pt-2">
+              {['Market Context', 'Risk Management', 'Psychology'].map((category) => (
                 <div key={category} className="space-y-2">
-                  <h3 className="text-[9px] font-black uppercase tracking-widest text-text-muted border-b border-border-theme/30 pb-0.5 mt-1">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-text-muted border-b border-border-theme/30 pb-1">
                     {category}
                   </h3>
                   
-                  <div className="space-y-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {DEFAULT_CHECKLIST_ITEMS.filter(i => i.category === category).map((item) => {
                       const isChecked = !!checklist[item.id];
                       return (
                         <div 
                           key={item.id}
                           onClick={() => handleToggleChecklist(item.id)}
-                          className={`flex items-start gap-3 p-2.5 rounded-lg border cursor-pointer select-none transition-all ${
+                          className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer select-none transition-all ${
                             isChecked 
-                              ? 'bg-brand-green-light/20 border-brand-green/20 text-text-primary' 
-                              : 'bg-bg-secondary border-border-theme/30 text-text-secondary hover:border-border-hover hover:text-text-primary'
+                              ? 'bg-brand-green/10 border-brand-green/30 text-text-primary shadow-sm shadow-brand-green/5' 
+                              : 'bg-bg-secondary border-border-theme/40 text-text-secondary hover:border-border-hover hover:bg-bg-hover'
                           }`}
                         >
-                          <div className="mt-0.5 flex-shrink-0">
-                            {isChecked ? (
-                              <CheckSquare className="h-4 w-4 text-brand-green fill-brand-green/10" />
-                            ) : (
-                              <Square className="h-4 w-4 text-text-muted" />
-                            )}
+                          {/* Checkbox / Status Indicator */}
+                          <div className={`mt-0.5 flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-md border transition-colors ${
+                            isChecked ? 'bg-brand-green border-brand-green text-black' : 'bg-bg-input border-border-theme text-transparent'
+                          }`}>
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
                           </div>
-                          <span className="text-xs leading-relaxed">{item.text}</span>
+                          
+                          {/* Icon & Text Content */}
+                          <div className="flex-1 flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <item.icon className={`h-3.5 w-3.5 ${isChecked ? 'text-brand-green' : 'text-text-muted'}`} />
+                              <span className={`text-xs font-black tracking-wide ${isChecked ? 'text-brand-green' : 'text-text-primary'}`}>
+                                {item.title}
+                              </span>
+                            </div>
+                            <span className="text-[10px] leading-snug opacity-80">{item.text}</span>
+                          </div>
                         </div>
                       );
                     })}

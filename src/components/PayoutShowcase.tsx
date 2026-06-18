@@ -16,6 +16,7 @@ export default function PayoutShowcase() {
   const [formTrader, setFormTrader] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Interaction States
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
@@ -111,7 +112,36 @@ export default function PayoutShowcase() {
     setFormImage('');
     setFormTrader('');
     setSubmitSuccess(true);
-    setTimeout(() => setSubmitSuccess(false), 4000);
+    setTimeout(() => {
+      setSubmitSuccess(false);
+      setIsUploadModalOpen(false);
+    }, 3000);
+  };
+
+  // Animated Counter Component
+  const AnimatedCounter = ({ value }: { value: number }) => {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+      let start = 0;
+      const end = value;
+      if (start === end) return;
+      const duration = 1500;
+      let startTimestamp: number | null = null;
+      const step = (timestamp: number) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        // easeOutQuart
+        const easeProgress = 1 - Math.pow(1 - progress, 4);
+        setCount(Math.floor(easeProgress * end));
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        } else {
+          setCount(end);
+        }
+      };
+      window.requestAnimationFrame(step);
+    }, [value]);
+    return <span>{count.toLocaleString()}</span>;
   };
 
   // Like Payout
@@ -176,27 +206,27 @@ export default function PayoutShowcase() {
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
       
       {/* Page Header */}
-      <div className="text-center space-y-2 max-w-2xl mx-auto">
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary uppercase font-sans">
-          Payout <span className="text-brand-green">Showcase</span>
-        </h2>
-        <p className="text-xs sm:text-sm text-text-secondary">
-          The Wall of Fame. Upload your certificates from global funding providers. Local payout confirmations are subject to admin review before verification.
-        </p>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 max-w-4xl mx-auto mb-8">
+        <div className="space-y-1 sm:text-left text-center flex-1">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary uppercase font-sans">
+            Payout <span className="text-brand-green">Showcase</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-text-secondary">
+            The Wall of Fame. Upload your certificates from global funding providers.
+          </p>
+        </div>
+        <button
+          onClick={() => setIsUploadModalOpen(true)}
+          className="rounded-xl bg-brand-green px-5 py-3 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all shadow-[0_0_15px_rgba(34,197,94,0.2)] flex items-center gap-2 hover:scale-105"
+        >
+          <Upload className="h-4 w-4" />
+          <span>Submit Certificate</span>
+        </button>
       </div>
 
+      <div className="space-y-6 text-left">
 
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Side: Recent Verified Payouts */}
-        <div className="lg:col-span-7 space-y-6 text-left">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-            <Award className="h-5 w-5 text-brand-green" />
-            <span>Verified Payout Wall of Fame</span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {verifiedPayouts.map((payout) => {
               const hasLiked = currentUser?.loggedIn && payout.likes.includes(currentUser.username);
               const isCommentsOpen = !!expandedComments[payout.id];
@@ -259,8 +289,8 @@ export default function PayoutShowcase() {
 
                     <div className="flex items-baseline justify-between border-t border-border-theme/40 pt-2.5">
                       <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Payout Amount</span>
-                      <span className="text-base font-black text-brand-green font-mono">
-                        ${payout.amount.toLocaleString()}
+                      <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-emerald-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]">
+                        $<AnimatedCounter value={payout.amount} />
                       </span>
                     </div>
                   </div>
@@ -343,127 +373,136 @@ export default function PayoutShowcase() {
           </div>
         </div>
 
-        {/* Right Side: Upload Certificate Proof */}
-        <div className="lg:col-span-5 space-y-6 text-left">
-          <div className="rounded-xl border border-border-theme bg-bg-card p-6 space-y-4 glow-accent">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">
-                Post Payout Certificate
-              </h3>
-              <p className="text-[11px] text-text-secondary mt-1">
-                Upload your certificate of payout provided by your prop firm. Mandatory verification applies.
-              </p>
-            </div>
+      {/* Upload Certificate Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in p-4">
+          <div className="relative w-full max-w-lg overflow-y-auto max-h-[90vh] rounded-2xl border border-border-theme bg-bg-card p-6 shadow-2xl glow-accent">
+            <button
+              onClick={() => setIsUploadModalOpen(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-text-primary transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-brand-green" /> Submit Payout Proof
+                </h3>
+                <p className="text-[11px] text-text-secondary mt-1">
+                  Upload your certificate of payout provided by your prop firm.
+                </p>
+              </div>
 
-            <form onSubmit={handleSubmitPayout} className="space-y-3.5">
-              {!currentUser?.loggedIn && (
+              <form onSubmit={handleSubmitPayout} className="space-y-3.5">
+                {!currentUser?.loggedIn && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trader Handle</label>
+                    <input
+                      type="text"
+                      required
+                      value={formTrader}
+                      onChange={(e) => setFormTrader(e.target.value)}
+                      placeholder="e.g. SamirFX"
+                      className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Prop Firm</label>
+                    <select
+                      value={formFirm}
+                      onChange={(e) => setFormFirm(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none"
+                    >
+                      <option value="FTMO">FTMO</option>
+                      <option value="FundedNext">FundedNext</option>
+                      <option value="The 5%ers">The 5%ers</option>
+                      <option value="FundedMax">FundedMax</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Amount (USD)</label>
+                    <input
+                      type="number"
+                      required
+                      value={formAmount}
+                      onChange={(e) => setFormAmount(e.target.value)}
+                      placeholder="e.g. 1500"
+                      className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Certificate Image File Dropzone */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Trader Handle</label>
-                  <input
-                    type="text"
-                    required
-                    value={formTrader}
-                    onChange={(e) => setFormTrader(e.target.value)}
-                    placeholder="e.g. SamirFX"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
-                  />
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+                    Mandatory Certificate Upload
+                  </label>
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center ${
+                      isDragging
+                        ? 'border-brand-green bg-brand-green/5'
+                        : formImage
+                          ? 'border-brand-green bg-bg-secondary/40'
+                          : 'border-border-theme bg-bg-secondary/20 hover:border-brand-green/40'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                      }}
+                      className="hidden"
+                    />
+                    {formImage ? (
+                      <div className="space-y-2 w-full flex flex-col items-center">
+                        <div className="h-20 w-32 rounded border border-border-theme overflow-hidden bg-bg-secondary">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={formImage} alt="Uploaded Cert Preview" className="w-full h-full object-cover" />
+                        </div>
+                        <span className="text-[10px] text-brand-green font-bold flex items-center gap-1.5">
+                          <Check className="h-3.5 w-3.5" />
+                          <span>Ready to upload</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 text-text-muted">
+                        <Upload className="h-6 w-6 mx-auto text-text-subtle" />
+                        <div className="text-[10px] font-bold">DRAG & DROP CERTIFICATE IMAGE</div>
+                        <div className="text-[8px] uppercase tracking-wider">or click to browse from device</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-brand-green py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all shadow-[0_0_10px_rgba(34,197,94,0.15)] flex items-center justify-center gap-1.5 mt-4"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>Submit Certificate Proof</span>
+                </button>
+              </form>
+
+              {submitSuccess && (
+                <div className="p-3 bg-brand-green/10 border border-brand-green/30 rounded-lg text-brand-green text-[10px] font-bold flex items-center gap-1.5 animate-fade-in">
+                  <Check className="h-4 w-4 flex-shrink-0" />
+                  <span>Submitted successfully! Admin will verify soon.</span>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Prop Firm</label>
-                  <select
-                    value={formFirm}
-                    onChange={(e) => setFormFirm(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-secondary focus:border-brand-green focus:outline-none"
-                  >
-                    <option value="FTMO">FTMO</option>
-                    <option value="FundedNext">FundedNext</option>
-                    <option value="The 5%ers">The 5%ers</option>
-                    <option value="FundedMax">FundedMax</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Amount (USD)</label>
-                  <input
-                    type="number"
-                    required
-                    value={formAmount}
-                    onChange={(e) => setFormAmount(e.target.value)}
-                    placeholder="e.g. 1500"
-                    className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Certificate Image File Dropzone */}
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
-                  Mandatory Certificate Upload
-                </label>
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center ${
-                    isDragging
-                      ? 'border-brand-green bg-brand-green/5'
-                      : formImage
-                        ? 'border-brand-green bg-bg-secondary/40'
-                        : 'border-border-theme bg-bg-secondary/20 hover:border-brand-green/40'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(file);
-                    }}
-                    className="hidden"
-                  />
-                  {formImage ? (
-                    <div className="space-y-2 w-full flex flex-col items-center">
-                      <div className="h-20 w-32 rounded border border-border-theme overflow-hidden bg-bg-secondary">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={formImage} alt="Uploaded Cert Preview" className="w-full h-full object-cover" />
-                      </div>
-                      <span className="text-[10px] text-brand-green font-bold flex items-center gap-1.5">
-                        <Check className="h-3.5 w-3.5" />
-                        <span>Ready to upload</span>
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5 text-text-muted">
-                      <Upload className="h-6 w-6 mx-auto text-text-subtle" />
-                      <div className="text-[10px] font-bold">DRAG & DROP CERTIFICATE IMAGE</div>
-                      <div className="text-[8px] uppercase tracking-wider">or click to browse from device</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-brand-green py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all shadow-[0_0_10px_rgba(34,197,94,0.15)] flex items-center justify-center gap-1.5"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span>Submit Certificate Proof</span>
-              </button>
-            </form>
-
-            {submitSuccess && (
-              <div className="p-3 bg-brand-green/10 border border-brand-green/30 rounded-lg text-brand-green text-[10px] font-bold flex items-center gap-1.5 animate-fade-in">
-                <Check className="h-4 w-4 flex-shrink-0" />
-                <span>Submitted successfully! It is pending admin verification. You can review and approve it under the central Admin Panel.</span>
-              </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Certificate Lightbox Modal */}
       {activeLightboxImage && (

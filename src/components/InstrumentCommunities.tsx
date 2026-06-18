@@ -102,7 +102,7 @@ const INITIAL_POSTS: Record<string, CommunityPost[]> = {
 };
 
 interface InstrumentCommunitiesProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string } | null;
+  currentUser: { id?: string; username: string; loggedIn: boolean; avatar: string; email?: string; } | null;
   onOpenAuth: () => void;
 }
 

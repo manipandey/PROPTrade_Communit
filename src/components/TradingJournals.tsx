@@ -4,6 +4,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck, CheckSquare, Award, Eye, AlertTriangle, HelpCircle } from 'lucide-react';
 import { db, JournalEntry, EMOTIONS, SETUP_TYPES, Emotion, SetupType, TradeFeedback, TradingAccount, TradingSession, TRADING_SESSIONS } from '@/lib/supabase';
+import { api } from '../lib/api';
 import StreakSimulator from '@/components/StreakSimulator';
 
 interface PublicJournalEntry extends JournalEntry {
@@ -16,7 +17,7 @@ interface PublicJournalEntry extends JournalEntry {
 }
 
 interface TradingJournalsProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
+  currentUser: { id?: string; username: string; loggedIn: boolean; avatar: string; isDemo?: boolean; email?: string; } | null;
   onOpenAuth: () => void;
 }
 
@@ -197,28 +198,32 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   const [aiChatMessages, setAiChatMessages] = useState<{role: 'user' | 'ai'; text: string}[]>([]);
   const [aiChatInput, setAiChatInput] = useState('');
 
-  // Load user journals dynamically — syncing from external localStorage store
+  // Load user journals dynamically
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setSelectedAccountFilter('all');
-    setSelectedAccountTypeFilter('all');
-    if (currentUser?.loggedIn) {
-      setJournals(db.getJournals(currentUser.username));
-      setJournalSettings(db.getJournalSettings(currentUser.username));
-      const accs = db.getAccounts(currentUser.username);
-      setAccounts(accs);
-      if (accs.length > 0) {
-        setSelectedAccountId(accs[0].id);
+    const fetchJournals = async () => {
+      setSelectedAccountFilter('all');
+      setSelectedAccountTypeFilter('all');
+      if (currentUser?.loggedIn && currentUser.id) {
+        const liveJournals = await api.getJournals(currentUser.id);
+        setJournals(liveJournals);
+        
+        // Keep these in local storage for now
+        setJournalSettings(db.getJournalSettings(currentUser.username));
+        const accs = db.getAccounts(currentUser.username);
+        setAccounts(accs);
+        if (accs.length > 0) {
+          setSelectedAccountId(accs[0].id);
+        } else {
+          setSelectedAccountId('');
+        }
       } else {
+        setJournals([]);
+        setJournalSettings({ isPublic: false });
+        setAccounts([]);
         setSelectedAccountId('');
       }
-    } else {
-      setJournals([]);
-      setJournalSettings({ isPublic: false });
-      setAccounts([]);
-      setSelectedAccountId('');
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
+    };
+    fetchJournals();
   }, [currentUser]);
 
   // Load public feedbacks for selected trade in community
@@ -282,12 +287,12 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   };
 
   // Handle Trade Submission
-  const handleLogTradeSubmit = (e: React.FormEvent) => {
+  const handleLogTradeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
     setSuccessToast(null);
 
-    if (!currentUser || !currentUser.loggedIn) {
+    if (!currentUser || !currentUser.loggedIn || !currentUser.id) {
       onOpenAuth();
       return;
     }
@@ -336,9 +341,11 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
       sentiment: isNoSetup ? undefined : (sentiment || undefined)
     };
 
+    // Save to real backend
+    await api.saveJournal(currentUser.id, newTrade);
+
     const updatedJournals = [newTrade, ...journals];
     setJournals(updatedJournals);
-    db.saveJournals(currentUser.username, updatedJournals);
 
     // Compute helpful filter notification if trade is hidden under current view
     let subMessage = undefined;
@@ -1038,13 +1045,24 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
             </div>
           )}
 
-          {/* Log Trade Form Drawer */}
+          {/* Log Trade Form Popup */}
           {isLoggingTrade && currentUser?.loggedIn && (
-            <form onSubmit={handleLogTradeSubmit} className="rounded-xl border border-border-theme bg-bg-secondary p-6 space-y-4 glow-purple animate-fade-in text-left">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                <PlusCircle className="h-4.5 w-4.5 text-brand-green" />
-                <span>Enter Trade Details</span>
-              </h3>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border-theme bg-bg-card p-6 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-border-theme pb-4 mb-4">
+                  <h3 className="text-lg font-black uppercase tracking-wider text-text-primary flex items-center gap-2">
+                    <PlusCircle className="h-5 w-5 text-brand-green" />
+                    <span>Log New Trade</span>
+                  </h3>
+                  <button
+                    onClick={() => setIsLoggingTrade(false)}
+                    className="p-2 rounded-lg hover:bg-bg-hover text-text-muted transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <form onSubmit={handleLogTradeSubmit} className="space-y-5 text-left">
 
               {formError && (
                 <div className="flex items-start gap-2.5 rounded-lg bg-red-950/50 border border-red-800/60 p-3.5 text-xs text-red-200 animate-fade-in">
@@ -1467,7 +1485,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 })()
               )}
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border-theme/60 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsLoggingTrade(false)}
@@ -1483,6 +1501,8 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 </button>
               </div>
             </form>
+            </div>
+            </div>
           )}
 
           {/* Guest Lock Notification */}

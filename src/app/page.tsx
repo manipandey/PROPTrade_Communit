@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import HomeDashboard from '@/components/HomeDashboard';
@@ -60,15 +61,22 @@ type Theme = 'dark' | 'light';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('home');
+  const [activeSubTab, setActiveSubTab] = useState<string | undefined>(undefined);
   const [authOpen, setAuthOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>('light');
   const [currentUser, setCurrentUser] = useState<{
-    username: string; loggedIn: boolean; avatar: string; isDemo?: boolean
+    id?: string;
+    username: string;
+    loggedIn: boolean;
+    avatar: string;
+    isDemo?: boolean;
+    email?: string;
   } | null>(null);
   const [markets, setMarkets] = useState<MarketItem[]>(ALL_AVAILABLE_MARKETS);
   const [watchlist, setWatchlist] = useState<string[]>(['NAS100', 'XAUUSD', 'EURUSD', 'BTCUSD']);
   const [showLanding, setShowLanding] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Fetch real-time market data from APIs
   useEffect(() => {
@@ -166,28 +174,42 @@ export default function Home() {
 
   // Load user, theme, and watchlist on mount — syncing from external localStorage store
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    const user = db.getCurrentUser();
-    const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'light';
-    document.documentElement.setAttribute('data-theme', stored);
-    setCurrentUser(user);
-    setTheme(stored);
-    if (user.loggedIn) {
-      setShowLanding(false);
-    }
-
-    const saved = localStorage.getItem('propnepal_watchlist');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setWatchlist(parsed);
-        }
-      } catch {
-        // ignore
+    const initApp = async () => {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'light';
+      document.documentElement.setAttribute('data-theme', stored);
+      setTheme(stored);
+      
+      const user = await api.getCurrentUser();
+      if (user) {
+        setCurrentUser({
+          id: user.id,
+          username: user.username || user.email?.split('@')[0] || 'User',
+          loggedIn: true,
+          avatar: user.avatar || '👤',
+          email: user.email,
+          isDemo: user.is_demo
+        });
+        setShowLanding(false);
+      } else {
+        setCurrentUser({ username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
       }
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
+      setIsInitializing(false);
+
+      const saved = localStorage.getItem('propnepal_watchlist');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setWatchlist(parsed);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      /* eslint-enable react-hooks/set-state-in-effect */
+    };
+    initApp();
   }, []);
 
   const handleToggleWatchlist = (symbol: string) => {
@@ -209,17 +231,24 @@ export default function Home() {
     localStorage.setItem('propnepal_theme', next);
   };
 
-  const handleAuthSuccess = () => {
-    const user = db.getCurrentUser();
-    setCurrentUser(user);
-    if (user.loggedIn) {
+  const handleAuthSuccess = async () => {
+    const user = await api.getCurrentUser();
+    if (user) {
+      setCurrentUser({
+        id: user.id,
+        username: user.username || user.email?.split('@')[0] || 'User',
+        loggedIn: true,
+        avatar: user.avatar || '👤',
+        email: user.email,
+        isDemo: user.is_demo
+      });
       setShowLanding(false);
     }
   };
 
-  const handleLogout = () => {
-    db.setCurrentUser({ username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
-    setCurrentUser(db.getCurrentUser());
+  const handleLogout = async () => {
+    await api.logout();
+    setCurrentUser({ username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
     setShowLanding(true);
   };
 
@@ -228,10 +257,16 @@ export default function Home() {
   };
 
   // Close mobile menu on tab change
-  const handleSetActiveTab = (tab: string) => {
+  const handleSetActiveTab = (tab: string, subTab?: string) => {
     setActiveTab(tab);
+    if (subTab) setActiveSubTab(subTab);
+    else setActiveSubTab(undefined);
     setMobileMenuOpen(false);
   };
+
+  if (isInitializing) {
+    return <div className="min-h-screen flex items-center justify-center bg-bg-main"><div className="w-8 h-8 border-4 border-brand-green border-t-transparent rounded-full animate-spin"></div></div>;
+  }
 
   // Show landing page for unauthenticated users who haven't chosen to browse as guest
   if (showLanding && !currentUser?.loggedIn) {
@@ -413,7 +448,7 @@ export default function Home() {
             {/* ── TRADING TOOLS ── */}
             {activeTab === 'tools' && (
               <div className="animate-fade-in space-y-5">
-                <Tools theme={theme} />
+                <Tools theme={theme} defaultSubTab={activeSubTab as any} />
                 <AdSlot variant="banner" className="mt-4" />
               </div>
             )}

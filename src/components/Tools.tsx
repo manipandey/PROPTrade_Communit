@@ -185,6 +185,8 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
   useEffect(() => {
     if (subTab !== 'chart' || !chartContainerRef.current) return;
 
+    let isMounted = true;
+    
     // Clear previous widget
     chartContainerRef.current.innerHTML = '';
 
@@ -199,7 +201,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     script.type = 'text/javascript';
     script.async = true;
     script.onload = () => {
-      if (typeof window !== 'undefined' && (window as unknown as TradingViewGlobal).TradingView) {
+      if (isMounted && typeof window !== 'undefined' && (window as unknown as TradingViewGlobal).TradingView) {
         new (window as unknown as Required<TradingViewGlobal>).TradingView.widget({
           autosize: true,
           symbol: tvSymbol,
@@ -217,6 +219,13 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     };
 
     chartContainerRef.current.appendChild(script);
+
+    return () => {
+      isMounted = false;
+      if (chartContainerRef.current) {
+        chartContainerRef.current.innerHTML = '';
+      }
+    };
   }, [tvSymbol, theme, subTab]);
 
   // Sync default prices for margin calculator when pair changes
@@ -283,15 +292,16 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
       // 1 pip = $10 for standard lot of 100,000 units
       lotSize = riskAmt / (stopLossNum * 10);
     } else if (lotPair === 'USDJPY') {
-      // 1 pip = approx $6.3 depending on exchange rate
-      lotSize = riskAmt / (stopLossNum * 6.3);
+      // 1 pip = approx $6.45 depending on exchange rate (~155)
+      lotSize = riskAmt / (stopLossNum * 6.45);
     } else if (lotPair === 'XAUUSD') {
-      // stop loss in USD price points (1 point = $100 per lot, or 10 points = $10)
-      // Let's assume standard gold stop loss where 1 point = $1 per lot
-      lotSize = riskAmt / (stopLossNum * 1.0);
+      // SL is in USD/Points. 1 standard lot = 100 oz. $1 move = $100 risk per lot.
+      lotSize = riskAmt / (stopLossNum * 100);
     } else if (lotPair === 'BTCUSD') {
+      // 1 lot = 1 coin. $1 move = $1 risk.
       lotSize = riskAmt / stopLossNum;
     } else if (lotPair === 'US30') {
+      // 1 lot = 1 contract. $1 move = $1 risk.
       lotSize = riskAmt / stopLossNum;
     }
 

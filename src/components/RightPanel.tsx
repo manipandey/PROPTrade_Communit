@@ -55,9 +55,15 @@ export default function RightPanel({ onNavigate, markets, watchlist, onToggleWat
     // Clear previous widget
     widgetContainerRef.current.innerHTML = '';
 
-    const widget = document.createElement('div');
-    widget.className = 'tradingview-widget-container__widget';
-    widgetContainerRef.current.appendChild(widget);
+    // Isolate the TradingView script inside an iframe to prevent "contentWindow is not available" errors
+    const iframe = document.createElement('iframe');
+    iframe.style.width = '100%';
+    iframe.style.height = '380px';
+    iframe.style.border = 'none';
+    iframe.style.borderRadius = '8px';
+    iframe.style.overflow = 'hidden';
+    
+    widgetContainerRef.current.appendChild(iframe);
 
     // Map watchlist symbols to TradingView titles/proNames
     const symbolsConfig = watchlist.map((sym) => {
@@ -68,11 +74,7 @@ export default function RightPanel({ onNavigate, markets, watchlist, onToggleWat
       };
     });
 
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js';
-    script.type = 'text/javascript';
-    script.async = true;
-    script.innerHTML = JSON.stringify({
+    const config = {
       title: 'Watchlist',
       tabs: [
         {
@@ -91,9 +93,40 @@ export default function RightPanel({ onNavigate, markets, watchlist, onToggleWat
       gridLineColor: 'rgba(240, 243, 250, 0.06)',
       scaleLineColor: 'rgba(240, 243, 250, 0.06)',
       symbolActiveColor: 'rgba(33, 150, 243, 0.12)'
-    });
+    };
 
-    widgetContainerRef.current.appendChild(script);
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { margin: 0; padding: 0; background-color: transparent; overflow: hidden; }
+            ::-webkit-scrollbar { display: none; }
+          </style>
+        </head>
+        <body>
+          <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+            ${JSON.stringify(config)}
+            </script>
+          </div>
+        </body>
+      </html>
+    `;
+
+    if (iframe.contentWindow) {
+      iframe.contentWindow.document.open();
+      iframe.contentWindow.document.write(html);
+      iframe.contentWindow.document.close();
+    }
+
+    return () => {
+      if (widgetContainerRef.current) {
+        widgetContainerRef.current.innerHTML = '';
+      }
+    };
   }, [watchlist, theme, isEditing]);
 
   return (

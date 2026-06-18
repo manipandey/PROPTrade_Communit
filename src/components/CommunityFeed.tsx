@@ -4,6 +4,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Search, Flame, Clock, MessageSquare, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link } from 'lucide-react';
 import { db, Post, Comment } from '@/lib/supabase';
+import { api } from '../lib/api';
 import AdSlot from './AdSlot';
 
 const REACTION_TYPES = [
@@ -15,8 +16,127 @@ const REACTION_TYPES = [
   { key: 'hot',    emoji: '🔥', label: 'Hot Setup' },
 ];
 
+interface CommentNodeProps {
+  comment: any;
+  allComments: any[];
+  postId: string;
+  depth: number;
+  currentUser: any;
+  replyingToCommentId: string | null;
+  setReplyingToCommentId: (id: string | null) => void;
+  replyContent: string;
+  setReplyContent: (content: string) => void;
+  onReplySubmit: (e: React.FormEvent, postId: string, parentId: string) => void;
+  onReact: (postId: string, commentId: string, reactionKey: string) => void;
+}
+
+const CommentThreadItem: React.FC<CommentNodeProps> = ({
+  comment, allComments, postId, depth, currentUser,
+  replyingToCommentId, setReplyingToCommentId, replyContent, setReplyContent,
+  onReplySubmit, onReact
+}) => {
+  const replies = allComments.filter(c => c.parentId === comment.id);
+  replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+  return (
+    <div className={`border-l border-border-theme pl-4 py-2 space-y-2 ${depth > 0 ? 'ml-2 mt-2' : ''}`}>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2 text-[9px] font-mono font-bold text-text-secondary">
+          <span className="text-text-muted">u/{comment.author}</span>
+          {(() => {
+            const badges = db.getUserBadges(comment.author);
+            const unlocked = badges.filter(b => b.unlocked);
+            return unlocked.map(b => (
+              <span key={b.id} className="text-[9px]" title={b.name}>{b.emoji}</span>
+            ));
+          })()}
+          <span>•</span>
+          <span>{new Date(comment.createdAt).toLocaleDateString()}</span>
+        </div>
+        <p className="text-xs text-text-secondary leading-relaxed">{comment.content}</p>
+      </div>
+
+      {/* Comment Reactions & Reply Button */}
+      <div className="flex items-center gap-2 pt-1">
+        {REACTION_TYPES.map((type) => {
+          const count = comment.reactions?.[type.key] || 0;
+          const active = comment.rawReactions?.some((r: any) => r.user_id === currentUser?.id && r.reaction_type === type.key);
+          
+          return (
+            <button
+              key={type.key}
+              onClick={() => onReact(postId, comment.id, type.key)}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-all text-[9px] font-bold"
+              style={{
+                backgroundColor: active ? 'rgba(22, 163, 74, 0.15)' : 'transparent',
+                color: active ? 'var(--text-primary)' : 'var(--text-muted)'
+              }}
+              title={type.label}
+            >
+              <span className={`text-[10px] transition-all ${active ? 'grayscale-0' : 'grayscale hover:grayscale-0'}`}>{type.emoji}</span>
+              {count > 0 && <span>{count}</span>}
+            </button>
+          );
+        })}
+        
+        <button 
+          onClick={() => setReplyingToCommentId(replyingToCommentId === comment.id ? null : comment.id)}
+          className="text-[9px] font-bold text-text-muted hover:text-text-primary uppercase tracking-wider ml-2 transition-colors"
+        >
+          Reply
+        </button>
+      </div>
+
+      {/* Reply Input */}
+      {replyingToCommentId === comment.id && (
+        <form onSubmit={(e) => onReplySubmit(e, postId, comment.id)} className="flex gap-2 mt-2 animate-fade-in">
+          <input
+            type="text"
+            autoFocus
+            required
+            placeholder={`Reply to u/${comment.author}...`}
+            disabled={!currentUser?.loggedIn}
+            value={replyContent}
+            onChange={(e) => setReplyContent(e.target.value)}
+            className="flex-1 rounded border border-border-theme bg-bg-input py-1 px-2 text-[10px] text-text-primary placeholder-text-muted focus:border-brand-green focus:outline-none transition-all"
+          />
+          <button
+            type="submit"
+            disabled={!currentUser?.loggedIn}
+            className="rounded bg-brand-green text-black px-3 text-[9px] font-bold uppercase tracking-wider hover:bg-brand-green/90 transition-all"
+          >
+            Post
+          </button>
+        </form>
+      )}
+
+      {/* Render Replies recursively */}
+      {replies.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {replies.map(reply => (
+            <CommentThreadItem
+              key={reply.id}
+              comment={reply}
+              allComments={allComments}
+              postId={postId}
+              depth={depth + 1}
+              currentUser={currentUser}
+              replyingToCommentId={replyingToCommentId}
+              setReplyingToCommentId={setReplyingToCommentId}
+              replyContent={replyContent}
+              setReplyContent={setReplyContent}
+              onReplySubmit={onReplySubmit}
+              onReact={onReact}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface CommunityFeedProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string } | null;
+  currentUser: { id?: string; username: string; loggedIn: boolean; avatar: string; email?: string; } | null;
   onOpenAuth: () => void;
 }
 
@@ -24,8 +144,11 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   const [posts, setPosts] = useState<Post[]>([]);
   
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPosts(db.getPosts());
+    const fetchPosts = async () => {
+      const livePosts = await api.getPosts();
+      setPosts(livePosts);
+    };
+    fetchPosts();
   }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -38,7 +161,12 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   const [postCategory, setPostCategory] = useState('FTMO');
   const [postTagsString, setPostTagsString] = useState('');
   const [postImageUrl, setPostImageUrl] = useState('');
-  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
+  const [imageMode, setImageMode] = useState<'url' | 'upload'>('url');
+
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+
+  // Post Actions
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -128,9 +256,9 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   };
 
   // Submit Post
-  const handleCreatePostSubmit = (e: React.FormEvent) => {
+  const handleCreatePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !currentUser.loggedIn) return;
+    if (!currentUser || !currentUser.loggedIn || !currentUser.id) return;
     if (!postTitle || !postContent) return;
 
     const tags = postTagsString
@@ -138,23 +266,22 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
       .map((t) => t.trim().replace(/#/g, ''))
       .filter((t) => t.length > 0);
 
-    const newPost: Post = {
-      id: `post-${Date.now()}`,
+    const newPost = {
       title: postTitle,
       content: postContent,
       author: currentUser.username,
       category: postCategory,
       tags: tags.length > 0 ? tags : ['General'],
       upvotes: 1,
-      comments: [],
-      createdAt: new Date().toISOString(),
-      userVoted: 'up', // Creator automatically upvotes their post
       imageUrl: postImageUrl.trim() || undefined
     };
 
-    const newPostsList = [newPost, ...posts];
-    setPosts(newPostsList);
-    db.savePosts(newPostsList);
+    // Save to real database
+    await api.savePost(currentUser.id, newPost);
+    
+    // Refresh feed
+    const livePosts = await api.getPosts();
+    setPosts(livePosts);
 
     // Reset Form
     setPostTitle('');
@@ -166,33 +293,58 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   };
 
   // Submit Comment
-  const handleCreateCommentSubmit = (e: React.FormEvent, postId: string) => {
+  const handleCreateCommentSubmit = async (e: React.FormEvent, postId: string) => {
     e.preventDefault();
-    if (!currentUser || !currentUser.loggedIn) {
+    if (!currentUser || !currentUser.loggedIn || !currentUser.id) {
       onOpenAuth();
       return;
     }
     if (!newCommentContent.trim()) return;
 
-    const updatedPosts = posts.map((post) => {
-      if (post.id !== postId) return post;
+    // Save to real database
+    await api.saveComment(currentUser.id, postId, newCommentContent);
 
-      const newComment: Comment = {
-        id: `comment-${Date.now()}`,
-        author: currentUser.username,
-        content: newCommentContent,
-        createdAt: new Date().toISOString()
-      };
-
-      return {
-        ...post,
-        comments: [...post.comments, newComment]
-      };
-    });
-
-    setPosts(updatedPosts);
-    db.savePosts(updatedPosts);
+    // Refresh feed
+    const livePosts = await api.getPosts();
+    setPosts(livePosts);
+    
     setNewCommentContent('');
+  };
+
+  const handleCreateReplySubmit = async (e: React.FormEvent, postId: string, parentId: string) => {
+    e.preventDefault();
+    if (!currentUser || !currentUser.loggedIn || !currentUser.id) {
+      onOpenAuth();
+      return;
+    }
+    if (!replyContent.trim()) return;
+
+    await api.saveComment(currentUser.id, postId, replyContent, parentId);
+    
+    const livePosts = await api.getPosts();
+    setPosts(livePosts);
+    
+    setReplyContent('');
+    setReplyingToCommentId(null);
+  };
+
+  const handleReactComment = async (postId: string, commentId: string, reactionKey: string) => {
+    if (!currentUser || !currentUser.loggedIn || !currentUser.id) {
+      onOpenAuth();
+      return;
+    }
+    
+    const post = posts.find((p: any) => p.id === postId);
+    if (!post) return;
+    const comment = post.comments.find((c: any) => c.id === commentId);
+    if (!comment) return;
+    
+    const hasReacted = comment.rawReactions?.some((r: any) => r.user_id === currentUser.id && r.reaction_type === reactionKey);
+
+    await api.reactToComment(currentUser.id, commentId, reactionKey, !hasReacted);
+    
+    const livePosts = await api.getPosts();
+    setPosts(livePosts);
   };
 
   // Filter & Sort Posts
@@ -765,26 +917,24 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                           No responses yet. Be the first to share your thoughts!
                         </div>
                       ) : (
-                        post.comments.map((comm) => (
-                          <div key={comm.id} className="border-l border-border-theme pl-4 py-1 space-y-1">
-                            <div className="flex items-center gap-2 text-[9px] font-mono font-bold text-text-secondary">
-                              <span className="text-text-muted">u/{comm.author}</span>
-                              {(() => {
-                                const badges = db.getUserBadges(comm.author);
-                                const unlocked = badges.filter(b => b.unlocked);
-                                return unlocked.map(b => (
-                                  <span key={b.id} className="text-[9px]" title={b.name}>
-                                    {b.emoji}
-                                  </span>
-                                ));
-                              })()}
-                              <span>•</span>
-                              <span>{new Date(comm.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <p className="text-xs text-text-secondary leading-relaxed">
-                              {comm.content}
-                            </p>
-                          </div>
+                        post.comments
+                          .filter((comm: any) => !comm.parentId)
+                          .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                          .map((comm: any) => (
+                            <CommentThreadItem
+                              key={comm.id}
+                              comment={comm}
+                              allComments={post.comments}
+                              postId={post.id}
+                              depth={0}
+                              currentUser={currentUser}
+                              replyingToCommentId={replyingToCommentId}
+                              setReplyingToCommentId={setReplyingToCommentId}
+                              replyContent={replyContent}
+                              setReplyContent={setReplyContent}
+                              onReplySubmit={handleCreateReplySubmit}
+                              onReact={handleReactComment}
+                            />
                         ))
                       )}
                     </div>

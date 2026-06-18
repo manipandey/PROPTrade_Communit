@@ -11,7 +11,37 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "PropNepal — Nepal's Premier Prop Trading Community",
   description: "Connect with Nepal's funded traders. Share payout proofs, log trading journals, compare prop firm reviews, and master evaluation strategies to access institutional capital.",
-  keywords: ["prop trading", "Nepal", "FTMO", "FundedNext", "trading journal", "funded trader"],
+  keywords: ["prop trading", "Nepal", "FTMO", "FundedNext", "trading journal", "funded trader", "SMC", "Forex Nepal"],
+  authors: [{ name: "Maniraj Pandey" }],
+  openGraph: {
+    title: "PropNepal — Nepal's Premier Prop Trading Community",
+    description: "Connect with Nepal's funded traders. Share payout proofs, log trading journals, compare prop firm reviews, and master evaluation strategies.",
+    url: "https://propnepal.vercel.app",
+    siteName: "PropNepal",
+    images: [
+      {
+        url: "/og-image.jpg", // This would be the social sharing image
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PropNepal — Nepal's Premier Prop Trading Community",
+    description: "Connect with Nepal's funded traders. Share payout proofs, log trading journals, and master evaluation strategies.",
+  },
+};
+
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f5f7" },
+  ],
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

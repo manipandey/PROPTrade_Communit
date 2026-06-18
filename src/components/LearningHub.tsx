@@ -11,7 +11,7 @@ interface QuizQuestion {
 }
 
 interface LearningHubProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
+  currentUser: { id?: string; username: string; loggedIn: boolean; avatar: string; isDemo?: boolean; email?: string; } | null;
   onOpenAuth: () => void;
 }
 

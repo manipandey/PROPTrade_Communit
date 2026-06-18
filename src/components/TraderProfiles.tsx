@@ -45,44 +45,47 @@ export default function TraderProfiles() {
             <div
               key={profile.id}
               onClick={() => setSelectedProfile(profile)}
-              className="group relative rounded-xl border border-border-theme bg-bg-card p-5 cursor-pointer transition-all duration-300 hover:border-brand-green/30 hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(34,197,94,0.03)] flex flex-col justify-between"
+              className="group relative rounded-2xl border border-border-theme/50 bg-bg-card/40 backdrop-blur-xl p-6 cursor-pointer transition-all duration-500 hover:border-brand-green/40 hover:-translate-y-2 hover:rotate-[1deg] hover:shadow-[0_20px_40px_-15px_rgba(34,197,94,0.15)] flex flex-col justify-between overflow-hidden"
             >
-              <div className="space-y-4">
+              {/* Animated background glow on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-green/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+              <div className="space-y-5 relative z-10">
                 {/* Header row */}
                 <div className="flex justify-between items-start">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-bg-input border border-border-theme text-2xl group-hover:border-brand-green/30 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-bg-input to-bg-secondary border border-border-theme/50 shadow-inner text-3xl group-hover:border-brand-green/40 transition-colors group-hover:scale-110 duration-500">
                       {profile.avatar}
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-text-primary group-hover:text-brand-green transition-colors">
+                      <h3 className="text-base font-extrabold text-text-primary group-hover:text-brand-green transition-colors tracking-tight">
                         {profile.name}
                       </h3>
-                      <span className="text-[10px] text-text-muted font-mono">{profile.handle}</span>
+                      <span className="text-[11px] text-brand-green/70 font-mono tracking-wider">{profile.handle}</span>
                     </div>
                   </div>
 
                   <button
                     onClick={(e) => handleCheer(profile.id, e)}
-                    className={`rounded-lg border p-2 transition-all ${
+                    className={`rounded-xl border p-2.5 transition-all duration-300 ${
                       isCheered 
-                        ? 'bg-red-950/20 border-red-900/40 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' 
-                        : 'border-border-theme bg-bg-secondary text-text-muted hover:border-red-900/50 hover:text-red-400'
+                        ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] scale-110' 
+                        : 'border-border-theme/50 bg-bg-secondary/50 text-text-muted hover:border-red-500/50 hover:text-red-400 hover:bg-red-500/5'
                     }`}
                     title={isCheered ? 'Cheered!' : 'Support Trader'}
                   >
-                    <Heart className="h-4 w-4 fill-current" />
+                    <Heart className={`h-4.5 w-4.5 transition-all ${isCheered ? 'fill-current scale-110' : ''}`} />
                   </button>
                 </div>
 
                 {/* Badging list */}
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {profile.propFirms.map((firm) => (
                     <span
                       key={firm}
-                      className="inline-flex items-center gap-1 rounded bg-bg-input border border-border-theme px-2 py-0.5 text-[9px] font-mono font-bold text-text-secondary"
+                      className="inline-flex items-center gap-1.5 rounded-md bg-bg-input/60 border border-border-theme/50 px-2.5 py-1 text-[10px] font-mono font-bold text-text-secondary shadow-sm"
                     >
-                      <ShieldCheck className="h-3 w-3 text-brand-green" />
+                      <ShieldCheck className="h-3.5 w-3.5 text-brand-green" />
                       {firm}
                     </span>
                   ))}
@@ -93,7 +96,7 @@ export default function TraderProfiles() {
                     return unlocked.map(b => (
                       <span
                         key={b.id}
-                        className="inline-flex items-center gap-1 rounded bg-brand-green/10 border border-brand-green/20 px-2 py-0.5 text-[9px] font-mono font-bold text-brand-green"
+                        className="inline-flex items-center gap-1 rounded-md bg-brand-green/10 border border-brand-green/20 px-2.5 py-1 text-[10px] font-mono font-bold text-brand-green shadow-[0_0_10px_rgba(34,197,94,0.1)]"
                         title={`${b.name}: ${b.description}`}
                       >
                         <span>{b.emoji}</span>
@@ -104,31 +107,31 @@ export default function TraderProfiles() {
                 </div>
 
                 {/* Bio Excerpt */}
-                <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">
+                <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed font-medium">
                   {profile.bio}
                 </p>
 
                 {/* Metric Summary Bar */}
-                <div className="grid grid-cols-3 gap-2 border-t border-border-theme/60 pt-4 text-center">
-                  <div>
-                    <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider block">Max Balance</span>
-                    <span className="text-xs font-black text-text-primary mt-0.5 block">{profile.balance}</span>
+                <div className="grid grid-cols-3 gap-3 border-t border-border-theme/40 pt-5 text-center">
+                  <div className="group/stat">
+                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block transition-colors group-hover/stat:text-text-secondary">Max Balance</span>
+                    <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-white mt-1 block">{profile.balance}</span>
                   </div>
-                  <div>
-                    <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider block">Win Rate</span>
-                    <span className="text-xs font-black text-brand-green mt-0.5 block">{profile.winRate}</span>
+                  <div className="group/stat">
+                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block transition-colors group-hover/stat:text-text-secondary">Win Rate</span>
+                    <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-emerald-400 mt-1 block drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]">{profile.winRate}</span>
                   </div>
-                  <div>
-                    <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider block">Profit Split</span>
-                    <span className="text-xs font-black text-text-secondary mt-0.5 block">{profile.profitSplit}</span>
+                  <div className="group/stat">
+                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest block transition-colors group-hover/stat:text-text-secondary">Profit Split</span>
+                    <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 mt-1 block">{profile.profitSplit}</span>
                   </div>
                 </div>
               </div>
 
               {/* View Detail Indicator */}
-              <div className="mt-4 text-[9px] font-bold uppercase tracking-widest text-text-muted group-hover:text-brand-green flex items-center justify-between border-t border-border-theme/40 pt-3">
-                <span>View Performance Curve</span>
-                <TrendingUp className="h-3 w-3" />
+              <div className="mt-5 text-[10px] font-bold uppercase tracking-widest text-text-muted group-hover:text-brand-green flex items-center justify-between border-t border-border-theme/30 pt-4 relative z-10 transition-colors">
+                <span className="flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">View Performance Curve</span>
+                <TrendingUp className="h-4 w-4 transform group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300" />
               </div>
             </div>
           );
@@ -249,7 +252,17 @@ export default function TraderProfiles() {
                         stroke="currentColor"
                         strokeWidth="2.5"
                         strokeLinecap="round"
+                        style={{
+                          strokeDasharray: '300',
+                          strokeDashoffset: '300',
+                          animation: 'drawChart 2s ease-out forwards'
+                        }}
                       />
+                      <style>{`
+                        @keyframes drawChart {
+                          to { stroke-dashoffset: 0; }
+                        }
+                      `}</style>
                       <path
                         d={`M 0 35 L 14 ${35 - selectedProfile.equityCurve[1] * 2} L 28 ${35 - selectedProfile.equityCurve[2] * 2} L 42 ${35 - selectedProfile.equityCurve[3] * 2} L 56 ${35 - selectedProfile.equityCurve[4] * 2} L 70 ${35 - selectedProfile.equityCurve[5] * 2} L 84 ${35 - selectedProfile.equityCurve[6] * 2} L 100 ${35 - selectedProfile.equityCurve[7] * 2} L 100 40 L 0 40 Z`}
                         fill="url(#chart-glow)"

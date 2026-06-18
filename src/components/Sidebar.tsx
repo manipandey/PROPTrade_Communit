@@ -9,7 +9,7 @@ import {
 import { db } from '@/lib/supabase';
 
 interface SidebarProps {
-  currentUser: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
+  currentUser: { id?: string; username: string; loggedIn: boolean; avatar: string; isDemo?: boolean; email?: string; } | null;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenAuth: () => void;
