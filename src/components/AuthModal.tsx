@@ -218,25 +218,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
 
         {/* Auth Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
-            <div className="flex items-center gap-2.5 rounded-lg p-3 mb-2" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--bg-hover)' }}>
-              <input
-                type="checkbox"
-                id="isDemoAccount"
-                checked={isDemoAccount}
-                onChange={(e) => {
-                  setIsDemoAccount(e.target.checked);
-                  setError('');
-                }}
-                className="h-4 w-4 rounded cursor-pointer"
-                style={{ accentColor: 'var(--accent)' }}
-              />
-              <label htmlFor="isDemoAccount" className="text-xs font-bold select-none cursor-pointer" style={{ color: 'var(--text-primary)' }}>
-                ⚡ Register as Demo Account
-                <span className="text-[10px] font-normal block mt-0.5" style={{ color: 'var(--text-muted)' }}>No email or personal details needed.</span>
-              </label>
-            </div>
-          )}
 
           {isSignUp && (
             <div>
@@ -298,26 +279,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           </button>
         </form>
 
-        {/* Quick Demo Accounts */}
-        <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--border)' }}>
-          <div className="text-center text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
-            Or test with a demo profile / admin account
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {(['FTMO_Champ', 'GoldHunter', 'NepaliScalper', 'admin'] as const).map((role, i) => (
-              <button
-                key={role}
-                onClick={() => handleQuickLogin(role)}
-                className="rounded-lg py-2 text-center text-xs font-medium transition-all"
-                style={{ border: '1px solid var(--border)', backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-              >
-                {['⚡ FTMO Champ', '💰 Gold Hunter', '🦅 Scalper', '👑 Admin'][i]}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Footer Toggle */}
         <div className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>

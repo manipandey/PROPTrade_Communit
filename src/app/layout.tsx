@@ -20,14 +20,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="dark" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" data-theme="light" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script
           id="theme-loader"
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var theme = localStorage.getItem('propnepal_theme') || 'dark';
+                var theme = localStorage.getItem('propnepal_theme') || 'light';
                 document.documentElement.setAttribute('data-theme', theme);
               } catch(e) {}
             `,

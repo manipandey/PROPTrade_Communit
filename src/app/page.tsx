@@ -62,7 +62,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('home');
   const [authOpen, setAuthOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
   const [currentUser, setCurrentUser] = useState<{
     username: string; loggedIn: boolean; avatar: string; isDemo?: boolean
   } | null>(null);
@@ -168,7 +168,7 @@ export default function Home() {
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     const user = db.getCurrentUser();
-    const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'dark';
+    const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'light';
     document.documentElement.setAttribute('data-theme', stored);
     setCurrentUser(user);
     setTheme(stored);
