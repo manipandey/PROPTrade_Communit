@@ -149,6 +149,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   // Validation / feedback states
   const [formError, setFormError] = useState('');
   const [successToast, setSuccessToast] = useState<{ message: string; subMessage?: string } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state for new account
   const [newAccName, setNewAccName] = useState('');
@@ -324,6 +325,9 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
       return;
     }
 
+    setIsSubmitting(true);
+    try {
+
     const newTrade: JournalEntry = {
       id: `j-${Date.now()}`,
       date,
@@ -401,6 +405,12 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
     setMindsetReady(false);
     setSentiment(null);
     setIsLoggingTrade(false);
+    } catch (err) {
+      console.error(err);
+      setFormError('Failed to log trade. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Helper to calculate P&L automatically based on lots, entry/exit price, and asset multiplier rules
@@ -1553,9 +1563,10 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-brand-green px-5 py-2 text-xs font-bold text-black hover:bg-brand-green/90 uppercase tracking-wider shadow-[0_0_10px_rgba(34,197,94,0.2)]"
+                  disabled={isSubmitting}
+                  className="rounded-lg bg-brand-green px-5 py-2 text-xs font-bold text-black hover:bg-brand-green/90 uppercase tracking-wider shadow-[0_0_10px_rgba(34,197,94,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Log Position
+                  {isSubmitting ? 'Logging...' : 'Log Position'}
                 </button>
               </div>
             </form>

@@ -25,6 +25,7 @@ export default function PayoutShowcase() {
   const [isDragging, setIsDragging] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Interaction States
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
@@ -104,58 +105,66 @@ export default function PayoutShowcase() {
       return;
     }
 
-    const traderName = currentUser?.loggedIn ? currentUser.username : (formTrader.trim() || 'GuestTrader');
+    setIsSubmitting(true);
+    try {
+      const traderName = currentUser?.loggedIn ? currentUser.username : (formTrader.trim() || 'GuestTrader');
 
-    const newPayout: Payout = {
-      id: `p-${Date.now()}`,
-      trader: traderName.replace(/\s+/g, ''),
-      amount: numericAmount,
-      propFirm: formFirm,
-      date: new Date().toISOString().split('T')[0],
-      hash: `TXN-${Math.floor(1000000 + Math.random() * 9000000)}-NP`,
-      verified: false, // Must be verified by admin
-      likes: [],
-      comments: [],
-      imageUrl: formImage
-    };
+      const newPayout: Payout = {
+        id: `p-${Date.now()}`,
+        trader: traderName.replace(/\s+/g, ''),
+        amount: numericAmount,
+        propFirm: formFirm,
+        date: new Date().toISOString().split('T')[0],
+        hash: `TXN-${Math.floor(1000000 + Math.random() * 9000000)}-NP`,
+        verified: false, // Must be verified by admin
+        likes: [],
+        comments: [],
+        imageUrl: formImage
+      };
 
-    // Attempt to save to Supabase
-    const saved = await api.savePayout({
-      trader: newPayout.trader,
-      amount: newPayout.amount,
-      propFirm: newPayout.propFirm,
-      date: newPayout.date,
-      hash: newPayout.hash,
-      verified: newPayout.verified,
-      imageUrl: newPayout.imageUrl,
-      userId: currentUser?.loggedIn && !currentUser.id?.startsWith('mock-') ? currentUser.id : undefined
-    });
+      // Attempt to save to Supabase
+      const saved = await api.savePayout({
+        trader: newPayout.trader,
+        amount: newPayout.amount,
+        propFirm: newPayout.propFirm,
+        date: newPayout.date,
+        hash: newPayout.hash,
+        verified: newPayout.verified,
+        imageUrl: newPayout.imageUrl,
+        userId: currentUser?.loggedIn && !currentUser.id?.startsWith('mock-') ? currentUser.id : undefined
+      });
 
-    if (saved) {
-      const livePayouts = await api.getPayouts();
-      if (livePayouts) {
-        setPayouts(livePayouts);
-        db.savePayouts(livePayouts);
+      if (saved) {
+        const livePayouts = await api.getPayouts();
+        if (livePayouts) {
+          setPayouts(livePayouts);
+          db.savePayouts(livePayouts);
+        } else {
+          const updated = [newPayout, ...payouts];
+          setPayouts(updated);
+          db.savePayouts(updated);
+        }
       } else {
         const updated = [newPayout, ...payouts];
         setPayouts(updated);
         db.savePayouts(updated);
       }
-    } else {
-      const updated = [newPayout, ...payouts];
-      setPayouts(updated);
-      db.savePayouts(updated);
-    }
 
-    // Reset Form
-    setFormAmount('');
-    setFormImage('');
-    setFormTrader('');
-    setSubmitSuccess(true);
-    setTimeout(() => {
-      setSubmitSuccess(false);
-      setIsUploadModalOpen(false);
-    }, 3000);
+      // Reset Form
+      setFormAmount('');
+      setFormImage('');
+      setFormTrader('');
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        setIsUploadModalOpen(false);
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while submitting your certificate. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Animated Counter Component
@@ -543,10 +552,11 @@ export default function PayoutShowcase() {
 
                 <button
                   type="submit"
-                  className="w-full rounded-lg bg-brand-green py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all shadow-[0_0_10px_rgba(34,197,94,0.15)] flex items-center justify-center gap-1.5 mt-4"
+                  disabled={isSubmitting}
+                  className="w-full rounded-lg bg-brand-green py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all shadow-[0_0_10px_rgba(34,197,94,0.15)] flex items-center justify-center gap-1.5 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Sparkles className="h-4 w-4" />
-                  <span>Submit Certificate Proof</span>
+                  <span>{isSubmitting ? 'Submitting...' : 'Submit Certificate Proof'}</span>
                 </button>
               </form>
 
