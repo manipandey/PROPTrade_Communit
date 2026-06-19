@@ -172,12 +172,23 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const initApp = async () => {
-      const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'light';
-      document.documentElement.setAttribute('data-theme', stored);
-      setTheme(stored);
-      
-      const user = await api.getCurrentUser();
+    const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'light';
+    document.documentElement.setAttribute('data-theme', stored);
+    setTheme(stored);
+
+    const saved = localStorage.getItem('propnepal_watchlist');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setWatchlist(parsed);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const unsubscribe = api.onAuthStateChange((user: any) => {
       if (user) {
         setCurrentUser({
           id: user.id,
@@ -192,20 +203,11 @@ export default function Home() {
         setCurrentUser({ username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
       }
       setIsInitializing(false);
+    });
 
-      const saved = localStorage.getItem('propnepal_watchlist');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setWatchlist(parsed);
-          }
-        } catch {
-          // ignore
-        }
-      }
+    return () => {
+      unsubscribe();
     };
-    initApp();
   }, []);
 
   const handleToggleWatchlist = (symbol: string) => {

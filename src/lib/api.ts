@@ -71,8 +71,78 @@ export const api = {
   async getCurrentUser() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    
+    let profile = null;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      if (!error && data) {
+        profile = data;
+      }
+    } catch (e) {
+      console.warn('Error fetching profile in getCurrentUser:', e);
+    }
+
+    if (!profile) {
+      try {
+        const fallbackUsername = user.email 
+          ? user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') 
+          : 'trader_' + user.id.slice(0, 5);
+          
+        const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([
+          { id: user.id, username: fallbackUsername, email: user.email || '', is_demo: false }
+        ]).select().single();
+        
+        if (!insertError && newProfile) {
+          profile = newProfile;
+        }
+      } catch (e) {
+        console.warn('Error creating default profile in getCurrentUser:', e);
+      }
+    }
+
     return { ...user, ...profile };
+  },
+
+  onAuthStateChange(callback: (user: unknown) => void) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        let profile = null;
+        try {
+          const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+          if (!error && data) {
+            profile = data;
+          }
+        } catch (e) {
+          console.warn('Error fetching profile in onAuthStateChange:', e);
+        }
+
+        if (!profile) {
+          try {
+            const fallbackUsername = session.user.email 
+              ? session.user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') 
+              : 'trader_' + session.user.id.slice(0, 5);
+              
+            const { data: newProfile, error: insertError } = await supabase.from('profiles').insert([
+              { id: session.user.id, username: fallbackUsername, email: session.user.email || '', is_demo: false }
+            ]).select().single();
+            
+            if (!insertError && newProfile) {
+              profile = newProfile;
+            }
+          } catch (e) {
+            console.warn('Error creating default profile in onAuthStateChange:', e);
+          }
+        }
+
+        callback({ ...session.user, ...profile });
+      } else {
+        callback(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   },
 
   // --- JOURNALS ---
