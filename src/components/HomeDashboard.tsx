@@ -53,9 +53,29 @@ export default function HomeDashboard({ currentUser, onOpenJournal, onOpenAuth }
     dateString: '',
     committed: false
   });
-  
-  const todayDateString = new Date().toISOString().split('T')[0];
+  const [todayDateString, setTodayDateString] = useState(() => new Date().toISOString().split('T')[0]);
   const usernameKey = currentUser?.username || 'guest';
+
+  // Keep todayDateString updated in real time (e.g. overnight or waking from sleep)
+  useEffect(() => {
+    const checkDate = () => {
+      if (typeof window === 'undefined') return;
+      const currentDate = new Date().toISOString().split('T')[0];
+      if (currentDate !== todayDateString) {
+        setTodayDateString(currentDate);
+      }
+    };
+    
+    // Check when window gets focused/resumed from sleep
+    window.addEventListener('focus', checkDate);
+    // Periodically check every 10 seconds
+    const interval = setInterval(checkDate, 10000);
+    
+    return () => {
+      window.removeEventListener('focus', checkDate);
+      clearInterval(interval);
+    };
+  }, [todayDateString]);
 
   // Load quote and state on mount
   useEffect(() => {
