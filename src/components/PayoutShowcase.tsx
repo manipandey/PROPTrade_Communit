@@ -38,6 +38,28 @@ export default function PayoutShowcase() {
   // Load payouts and user
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
+
+    // ── One-time cleanup: remove any base64 images previously saved to localStorage ──
+    // This frees up quota that was filled by earlier versions of the code.
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('alphajournal_payouts');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.map((p: { imageUrl?: string }) => ({
+              ...p,
+              imageUrl: p.imageUrl && p.imageUrl.startsWith('http') ? p.imageUrl : undefined
+            }));
+            localStorage.setItem('alphajournal_payouts', JSON.stringify(cleaned));
+          }
+        }
+      } catch {
+        // If quota is still too tight, just wipe the key so the app can function
+        try { localStorage.removeItem('alphajournal_payouts'); } catch { /* ignore */ }
+      }
+    }
+
     const loadPayouts = async () => {
       let rawPayouts = await api.getPayouts();
       if (rawPayouts) {

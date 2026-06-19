@@ -628,7 +628,12 @@ export class MockSupabaseEngine {
 
   private setStorage<T>(key: string, value: T): void {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(key, JSON.stringify(value));
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        // Re-throw so callers can handle (e.g. savePayouts strips images on quota error)
+        throw e;
+      }
     }
   }
 
@@ -709,7 +714,24 @@ export class MockSupabaseEngine {
   }
 
   savePayouts(payouts: Payout[]): void {
-    this.setStorage('alphajournal_payouts', payouts);
+    // Strip base64 image blobs before writing to localStorage to prevent QuotaExceededError.
+    // Only permanent Supabase Storage URLs (https://...) are kept. Base64 strings are cleared.
+    const sanitized = payouts.map(p => ({
+      ...p,
+      imageUrl: p.imageUrl && p.imageUrl.startsWith('http') ? p.imageUrl : undefined
+    }));
+    try {
+      this.setStorage('alphajournal_payouts', sanitized);
+    } catch (e) {
+      // If quota is still exceeded, save metadata only (no imageUrl at all)
+      console.warn('localStorage quota exceeded for payouts — saving without imageUrls:', e);
+      try {
+        const minimal = payouts.map(({ imageUrl: _img, ...rest }) => rest);
+        this.setStorage('alphajournal_payouts', minimal);
+      } catch (e2) {
+        console.error('Cannot save payouts to localStorage even without images:', e2);
+      }
+    }
   }
 
   getReviews(): Review[] {
