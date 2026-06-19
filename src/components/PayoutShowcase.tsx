@@ -108,26 +108,35 @@ export default function PayoutShowcase() {
     setIsSubmitting(true);
     try {
       const traderName = currentUser?.loggedIn ? currentUser.username : (formTrader.trim() || 'GuestTrader');
+      const cleanTrader = traderName.replace(/\s+/g, '');
+
+      // Step 1: Try to upload the certificate image to Supabase Storage
+      // This gives us a permanent public URL instead of storing base64 in DB
+      let persistentImageUrl: string | null = null;
+      const isBase64 = formImage.startsWith('data:');
+      if (isBase64) {
+        persistentImageUrl = await api.uploadCertificateImage(formImage, cleanTrader).catch(() => null);
+      } else {
+        persistentImageUrl = formImage;
+      }
+
+      // Use the Supabase Storage URL if upload succeeded, otherwise fall back to base64 for local display
+      const displayImageUrl = persistentImageUrl || formImage;
 
       const newPayout: Payout = {
         id: `p-${Date.now()}`,
-        trader: traderName.replace(/\s+/g, ''),
+        trader: cleanTrader,
         amount: numericAmount,
         propFirm: formFirm,
         date: new Date().toISOString().split('T')[0],
         hash: `TXN-${Math.floor(1000000 + Math.random() * 9000000)}-NP`,
-        verified: false, // Must be verified by admin
+        verified: false,
         likes: [],
         comments: [],
-        imageUrl: formImage
+        imageUrl: displayImageUrl
       };
 
-      // Base64 images are too large for Supabase text columns (~1MB+ each).
-      // We send image_url as null to Supabase and keep the full base64 only in local state/localStorage.
-      const isBase64 = formImage.startsWith('data:');
-      const supabaseImageUrl = isBase64 ? null : formImage;
-
-      // Attempt to save to Supabase (without the base64 blob)
+      // Step 2: Save payout record to Supabase DB with the persistent image URL
       let saved = null;
       try {
         saved = await api.savePayout({
@@ -137,22 +146,20 @@ export default function PayoutShowcase() {
           date: newPayout.date,
           hash: newPayout.hash,
           verified: newPayout.verified,
-          imageUrl: supabaseImageUrl ?? undefined,
+          imageUrl: persistentImageUrl ?? undefined,  // Only send public URL (not base64)
           userId: currentUser?.loggedIn && !currentUser.id?.startsWith('mock-') ? currentUser.id : undefined
         });
       } catch (saveErr) {
-        // Supabase save failed — proceed with local fallback
         console.warn('Supabase savePayout error (will use local fallback):', saveErr);
       }
 
-      // Always update local state with the full image (including base64)
+      // Step 3: Update local state with the full image URL
       if (saved) {
-        // Fetch fresh list from Supabase, then patch image from local base64
         const livePayouts = await api.getPayouts().catch(() => null);
         if (livePayouts) {
-          // Inject the local base64 image into the newly saved record
+          // Patch new record with displayImageUrl (in case Supabase Storage URL was updated)
           const patched = livePayouts.map(p =>
-            p.hash === newPayout.hash ? { ...p, imageUrl: formImage } : p
+            p.hash === newPayout.hash ? { ...p, imageUrl: displayImageUrl } : p
           );
           setPayouts(patched);
           db.savePayouts(patched);

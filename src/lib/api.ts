@@ -453,6 +453,45 @@ export const api = {
     }
   },
 
+  // --- STORAGE: Upload certificate image to Supabase Storage ---
+  async uploadCertificateImage(base64DataUrl: string, traderName: string): Promise<string | null> {
+    try {
+      // Convert base64 data URL → Blob → File
+      const [meta, data] = base64DataUrl.split(',');
+      const mimeMatch = meta.match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const ext = mime.split('/')[1] || 'png';
+      const byteString = atob(data);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: mime });
+      const fileName = `certificates/${traderName}_${Date.now()}.${ext}`;
+      const file = new File([blob], fileName, { type: mime });
+
+      const { error } = await supabase.storage
+        .from('certificates')
+        .upload(fileName, file, { upsert: true, contentType: mime });
+
+      if (error) {
+        console.error('Storage upload error:', error.message);
+        return null;
+      }
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('certificates')
+        .getPublicUrl(fileName);
+
+      return urlData?.publicUrl || null;
+    } catch (e) {
+      console.warn('uploadCertificateImage failed:', e);
+      return null;
+    }
+  },
+
   async savePayout(payout: {
     trader: string;
     amount: number;
