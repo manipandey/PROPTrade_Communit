@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck, CheckSquare, Award, Eye, AlertTriangle, HelpCircle } from 'lucide-react';
+import { PlusCircle, BookOpen, AlertCircle, Trash2, Brain, Star, MessageSquare, Upload, Link, Image as ImageIcon, Lock, Globe, Send, MessageCircle, X, ShieldCheck, CheckSquare, Award, Eye, AlertTriangle, HelpCircle, User } from 'lucide-react';
 import { db, JournalEntry, EMOTIONS, SETUP_TYPES, Emotion, SetupType, TradeFeedback, TradingAccount, TradingSession, TRADING_SESSIONS } from '@/lib/supabase';
 import { api } from '../lib/api';
 import StreakSimulator from '@/components/StreakSimulator';
@@ -555,6 +555,31 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   }, [activeJournals]);
 
   const publicJournals = useMemo(() => db.getAllPublicJournals() as PublicJournalEntry[], []);
+
+  if (!currentUser?.loggedIn) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+        <div className="rounded-2xl border border-border-theme bg-bg-card/85 p-8 text-center space-y-6 glass-panel shadow-[0_8px_32px_rgba(0,0,0,0.37)] backdrop-blur-md">
+          <div className="mx-auto w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center border border-brand-green/20">
+            <Lock className="h-8 w-8 text-brand-green" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-text-primary uppercase tracking-wider">Trading Journals Locked</h3>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Signup or login to access the full features of trading journals. Log and track your positions, monitor daily risk conformance parameters, record psychology emotions, and build consistency streaks.
+            </p>
+          </div>
+          <button
+            onClick={onOpenAuth}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green px-5 py-3.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
+          >
+            <User className="h-4 w-4" />
+            <span>Signup or Login</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
@@ -1505,16 +1530,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
             </div>
           )}
 
-          {/* Guest Lock Notification */}
-          {!currentUser?.loggedIn && (
-            <div className="rounded-xl border border-border-theme bg-bg-card p-5 text-center flex items-center justify-center gap-3 glass-panel">
-              <AlertCircle className="h-5 w-5 text-brand-green pulse-indicator" />
-              <div className="text-xs text-text-secondary text-left">
-                <span className="font-bold text-text-primary block">Simulate Your Log Book</span>
-                Log active positions, record notes, and let our stats system automatically compute profit factors. Sign in to begin!
-              </div>
-            </div>
-          )}
+
 
           {/* Journal History Table */}
           <div className="space-y-4">

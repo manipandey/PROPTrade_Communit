@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, MessageSquare, Image as ImageIcon, Video, Send, 
-  TrendingUp, TrendingDown, Clock, MessageCircle, Heart, Share2, Upload, X
+  TrendingUp, TrendingDown, Clock, MessageCircle, Heart, Share2, Upload, X, Lock
 } from 'lucide-react';
 
 interface Instrument {
@@ -315,6 +315,31 @@ export default function InstrumentCommunities({ currentUser, onOpenAuth }: Instr
   const totalVotes = currentVotes.bullish + currentVotes.bearish;
   const bullishPercent = totalVotes > 0 ? Math.round((currentVotes.bullish / totalVotes) * 100) : 50;
   const bearishPercent = 100 - bullishPercent;
+
+  if (!currentUser?.loggedIn) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+        <div className="rounded-2xl border border-border-theme bg-bg-card/85 p-8 text-center space-y-6 glass-panel shadow-[0_8px_32px_rgba(0,0,0,0.37)] backdrop-blur-md">
+          <div className="mx-auto w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center border border-brand-green/20">
+            <Lock className="h-8 w-8 text-brand-green" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-text-primary uppercase tracking-wider">Instrument Groups Locked</h3>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Signup or login to access the full features of instrument communities. Join dedicated asset groups, vote on live bias consensus, participate in chat rooms, and view user technical analysis.
+            </p>
+          </div>
+          <button
+            onClick={onOpenAuth}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green px-5 py-3.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
+          >
+            <Users className="h-4 w-4" />
+            <span>Signup or Login</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">

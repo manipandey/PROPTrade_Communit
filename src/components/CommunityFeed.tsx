@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Search, Flame, Clock, MessageSquare, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link } from 'lucide-react';
+import { Search, Flame, Clock, MessageSquare, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link, Lock } from 'lucide-react';
 import { db } from '@/lib/supabase';
 import { api } from '../lib/api';
 
@@ -416,6 +416,31 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
     return result;
   }, [posts, selectedCategory, searchQuery, sortBy]);
 
+  if (!currentUser?.loggedIn) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+        <div className="rounded-2xl border border-border-theme bg-bg-card/85 p-8 text-center space-y-6 glass-panel shadow-[0_8px_32px_rgba(0,0,0,0.37)] backdrop-blur-md">
+          <div className="mx-auto w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center border border-brand-green/20">
+            <Lock className="h-8 w-8 text-brand-green" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-text-primary uppercase tracking-wider">Nepal&apos;s Trading Conversations</h3>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Signup or login to access the full features of the community. Join active conversations, view and share technical analysis, ask trading questions, and view user posts.
+            </p>
+          </div>
+          <button
+            onClick={onOpenAuth}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green px-5 py-3.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
+          >
+            <User className="h-4 w-4" />
+            <span>Signup or Login</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
       
@@ -682,22 +707,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
         </form>
       )}
 
-      {/* Guest Lock Screen */}
-      {!currentUser?.loggedIn && (
-        <div className="rounded-2xl border border-border-theme bg-bg-card/85 p-6 text-center space-y-3 glass-panel">
-          <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">Join Nepal&apos;s Trading Conversations</h3>
-          <p className="text-xs text-text-secondary max-w-lg mx-auto">
-            Create an account or login to upvote analysis threads, ask technical questions, comment on posts, and collaborate on localized prop-firm guides.
-          </p>
-          <button
-            onClick={onOpenAuth}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-green px-5 py-2.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
-          >
-            <User className="h-4 w-4" />
-            <span>Create Profile</span>
-          </button>
-        </div>
-      )}
+
 
       {/* Posts List */}
       <div className="space-y-4">
