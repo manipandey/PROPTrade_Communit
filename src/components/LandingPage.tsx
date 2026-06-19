@@ -750,7 +750,7 @@ export default function LandingPage({ theme, onToggleTheme, onOpenAuth, onEnterA
             <img src="/logo-icon.svg" className="h-9 w-9 object-contain" alt="propNPL Logo" />
             <div>
               <span className="text-sm font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                Prop<span className="text-brand-green">Nepal</span>
+                prop<span className="text-brand-green">NPL</span>
               </span>
               <div className="text-[8px] font-bold uppercase tracking-[.18em] -mt-0.5" style={{ color: 'var(--text-muted)' }}>Learn, Record, Connect</div>
             </div>
@@ -1269,7 +1269,7 @@ export default function LandingPage({ theme, onToggleTheme, onOpenAuth, onEnterA
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-icon.svg" className="h-7 w-7 object-contain" alt="propNPL Logo" />
               <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                Prop<span className="text-brand-green">Nepal</span>
+                prop<span className="text-brand-green">NPL</span>
               </span>
             </div>
             <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>

@@ -169,7 +169,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
             <img src="/logo-icon.svg" className="h-10 w-10 object-contain" alt="propNPL Logo" />
             <div>
               <span className="text-lg font-black tracking-tight text-text-primary uppercase font-sans">
-                Trade<span className="text-brand-green">Journal</span>
+                prop<span className="text-brand-green">NPL</span>
               </span>
               <div className="text-[9px] font-bold uppercase tracking-wider text-text-muted font-mono -mt-1">
                 Community Platform

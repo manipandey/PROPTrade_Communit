@@ -18,7 +18,7 @@ export default function Footer() {
                 <Shield className="h-4.5 w-4.5 text-black stroke-[2.5]" />
               </div>
               <span className="text-sm font-black tracking-tight text-text-primary uppercase font-sans">
-                Prop<span className="text-brand-green">Nepal</span>
+                prop<span className="text-brand-green">NPL</span>
               </span>
             </div>
             <p className="text-text-muted text-[11px] leading-relaxed">
