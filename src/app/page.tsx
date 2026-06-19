@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { db } from '@/lib/supabase';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import HomeDashboard from '@/components/HomeDashboard';
@@ -163,17 +164,21 @@ export default function Home() {
 
     const unsubscribe = api.onAuthStateChange((user: any) => {
       if (user) {
-        setCurrentUser({
+        const u = {
           id: user.id,
           username: user.username || user.email?.split('@')[0] || 'User',
           loggedIn: true,
           avatar: user.avatar || '👤',
           email: user.email,
           isDemo: user.is_demo
-        });
+        };
+        setCurrentUser(u);
+        db.setCurrentUser(u);
         setShowLanding(false);
       } else {
-        setCurrentUser({ username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
+        const guest = { username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '', isDemo: false };
+        setCurrentUser(guest);
+        db.setCurrentUser(guest);
       }
       setIsInitializing(false);
     });
@@ -205,21 +210,25 @@ export default function Home() {
   const handleAuthSuccess = async () => {
     const user = await api.getCurrentUser();
     if (user) {
-      setCurrentUser({
+      const u = {
         id: user.id,
         username: user.username || user.email?.split('@')[0] || 'User',
         loggedIn: true,
         avatar: user.avatar || '👤',
         email: user.email,
         isDemo: user.is_demo
-      });
+      };
+      setCurrentUser(u);
+      db.setCurrentUser(u);
       setShowLanding(false);
     }
   };
 
   const handleLogout = async () => {
     await api.logout();
-    setCurrentUser({ username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '' });
+    const guest = { username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '', isDemo: false };
+    setCurrentUser(guest);
+    db.setCurrentUser(guest);
     setShowLanding(true);
   };
 

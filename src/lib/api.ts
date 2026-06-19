@@ -1,4 +1,7 @@
 import { supabase } from './supabaseClient';
+import { db } from './supabase';
+
+const mockAuthListeners: Array<(user: any) => void> = [];
 
 export interface SupabaseComment {
   id: string;
@@ -24,12 +27,33 @@ export interface SupabasePost {
 export const api = {
   // --- AUTH ---
   async login(email: string, password: string) {
+    // 1. Try local mock authentication first (for admin/demo seeded users)
+    const mockRes = db.authenticateUser(email, password);
+    if (mockRes.success && mockRes.username) {
+      const mockUser = {
+        id: 'mock-' + mockRes.username.toLowerCase(),
+        email: email,
+        username: mockRes.username,
+        avatar: mockRes.avatar || '👤',
+        is_demo: mockRes.isDemo || false
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('propnepal_mock_session', JSON.stringify(mockUser));
+        mockAuthListeners.forEach(cb => cb(mockUser));
+      }
+      return { success: true, user: mockUser };
+    }
+
+    // 2. Fallback to Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { success: false, message: error.message };
     
     // Fetch profile
     if (data.user) {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('propnepal_mock_session');
+      }
       return { success: true, user: { ...data.user, ...profile } };
     }
     return { success: false, message: 'Unknown error' };
@@ -47,6 +71,25 @@ export const api = {
   },
 
   async register(email: string, username: string, password: string, isDemo: boolean = false) {
+    if (isDemo) {
+      const regRes = db.registerUser(email, username, password, true);
+      if (!regRes.success) {
+        return { success: false, message: regRes.error || 'Registration failed.' };
+      }
+      const mockUser = {
+        id: 'mock-' + username.toLowerCase(),
+        email: email,
+        username: username,
+        avatar: '👤',
+        is_demo: true
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('propnepal_mock_session', JSON.stringify(mockUser));
+        mockAuthListeners.forEach(cb => cb(mockUser));
+      }
+      return { success: true, user: mockUser };
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -59,16 +102,30 @@ export const api = {
         { id: data.user.id, username, email, is_demo: isDemo }
       ]);
       if (profileError) return { success: false, message: profileError.message };
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('propnepal_mock_session');
+      }
       return { success: true, user: data.user };
     }
     return { success: false, message: 'Unknown error' };
   },
 
   async logout() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('propnepal_mock_session');
+      mockAuthListeners.forEach(cb => cb(null));
+    }
     await supabase.auth.signOut();
   },
 
   async getCurrentUser() {
+    if (typeof window !== 'undefined') {
+      const mockSession = localStorage.getItem('propnepal_mock_session');
+      if (mockSession) {
+        return JSON.parse(mockSession);
+      }
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     
@@ -103,8 +160,21 @@ export const api = {
     return { ...user, ...profile };
   },
 
-  onAuthStateChange(callback: (user: unknown) => void) {
+  onAuthStateChange(callback: (user: any) => void) {
+    mockAuthListeners.push(callback);
+    
+    if (typeof window !== 'undefined') {
+      const mockSession = localStorage.getItem('propnepal_mock_session');
+      if (mockSession) {
+        callback(JSON.parse(mockSession));
+      }
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (typeof window !== 'undefined' && localStorage.getItem('propnepal_mock_session')) {
+        return;
+      }
+
       if (session?.user) {
         let profile = null;
         try {
@@ -142,6 +212,8 @@ export const api = {
 
     return () => {
       subscription.unsubscribe();
+      const idx = mockAuthListeners.indexOf(callback);
+      if (idx !== -1) mockAuthListeners.splice(idx, 1);
     };
   },
 
