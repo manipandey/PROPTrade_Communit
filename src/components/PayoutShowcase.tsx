@@ -4,10 +4,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Check, Upload, Heart, MessageSquare, X } from 'lucide-react';
 import { db, Payout, Comment } from '@/lib/supabase';
+import { api } from '@/lib/api';
 
 export default function PayoutShowcase() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [currentUser, setCurrentUser] = useState<{ username: string; loggedIn: boolean; avatar: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    id?: string;
+    username: string;
+    loggedIn: boolean;
+    avatar: string;
+    isDemo?: boolean;
+    email?: string;
+  } | null>(null);
 
   // Form States
   const [formFirm, setFormFirm] = useState('FTMO');
@@ -29,13 +37,21 @@ export default function PayoutShowcase() {
   // Load payouts and user
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    const rawPayouts = db.getPayouts() || [];
-    const sanitized = rawPayouts.map(p => ({
-      ...p,
-      likes: p.likes || [],
-      comments: p.comments || []
-    }));
-    setPayouts(sanitized);
+    const loadPayouts = async () => {
+      let rawPayouts = await api.getPayouts();
+      if (rawPayouts) {
+        db.savePayouts(rawPayouts);
+      } else {
+        rawPayouts = db.getPayouts() || [];
+      }
+      const sanitized = rawPayouts.map(p => ({
+        ...p,
+        likes: p.likes || [],
+        comments: p.comments || []
+      }));
+      setPayouts(sanitized);
+    };
+    loadPayouts();
     setCurrentUser(db.getCurrentUser());
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
@@ -75,7 +91,7 @@ export default function PayoutShowcase() {
   };
 
   // Submit Payout Form
-  const handleSubmitPayout = (e: React.FormEvent) => {
+  const handleSubmitPayout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formAmount || !formImage) {
       alert('Amount and Certificate upload are mandatory!');
@@ -103,9 +119,33 @@ export default function PayoutShowcase() {
       imageUrl: formImage
     };
 
-    const updated = [newPayout, ...payouts];
-    setPayouts(updated);
-    db.savePayouts(updated);
+    // Attempt to save to Supabase
+    const saved = await api.savePayout({
+      trader: newPayout.trader,
+      amount: newPayout.amount,
+      propFirm: newPayout.propFirm,
+      date: newPayout.date,
+      hash: newPayout.hash,
+      verified: newPayout.verified,
+      imageUrl: newPayout.imageUrl,
+      userId: currentUser?.loggedIn && !currentUser.id?.startsWith('mock-') ? currentUser.id : undefined
+    });
+
+    if (saved) {
+      const livePayouts = await api.getPayouts();
+      if (livePayouts) {
+        setPayouts(livePayouts);
+        db.savePayouts(livePayouts);
+      } else {
+        const updated = [newPayout, ...payouts];
+        setPayouts(updated);
+        db.savePayouts(updated);
+      }
+    } else {
+      const updated = [newPayout, ...payouts];
+      setPayouts(updated);
+      db.savePayouts(updated);
+    }
 
     // Reset Form
     setFormAmount('');
@@ -145,21 +185,29 @@ export default function PayoutShowcase() {
   };
 
   // Like Payout
-  const handleLike = (id: string, e: React.MouseEvent) => {
+  const handleLike = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!currentUser?.loggedIn) {
       alert('Please connect your account to like payout achievements!');
       return;
     }
 
+    const username = currentUser.username;
+    const targetPayout = payouts.find(p => p.id === id);
+    if (!targetPayout) return;
+
+    const likesList = targetPayout.likes || [];
+    const liked = likesList.includes(username);
+    const nextLikes = liked 
+      ? likesList.filter(u => u !== username)
+      : [...likesList, username];
+
+    if (!id.startsWith('p-')) {
+      await api.updatePayout(id, { likes: nextLikes });
+    }
+
     const updated = payouts.map(p => {
       if (p.id === id) {
-        const username = currentUser.username;
-        const likesList = p.likes || [];
-        const liked = likesList.includes(username);
-        const nextLikes = liked 
-          ? likesList.filter(u => u !== username)
-          : [...likesList, username];
         return { ...p, likes: nextLikes };
       }
       return p;
@@ -170,7 +218,7 @@ export default function PayoutShowcase() {
   };
 
   // Comment Payout
-  const handlePostComment = (id: string, e: React.FormEvent) => {
+  const handlePostComment = async (id: string, e: React.FormEvent) => {
     e.preventDefault();
     const commentText = commentInputs[id]?.trim();
     if (!commentText) return;
@@ -180,16 +228,25 @@ export default function PayoutShowcase() {
       return;
     }
 
+    const targetPayout = payouts.find(p => p.id === id);
+    if (!targetPayout) return;
+
+    const newComment: Comment = {
+      id: `c-${Date.now()}`,
+      author: currentUser.username,
+      content: commentText,
+      createdAt: new Date().toISOString()
+    };
+    const commentsList = targetPayout.comments || [];
+    const nextComments = [...commentsList, newComment];
+
+    if (!id.startsWith('p-')) {
+      await api.updatePayout(id, { comments: nextComments });
+    }
+
     const updated = payouts.map(p => {
       if (p.id === id) {
-        const newComment: Comment = {
-          id: `c-${Date.now()}`,
-          author: currentUser.username,
-          content: commentText,
-          createdAt: new Date().toISOString()
-        };
-        const commentsList = p.comments || [];
-        return { ...p, comments: [...commentsList, newComment] };
+        return { ...p, comments: nextComments };
       }
       return p;
     });

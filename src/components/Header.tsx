@@ -82,7 +82,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
           setTickerData((prev) =>
             prev.map((item) => {
               let livePrice = item.priceValue;
-              let liveChange = item.changeValue;
+              const liveChange = item.changeValue;
               
               if (item.symbol === 'XAUUSD' && rates.XAU) {
                 livePrice = 1 / rates.XAU;
@@ -166,10 +166,10 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
           {/* Logo */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.svg" className="h-10 w-10 object-contain" alt="PropNepal Logo" />
+            <img src="/logo-icon.svg" className="h-10 w-10 object-contain" alt="propNPL Logo" />
             <div>
               <span className="text-lg font-black tracking-tight text-text-primary uppercase font-sans">
-                Prop<span className="text-brand-green">Nepal</span>
+                Trade<span className="text-brand-green">Journal</span>
               </span>
               <div className="text-[9px] font-bold uppercase tracking-wider text-text-muted font-mono -mt-1">
                 Community Platform

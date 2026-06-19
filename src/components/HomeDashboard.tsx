@@ -85,7 +85,7 @@ export default function HomeDashboard({ currentUser, onOpenJournal, onOpenAuth }
     setQuote(TRADING_QUOTES[day % TRADING_QUOTES.length]);
 
     // Load checklist
-    const savedChecklist = localStorage.getItem(`propnepal_checklist_${usernameKey}_${todayDateString}`);
+    const savedChecklist = localStorage.getItem(`propnpl_checklist_${usernameKey}_${todayDateString}`);
     if (savedChecklist) {
       try {
         setChecklist(JSON.parse(savedChecklist));
@@ -97,7 +97,7 @@ export default function HomeDashboard({ currentUser, onOpenJournal, onOpenAuth }
     }
 
     // Load daily plan
-    const savedPlan = localStorage.getItem(`propnepal_plan_${usernameKey}_${todayDateString}`);
+    const savedPlan = localStorage.getItem(`propnpl_plan_${usernameKey}_${todayDateString}`);
     if (savedPlan) {
       try {
         setPlan(JSON.parse(savedPlan));
@@ -128,13 +128,13 @@ export default function HomeDashboard({ currentUser, onOpenJournal, onOpenAuth }
   const handleToggleChecklist = (id: string) => {
     const next = { ...checklist, [id]: !checklist[id] };
     setChecklist(next);
-    localStorage.setItem(`propnepal_checklist_${usernameKey}_${todayDateString}`, JSON.stringify(next));
+    localStorage.setItem(`propnpl_checklist_${usernameKey}_${todayDateString}`, JSON.stringify(next));
   };
 
   const handleResetChecklist = () => {
     if (confirm('Reset checklist items?')) {
       setChecklist({});
-      localStorage.removeItem(`propnepal_checklist_${usernameKey}_${todayDateString}`);
+      localStorage.removeItem(`propnpl_checklist_${usernameKey}_${todayDateString}`);
     }
   };
 
@@ -147,13 +147,13 @@ export default function HomeDashboard({ currentUser, onOpenJournal, onOpenAuth }
     }
     const updatedPlan = { ...plan, committed: true, dateString: todayDateString };
     setPlan(updatedPlan);
-    localStorage.setItem(`propnepal_plan_${usernameKey}_${todayDateString}`, JSON.stringify(updatedPlan));
+    localStorage.setItem(`propnpl_plan_${usernameKey}_${todayDateString}`, JSON.stringify(updatedPlan));
   };
 
   const handleEditPlan = () => {
     const updatedPlan = { ...plan, committed: false };
     setPlan(updatedPlan);
-    localStorage.setItem(`propnepal_plan_${usernameKey}_${todayDateString}`, JSON.stringify(updatedPlan));
+    localStorage.setItem(`propnpl_plan_${usernameKey}_${todayDateString}`, JSON.stringify(updatedPlan));
   };
 
   // Checklist counts

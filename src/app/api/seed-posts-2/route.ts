@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const email = 'manirajpandey@propnepal.com';
+    const email = 'manirajpandey@propnpl.com';
     const password = 'Password123!';
 
     // Attempt to login first to get the session and userId
@@ -56,7 +56,7 @@ export async function GET() {
       {
         user_id: userId,
         title: 'How a Journal & Checklist Helps You Pass Prop Challenges',
-        content: `The #1 reason traders fail prop firm challenges isn't bad strategies—it's poor discipline and lack of a trading plan. \n\nHere is how maintaining a journal and checklist guarantees your success:\n- **The Checklist**: Before entering ANY trade, you must tick off your criteria (e.g., Is it at a key level? Is there a catalyst? Is the Risk:Reward 1:2+?). If the checklist isn't complete, you don't trade. This prevents impulsive gambling.\n- **The Journal**: By logging every trade in the PropNepal Trading Journal, you collect data. After 20 trades, you can review your win rate, best setups, and worst mistakes. You stop guessing and start trading based on statistics.\n\nTreat trading like a business, use your journal, stick to your checklist, and the payouts will follow!`,
+        content: `The #1 reason traders fail prop firm challenges isn't bad strategies—it's poor discipline and lack of a trading plan. \n\nHere is how maintaining a journal and checklist guarantees your success:\n- **The Checklist**: Before entering ANY trade, you must tick off your criteria (e.g., Is it at a key level? Is there a catalyst? Is the Risk:Reward 1:2+?). If the checklist isn't complete, you don't trade. This prevents impulsive gambling.\n- **The Journal**: By logging every trade in the propNPL Trading Journal, you collect data. After 20 trades, you can review your win rate, best setups, and worst mistakes. You stop guessing and start trading based on statistics.\n\nTreat trading like a business, use your journal, stick to your checklist, and the payouts will follow!`,
         category: 'Strategies',
         image_url: '/images/posts/trading_journal_checklist.png',
         created_at: threeHoursAgo,

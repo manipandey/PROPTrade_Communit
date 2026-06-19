@@ -9,6 +9,7 @@ import {
 import { 
   db, Payout, Post, TraderProfile, Ad, CourseModule, RegisteredUser, Lesson, PremiumAccess 
 } from '@/lib/supabase';
+import { api } from '@/lib/api';
 
 export default function AdminPanel() {
   const [activeSubTab, setActiveSubTab] = useState<'ads' | 'payouts' | 'posts' | 'profiles' | 'academy' | 'users' | 'premium'>('ads');
@@ -54,14 +55,29 @@ export default function AdminPanel() {
   // Users Directory search state
   const [searchUser, setSearchUser] = useState('');
 
-  const loadAllData = () => {
-    setAds(db.getAds() || []);
-    setPayouts(db.getPayouts() || []);
-    setPosts(db.getPosts() || []);
-    setProfiles(db.getRawProfiles() || []);
-    setAcademyModules(db.getAcademyModules() || []);
+  const loadAllData = async () => {
+    const liveAds = await api.getAds();
+    setAds(liveAds || []);
+    
+    let livePayouts = await api.getPayouts();
+    if (!livePayouts) {
+      livePayouts = db.getPayouts() || [];
+    }
+    setPayouts(livePayouts);
+
+    const livePosts = await api.getPosts();
+    setPosts(livePosts || []);
+
+    const liveProfiles = await api.getProfiles();
+    setProfiles(liveProfiles || []);
+
+    const liveModules = await api.getAcademyModules();
+    setAcademyModules(liveModules || []);
+
     setUsers(db.getRegisteredUsers() || []);
-    setPremiumAccessList(db.getPremiumAccessList() || []);
+
+    const livePremiumList = await api.getPremiumAccessList();
+    setPremiumAccessList(livePremiumList || []);
   };
 
   // Load state on mount
@@ -72,7 +88,7 @@ export default function AdminPanel() {
   }, []);
 
   // --- Ads Logic ---
-  const handleAddAd = (e: React.FormEvent) => {
+  const handleAddAd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adText || !adAuthor) return;
 
@@ -87,7 +103,7 @@ export default function AdminPanel() {
 
     const nextAds = [...ads, newAd];
     setAds(nextAds);
-    db.saveAds(nextAds);
+    await api.saveAds(nextAds);
 
     // Reset Form
     setAdText('');
@@ -97,37 +113,48 @@ export default function AdminPanel() {
     setAdImage('');
   };
 
-  const handleDeleteAd = (id: string) => {
+  const handleDeleteAd = async (id: string) => {
     if (!confirm('Are you sure you want to delete this ad/quote?')) return;
     const nextAds = ads.filter(a => a.id !== id);
     setAds(nextAds);
-    db.saveAds(nextAds);
+    await api.saveAds(nextAds);
   };
 
   // --- Payout Approvals Logic ---
-  const handleApprovePayout = (id: string) => {
+  const handleApprovePayout = async (id: string) => {
+    if (!id.startsWith('p-')) {
+      await api.updatePayout(id, { verified: true });
+    }
+
     const nextPayouts = payouts.map(p => p.id === id ? { ...p, verified: true } : p);
     setPayouts(nextPayouts);
     db.savePayouts(nextPayouts);
   };
 
-  const handleRejectPayout = (id: string) => {
+  const handleRejectPayout = async (id: string) => {
     if (!confirm('Reject and delete this payout proof submission?')) return;
+
+    if (!id.startsWith('p-')) {
+      await api.deletePayout(id);
+    }
+
     const nextPayouts = payouts.filter(p => p.id !== id);
     setPayouts(nextPayouts);
     db.savePayouts(nextPayouts);
   };
 
   // --- Posts Moderator Logic ---
-  const handleDeletePost = (id: string) => {
+  const handleDeletePost = async (id: string) => {
     if (!confirm('Are you sure you want to moderate/delete this post?')) return;
-    const nextPosts = posts.filter(p => p.id !== id);
-    setPosts(nextPosts);
-    db.savePosts(nextPosts);
+    const success = await api.deletePost(id);
+    if (success) {
+      const nextPosts = posts.filter(p => p.id !== id);
+      setPosts(nextPosts);
+    }
   };
 
   // --- Profile Directory Logic ---
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profileName || !profileHandle) return;
 
@@ -151,7 +178,7 @@ export default function AdminPanel() {
         bio: profileBio
       };
 
-      db.adminUpdateProfile(updated);
+      await api.adminUpdateProfile(updated);
       setEditingProfileId(null);
     } else {
       // Create mode
@@ -169,7 +196,7 @@ export default function AdminPanel() {
         bio: profileBio || 'Trader ranking profile.'
       };
 
-      db.adminCreateProfile(created);
+      await api.adminCreateProfile(created);
       setIsAddingProfile(false);
     }
 
@@ -200,24 +227,31 @@ export default function AdminPanel() {
     setProfileBio(p.bio);
   };
 
-  const handleDeleteProfile = (id: string) => {
+  const handleDeleteProfile = async (id: string) => {
     if (!confirm('Are you sure you want to delete this trader profile?')) return;
-    db.adminDeleteProfile(id);
+    const existing = profiles.find(p => p.id === id);
+    await api.adminDeleteProfile(id, existing?.handle);
     loadAllData();
   };
   
-  const handleDeleteUser = (username: string) => {
+  const handleDeleteUser = async (username: string) => {
     if (username === 'admin') {
       alert('Cannot delete the root admin user!');
       return;
     }
     if (!confirm(`Are you sure you want to delete account "${username}"? This will erase their profile and journal history.`)) return;
-    db.deleteUserAccount(username);
+    const usersList = db.getRegisteredUsers();
+    const userObj = usersList.find(u => u.username === username);
+    if (userObj) {
+      await api.deleteUserAccount(userObj.id, username);
+    } else {
+      db.deleteUserAccount(username);
+    }
     loadAllData();
   };
 
   // --- Academy Logic ---
-  const handleSaveAcademyModule = (moduleId: string) => {
+  const handleSaveAcademyModule = async (moduleId: string) => {
     const updated = academyModules.map(mod => {
       if (mod.id === moduleId) {
         return {
@@ -228,7 +262,7 @@ export default function AdminPanel() {
       return mod;
     });
     setAcademyModules(updated);
-    db.saveAcademyModules(updated);
+    await api.saveAcademyModules(updated);
     setEditingModuleId(null);
   };
 
@@ -248,7 +282,7 @@ export default function AdminPanel() {
     setLessonMediaType(lesson.mediaType || 'image');
   };
 
-  const handleSaveLesson = (moduleId: string) => {
+  const handleSaveLesson = async (moduleId: string) => {
     if (!lessonTitle.trim() || !lessonContent.trim()) {
       alert('Lesson Title and Detailed Description are required!');
       return;
@@ -278,11 +312,11 @@ export default function AdminPanel() {
     });
 
     setAcademyModules(updated);
-    db.saveAcademyModules(updated);
+    await api.saveAcademyModules(updated);
     resetLessonForm();
   };
 
-  const handleDeleteLesson = (moduleId: string, lessonIdx: number) => {
+  const handleDeleteLesson = async (moduleId: string, lessonIdx: number) => {
     if (!confirm('Delete this lesson outline?')) return;
     const updated = academyModules.map(mod => {
       if (mod.id === moduleId) {
@@ -294,7 +328,7 @@ export default function AdminPanel() {
       return mod;
     });
     setAcademyModules(updated);
-    db.saveAcademyModules(updated);
+    await api.saveAcademyModules(updated);
   };
 
   // Sub-lists
@@ -434,7 +468,7 @@ export default function AdminPanel() {
                       required
                       value={adAuthor}
                       onChange={(e) => setAdAuthor(e.target.value)}
-                      placeholder="e.g. Warren Buffett or PropNepal Trading"
+                      placeholder="e.g. Warren Buffett or propNPL Trading"
                       className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
                     />
                   </div>
@@ -457,7 +491,7 @@ export default function AdminPanel() {
                         onChange={(e) => setAdUseLogo(e.target.checked)}
                         className="rounded border-border-theme bg-bg-input text-brand-green focus:ring-brand-green"
                       />
-                      <span className="text-[11px] font-bold text-text-secondary uppercase">🔰 Attach PropNepal Logo</span>
+                      <span className="text-[11px] font-bold text-text-secondary uppercase">🔰 Attach propNPL Logo</span>
                     </label>
                   </div>
 
@@ -1349,8 +1383,8 @@ export default function AdminPanel() {
 
                       <div className="flex gap-2">
                         <button
-                          onClick={() => {
-                            db.verifyPremiumAccess(access.username);
+                          onClick={async () => {
+                            await api.verifyPremiumAccess(access.username);
                             loadAllData();
                           }}
                           className="flex-1 rounded-lg bg-brand-green py-2 text-[10px] font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all flex items-center justify-center gap-1 cursor-pointer"
@@ -1359,9 +1393,9 @@ export default function AdminPanel() {
                           <span>Verify Payment</span>
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (!confirm(`Reject premium access for "${access.username}"?`)) return;
-                            db.rejectPremiumAccess(access.username);
+                            await api.rejectPremiumAccess(access.username);
                             loadAllData();
                           }}
                           className="flex-1 rounded-lg bg-red-950/20 border border-red-900/30 text-red-500 py-2 text-[10px] font-bold uppercase tracking-wider hover:bg-red-500 hover:text-black hover:border-red-500 transition-all flex items-center justify-center gap-1 cursor-pointer"

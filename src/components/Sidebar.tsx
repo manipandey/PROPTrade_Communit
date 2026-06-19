@@ -53,10 +53,10 @@ export default function Sidebar({
           onClick={() => handleNav('home')}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.svg" className="h-9 w-9 object-contain" alt="PropNepal Logo" />
+          <img src="/logo-icon.svg" className="h-9 w-9 object-contain" alt="propNPL Logo" />
           <div>
             <div className="text-[15px] font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              Prop<span style={{ color: 'var(--accent)' }}>Nepal</span>
+              Trade<span style={{ color: 'var(--accent)' }}>Journal</span>
             </div>
             <div className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Learn, Record, Connect
@@ -200,9 +200,9 @@ export default function Sidebar({
       >
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.svg" className="h-8 w-8 object-contain" alt="PropNepal Logo" />
+          <img src="/logo-icon.svg" className="h-8 w-8 object-contain" alt="propNPL Logo" />
           <span className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>
-            Prop<span style={{ color: 'var(--accent)' }}>Nepal</span>
+            Trade<span style={{ color: 'var(--accent)' }}>Journal</span>
           </span>
         </div>
         <div className="flex items-center gap-2">

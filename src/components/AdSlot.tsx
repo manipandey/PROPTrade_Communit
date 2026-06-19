@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Quote } from 'lucide-react';
 import { db, Ad } from '@/lib/supabase';
+import { api } from '@/lib/api';
 
 interface AdSlotProps {
   variant?: 'banner' | 'sidebar';
@@ -16,13 +17,18 @@ export default function AdSlot({ variant = 'banner', className = '' }: AdSlotPro
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    const loadedAds = db.getAds() || [];
-    setAds(loadedAds);
-    if (loadedAds.length > 0) {
-      setCurrentIndex(Math.floor(Math.random() * loadedAds.length));
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
+    const loadAds = async () => {
+      try {
+        const loadedAds = await api.getAds();
+        setAds(loadedAds || []);
+        if (loadedAds && loadedAds.length > 0) {
+          setCurrentIndex(Math.floor(Math.random() * loadedAds.length));
+        }
+      } catch (e) {
+        console.error('Error loading ads:', e);
+      }
+    };
+    loadAds();
   }, []);
 
   useEffect(() => {

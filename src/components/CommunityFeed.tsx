@@ -183,11 +183,11 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   
   useEffect(() => {
     const fetchPosts = async () => {
-      const livePosts = await api.getPosts();
+      const livePosts = await api.getPosts(currentUser?.id || undefined);
       setPosts(livePosts as FeedPost[]);
     };
     fetchPosts();
-  }, []);
+  }, [currentUser]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<'hot' | 'new'>('hot');
@@ -247,50 +247,47 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   const categories = ['All', 'FTMO', 'FundedNext', 'Local Market', 'Performance Fees', 'Trading Journals', 'General'];
 
   // Handle Emoji Reacting
-  const handleReact = (postId: string, reactionKey: string) => {
-    if (!currentUser || !currentUser.loggedIn) {
+  const handleReact = async (postId: string, reactionKey: string) => {
+    if (!currentUser || !currentUser.loggedIn || !currentUser.id) {
       onOpenAuth();
       return;
     }
 
-    const updatedPosts = posts.map((post) => {
-      if (post.id !== postId) return post;
+    // Toggle reaction immediately on the UI for quick feedback (Optimistic Update)
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
 
-      const currentReactions = post.reactions || {
-        rocket: post.upvotes || 0,
-        bear: 0,
-        whale: 0,
-        rekt: 0,
-        bag: 0,
-        hot: 0,
-      };
+    const currentReactions = post.reactions || { rocket: 0, bear: 0, whale: 0, rekt: 0, bag: 0, hot: 0 };
+    const currentUserReactions = post.userReactions || {};
+    const hasReacted = currentUserReactions[reactionKey] || false;
 
-      const currentUserReactions = post.userReactions || {};
-      const hasReacted = currentUserReactions[reactionKey] || false;
+    const nextReactions = {
+      ...currentReactions,
+      [reactionKey]: Math.max(0, (currentReactions[reactionKey] || 0) + (hasReacted ? -1 : 1))
+    };
 
-      const nextReactions = {
-        ...currentReactions,
-        [reactionKey]: Math.max(0, (currentReactions[reactionKey] || 0) + (hasReacted ? -1 : 1))
-      };
+    const nextUserReactions = {
+      ...currentUserReactions,
+      [reactionKey]: !hasReacted
+    };
 
-      const nextUserReactions = {
-        ...currentUserReactions,
-        [reactionKey]: !hasReacted
-      };
+    const totalReactions = Object.values(nextReactions).reduce((sum, val) => sum + val, 0);
 
-      // Recalculate upvotes sum to maintain sorting stability
-      const totalReactions = Object.values(nextReactions).reduce((sum, val) => sum + val, 0);
-
-      return {
-        ...post,
-        reactions: nextReactions,
-        userReactions: nextUserReactions,
-        upvotes: totalReactions
-      };
-    });
+    const updatedPosts = posts.map(p => p.id === postId ? {
+      ...p,
+      reactions: nextReactions,
+      userReactions: nextUserReactions,
+      upvotes: totalReactions
+    } : p);
 
     setPosts(updatedPosts);
-    db.savePosts(updatedPosts);
+
+    // Call Supabase API
+    const success = await api.reactToPost(currentUser.id, postId, reactionKey, !hasReacted);
+    if (success) {
+      const livePosts = await api.getPosts(currentUser.id);
+      setPosts(livePosts as FeedPost[]);
+    }
   };
 
   // Submit Post
@@ -318,7 +315,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
     await api.savePost(currentUser.id, newPost);
     
     // Refresh feed
-    const livePosts = await api.getPosts();
+    const livePosts = await api.getPosts(currentUser.id);
     setPosts(livePosts as FeedPost[]);
 
     // Reset Form
@@ -343,7 +340,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
     await api.saveComment(currentUser.id, postId, newCommentContent);
 
     // Refresh feed
-    const livePosts = await api.getPosts();
+    const livePosts = await api.getPosts(currentUser.id);
     setPosts(livePosts as FeedPost[]);
     
     setNewCommentContent('');
@@ -359,7 +356,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
 
     await api.saveComment(currentUser.id, postId, replyContent, parentId);
     
-    const livePosts = await api.getPosts();
+    const livePosts = await api.getPosts(currentUser.id);
     setPosts(livePosts as FeedPost[]);
     
     setReplyContent('');
@@ -381,7 +378,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
 
     await api.reactToComment(currentUser.id, commentId, reactionKey, !hasReacted);
     
-    const livePosts = await api.getPosts();
+    const livePosts = await api.getPosts(currentUser.id);
     setPosts(livePosts as FeedPost[]);
   };
 
@@ -943,7 +940,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                         <input
                           type="text"
                           required
-                          placeholder={currentUser?.loggedIn ? "Write a helpful response..." : "Join PropNepal to comment"}
+                          placeholder={currentUser?.loggedIn ? "Write a helpful response..." : "Join propNPL to comment"}
                           disabled={!currentUser?.loggedIn}
                           value={newCommentContent}
                           onChange={(e) => setNewCommentContent(e.target.value)}

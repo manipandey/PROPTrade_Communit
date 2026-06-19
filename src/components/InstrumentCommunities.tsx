@@ -135,8 +135,8 @@ export default function InstrumentCommunities({ currentUser, onOpenAuth }: Instr
   // Initialize sentiment votes from localStorage
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    const savedVotes = localStorage.getItem('propnepal_inst_votes');
-    const savedUserVote = localStorage.getItem('propnepal_inst_user_votes');
+    const savedVotes = localStorage.getItem('propnpl_inst_votes');
+    const savedUserVote = localStorage.getItem('propnpl_inst_user_votes');
     
     if (savedVotes) {
       setVotes(JSON.parse(savedVotes));
@@ -148,7 +148,7 @@ export default function InstrumentCommunities({ currentUser, onOpenAuth }: Instr
         nas100: { bullish: 80, bearish: 20 },
       };
       setVotes(initial);
-      localStorage.setItem('propnepal_inst_votes', JSON.stringify(initial));
+      localStorage.setItem('propnpl_inst_votes', JSON.stringify(initial));
     }
 
     if (savedUserVote) {
@@ -192,7 +192,7 @@ export default function InstrumentCommunities({ currentUser, onOpenAuth }: Instr
         ...prev,
         [currentInstId]: { bullish: newBullish, bearish: newBearish }
       };
-      localStorage.setItem('propnepal_inst_votes', JSON.stringify(updated));
+      localStorage.setItem('propnpl_inst_votes', JSON.stringify(updated));
       return updated;
     });
 
@@ -201,7 +201,7 @@ export default function InstrumentCommunities({ currentUser, onOpenAuth }: Instr
         ...prev,
         [currentInstId]: type
       };
-      localStorage.setItem('propnepal_inst_user_votes', JSON.stringify(updated));
+      localStorage.setItem('propnpl_inst_user_votes', JSON.stringify(updated));
       return updated;
     });
   };

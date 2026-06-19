@@ -50,8 +50,8 @@ export const checkPlanAlignment = (
     };
   }
 
-  const savedPlan = localStorage.getItem(`propnepal_plan_${username}_${tradeDate}`);
-  const savedChecklist = localStorage.getItem(`propnepal_checklist_${username}_${tradeDate}`);
+  const savedPlan = localStorage.getItem(`propnpl_plan_${username}_${tradeDate}`);
+  const savedChecklist = localStorage.getItem(`propnpl_checklist_${username}_${tradeDate}`);
 
   let plan = null;
   if (savedPlan) {
@@ -209,8 +209,9 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
         
         // Keep these in local storage for now
         setJournalSettings(db.getJournalSettings(currentUser.username));
-        const accs = db.getAccounts(currentUser.username);
+        const accs = await api.getAccounts(currentUser.id);
         setAccounts(accs);
+        db.saveAccounts(currentUser.username, accs);
         if (accs.length > 0) {
           setSelectedAccountId(accs[0].id);
         } else {
@@ -228,10 +229,13 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
 
   // Load public feedbacks for selected trade in community
   useEffect(() => {
-    if (selectedTrade) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTradeFeedbacks(db.getTradeFeedback(selectedTrade.id));
-    }
+    const fetchFeedbacks = async () => {
+      if (selectedTrade) {
+        const fbs = await api.getTradeFeedback(selectedTrade.id);
+        setTradeFeedbacks(fbs);
+      }
+    };
+    fetchFeedbacks();
   }, [selectedTrade]);
 
   // Handle Drag-and-drop Image Upload
@@ -278,12 +282,15 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   };
 
   // Handle Trade Deletion
-  const handleDeleteTrade = (id: string) => {
+  const handleDeleteTrade = async (id: string) => {
     if (!currentUser || !currentUser.loggedIn) return;
     if (!confirm('Are you sure you want to delete this trade entry? This cannot be undone.')) return;
-    const updated = journals.filter((j) => j.id !== id);
-    setJournals(updated);
-    db.saveJournals(currentUser.username, updated);
+    const success = await api.deleteJournal(id);
+    if (success) {
+      const updated = journals.filter((j) => j.id !== id);
+      setJournals(updated);
+      db.saveJournals(currentUser.username, updated);
+    }
   };
 
   // Handle Trade Submission
@@ -342,10 +349,17 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
     };
 
     // Save to real backend
-    await api.saveJournal(currentUser.id, newTrade);
-
-    const updatedJournals = [newTrade, ...journals];
+    const saved = await api.saveJournal(currentUser.id, newTrade);
+    let finalTrade = newTrade;
+    if (saved && saved[0]) {
+      finalTrade = {
+        ...newTrade,
+        id: saved[0].id
+      };
+    }
+    const updatedJournals = [finalTrade, ...journals];
     setJournals(updatedJournals);
+    db.saveJournals(currentUser.username, updatedJournals);
 
     // Compute helpful filter notification if trade is hidden under current view
     let subMessage = undefined;
@@ -426,7 +440,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
   };
 
   // Submit Feedback / Rating / Question
-  const handlePostFeedback = (e: React.FormEvent) => {
+  const handlePostFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !currentUser.loggedIn) {
       onOpenAuth();
@@ -439,9 +453,23 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
     }
 
     const ratingArg = selectedRating > 0 ? selectedRating : undefined;
-    const feedback = db.addTradeFeedback(selectedTrade.id, currentUser.username, newComment.trim(), ratingArg);
+    const savedFeedback = await api.addTradeFeedback(selectedTrade.id, currentUser.username, newComment.trim(), ratingArg);
+    if (savedFeedback) {
+      const formattedFeedback: TradeFeedback = {
+        id: savedFeedback.id,
+        tradeId: savedFeedback.trade_id,
+        author: savedFeedback.author,
+        comment: savedFeedback.comment,
+        rating: savedFeedback.rating || undefined,
+        createdAt: savedFeedback.created_at
+      };
+      setTradeFeedbacks((prev) => [...prev, formattedFeedback]);
+      
+      const key = `propnpl_trade_feedback_${selectedTrade.id}`;
+      const existing = db.getTradeFeedback(selectedTrade.id);
+      localStorage.setItem(key, JSON.stringify([...existing, formattedFeedback]));
+    }
     
-    setTradeFeedbacks((prev) => [...prev, feedback]);
     setNewComment('');
     setSelectedRating(0);
     setFeedbackError('');
@@ -970,13 +998,15 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                           </div>
                         </div>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
+                            if (!currentUser?.id) return;
                             if (confirm(`Remove account "${acc.name}"? Historical logs will lose their link but remain in database.`)) {
-                              const updated = accounts.filter(a => a.id !== acc.id);
-                              setAccounts(updated);
-                              db.saveAccounts(currentUser.username, updated);
+                              await api.deleteAccount(acc.id);
+                              const accs = await api.getAccounts(currentUser.id);
+                              setAccounts(accs);
+                              db.saveAccounts(currentUser.username, accs);
                               if (selectedAccountId === acc.id) {
-                                setSelectedAccountId(updated.length > 0 ? updated[0].id : '');
+                                setSelectedAccountId(accs.length > 0 ? accs[0].id : '');
                               }
                             }
                           }}
@@ -1045,20 +1075,22 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
                     </div>
 
                     <button
-                      onClick={() => {
-                        if (!newAccName.trim()) return;
-                        const newAcc: TradingAccount = {
-                          id: `acc-${Date.now()}`,
+                      onClick={async () => {
+                        if (!newAccName.trim() || !currentUser?.id) return;
+                        const sizeVal = parseInt(newAccSize) || 100000;
+                        await api.saveAccount(currentUser.id, {
                           name: newAccName,
                           type: newAccType,
                           propFirm: newAccFirm,
-                          size: parseInt(newAccSize)
-                        };
-                        const updated = [...accounts, newAcc];
-                        setAccounts(updated);
-                        db.saveAccounts(currentUser.username, updated);
+                          size: sizeVal
+                        });
+                        const accs = await api.getAccounts(currentUser.id);
+                        setAccounts(accs);
+                        db.saveAccounts(currentUser.username, accs);
                         setNewAccName('');
-                        if (updated.length === 1) setSelectedAccountId(newAcc.id);
+                        if (accs.length > 0 && !selectedAccountId) {
+                          setSelectedAccountId(accs[accs.length - 1].id);
+                        }
                       }}
                       className="w-full rounded-lg bg-brand-green py-2 text-[10px] font-bold uppercase text-black hover:bg-brand-green/90 transition-all"
                     >

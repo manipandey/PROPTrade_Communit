@@ -476,9 +476,9 @@ const initialPremiumStrategies: PremiumStrategy[] = [
 
 const initialAds: Ad[] = [
   {
-    id: 'ad-propnepal',
-    text: 'Join PropNepal Elite community. Log journals, verify payouts, and master prop challenges with the ultimate Nepalese trading network!',
-    author: 'PropNepal Academy',
+    id: 'ad-propnpl',
+    text: 'Join propNPL Elite community. Log journals, verify payouts, and master prop challenges with the ultimate Nepalese trading network!',
+    author: 'propNPL Academy',
     isSponsored: true,
     logoUrl: '/logo-icon.svg'
   },
@@ -543,20 +543,20 @@ const DATA_VERSION = 'v6_trading_sessions_upgrade';
 export class MockSupabaseEngine {
   constructor() {
     if (typeof window !== 'undefined') {
-      const storedVersion = localStorage.getItem('propnepal_data_version');
+      const storedVersion = localStorage.getItem('propnpl_data_version');
       if (storedVersion !== DATA_VERSION) {
-        // Wipe all cached propnepal items to load newly seeded structures
+        // Wipe all cached propnpl items to load newly seeded structures
         Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('propnepal_')) {
+          if (key.startsWith('propnpl_')) {
             localStorage.removeItem(key);
           }
         });
-        localStorage.setItem('propnepal_data_version', DATA_VERSION);
+        localStorage.setItem('propnpl_data_version', DATA_VERSION);
       }
 
       // Initialize demo profiles registration & settings to public
       const demoRoles = ['FTMO_Champ', 'GoldHunter', 'NepaliScalper', 'PrabeshFX', 'SandhyaScalps', 'RohanPips', 'BishalFX'];
-      const usersKey = 'propnepal_registered_users';
+      const usersKey = 'propnpl_registered_users';
       const registeredUsers = JSON.parse(localStorage.getItem(usersKey) || '[]');
       const updatedUsers = [...registeredUsers];
       let changed = false;
@@ -572,7 +572,7 @@ export class MockSupabaseEngine {
       };
 
       // Seed admin user
-      const adminEmail = 'admin@propnepal.com';
+      const adminEmail = 'admin@propnpl.com';
       if (!registeredUsers.some((u: { email: string }) => u.email === adminEmail)) {
         const adminUser = {
           id: 'user-admin',
@@ -588,7 +588,7 @@ export class MockSupabaseEngine {
       }
 
       demoRoles.forEach(role => {
-        const email = `${role.toLowerCase()}@propnepal.com`;
+        const email = `${role.toLowerCase()}@propnpl.com`;
         if (!registeredUsers.some((u: { email: string }) => u.email === email)) {
           const newUser = {
             id: `user-${role}`,
@@ -604,7 +604,7 @@ export class MockSupabaseEngine {
         }
 
         // Make demo journals public by default
-        const settingsKey = `propnepal_journal_settings_${role}`;
+        const settingsKey = `propnpl_journal_settings_${role}`;
         if (!localStorage.getItem(settingsKey)) {
           localStorage.setItem(settingsKey, JSON.stringify({ isPublic: true }));
         }
@@ -633,19 +633,19 @@ export class MockSupabaseEngine {
   }
 
   getPosts(): Post[] {
-    return this.getStorage<Post[]>('propnepal_posts', initialPosts);
+    return this.getStorage<Post[]>('propnpl_posts', initialPosts);
   }
 
   savePosts(posts: Post[]): void {
-    this.setStorage('propnepal_posts', posts);
+    this.setStorage('propnpl_posts', posts);
   }
 
   getRawProfiles(): TraderProfile[] {
-    return this.getStorage<TraderProfile[]>('propnepal_profiles', initialProfiles);
+    return this.getStorage<TraderProfile[]>('propnpl_profiles', initialProfiles);
   }
 
   saveProfiles(profiles: TraderProfile[]): void {
-    this.setStorage('propnepal_profiles', profiles);
+    this.setStorage('propnpl_profiles', profiles);
   }
 
   getProfiles(): TraderProfile[] {
@@ -705,11 +705,11 @@ export class MockSupabaseEngine {
   }
 
   getPayouts(): Payout[] {
-    return this.getStorage<Payout[]>('propnepal_payouts', initialPayouts);
+    return this.getStorage<Payout[]>('propnpl_payouts', initialPayouts);
   }
 
   savePayouts(payouts: Payout[]): void {
-    this.setStorage('propnepal_payouts', payouts);
+    this.setStorage('propnpl_payouts', payouts);
   }
 
   getReviews(): Review[] {
@@ -718,19 +718,19 @@ export class MockSupabaseEngine {
 
   getJournals(username?: string): JournalEntry[] {
     if (!username) return [];
-    const key = `propnepal_journals_${username}`;
+    const key = `propnpl_journals_${username}`;
     const defaultData = demoJournals[username] || [];
     return this.getStorage<JournalEntry[]>(key, defaultData);
   }
 
   saveJournals(username: string, journals: JournalEntry[]): void {
-    const key = `propnepal_journals_${username}`;
+    const key = `propnpl_journals_${username}`;
     this.setStorage(key, journals);
   }
 
   // ── Trading Accounts Methods ──
   getAccounts(username: string): TradingAccount[] {
-    const key = `propnepal_accounts_${username}`;
+    const key = `propnpl_accounts_${username}`;
     let initial: TradingAccount[] = [];
     
     if (username === 'FTMO_Champ') {
@@ -767,39 +767,39 @@ export class MockSupabaseEngine {
   }
 
   saveAccounts(username: string, accounts: TradingAccount[]): void {
-    const key = `propnepal_accounts_${username}`;
+    const key = `propnpl_accounts_${username}`;
     this.setStorage(key, accounts);
   }
 
   getCurrentUser(): { username: string; loggedIn: boolean; avatar: string; email: string; isDemo?: boolean } {
-    return this.getStorage('propnepal_user', { username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '', isDemo: false });
+    return this.getStorage('propnpl_user', { username: 'GuestTrader', loggedIn: false, avatar: '👤', email: '', isDemo: false });
   }
 
   setCurrentUser(user: { username: string; loggedIn: boolean; avatar: string; email: string; isDemo?: boolean }) {
-    this.setStorage('propnepal_user', user);
+    this.setStorage('propnpl_user', user);
   }
 
   // ── Journal Settings ──
 
   getJournalSettings(username: string): JournalSettings {
-    const key = `propnepal_journal_settings_${username}`;
+    const key = `propnpl_journal_settings_${username}`;
     return this.getStorage<JournalSettings>(key, { isPublic: false });
   }
 
   saveJournalSettings(username: string, settings: JournalSettings): void {
-    const key = `propnepal_journal_settings_${username}`;
+    const key = `propnpl_journal_settings_${username}`;
     this.setStorage(key, settings);
   }
 
   // ── Trade Feedback / Q&A ──
 
   getTradeFeedback(tradeId: string): TradeFeedback[] {
-    const key = `propnepal_trade_feedback_${tradeId}`;
+    const key = `propnpl_trade_feedback_${tradeId}`;
     return this.getStorage<TradeFeedback[]>(key, []);
   }
 
   addTradeFeedback(tradeId: string, author: string, comment: string, rating?: number): TradeFeedback {
-    const key = `propnepal_trade_feedback_${tradeId}`;
+    const key = `propnpl_trade_feedback_${tradeId}`;
     const currentFeedback = this.getTradeFeedback(tradeId);
     const newFeedback: TradeFeedback = {
       id: `tf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -920,11 +920,11 @@ export class MockSupabaseEngine {
   // ── User Registration & Authentication ──
 
   getRegisteredUsers(): RegisteredUser[] {
-    return this.getStorage<RegisteredUser[]>('propnepal_registered_users', []);
+    return this.getStorage<RegisteredUser[]>('propnpl_registered_users', []);
   }
 
   saveRegisteredUsers(users: RegisteredUser[]): void {
-    this.setStorage('propnepal_registered_users', users);
+    this.setStorage('propnpl_registered_users', users);
   }
 
   updatePassword(username: string, newPass: string): void {
@@ -1002,9 +1002,9 @@ export class MockSupabaseEngine {
 
     // 2. Remove journal and settings from local storage
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(`propnepal_journals_${username}`);
-      localStorage.removeItem(`propnepal_journal_settings_${username}`);
-      localStorage.removeItem(`propnepal_accounts_${username}`);
+      localStorage.removeItem(`propnpl_journals_${username}`);
+      localStorage.removeItem(`propnpl_journal_settings_${username}`);
+      localStorage.removeItem(`propnpl_accounts_${username}`);
     }
 
     // 3. Remove profile from localStorage
@@ -1014,15 +1014,15 @@ export class MockSupabaseEngine {
   }
 
   getAds(): Ad[] {
-    return this.getStorage<Ad[]>('propnepal_ads', initialAds);
+    return this.getStorage<Ad[]>('propnpl_ads', initialAds);
   }
 
   saveAds(ads: Ad[]): void {
-    this.setStorage('propnepal_ads', ads);
+    this.setStorage('propnpl_ads', ads);
   }
 
   getAcademyModules(): CourseModule[] {
-    const cached = this.getStorage<CourseModule[]>('propnepal_academy_modules', initialModules);
+    const cached = this.getStorage<CourseModule[]>('propnpl_academy_modules', initialModules);
     const mod1 = cached.find(m => m.id === 'mod-1');
     const mod2 = cached.find(m => m.id === 'mod-2');
     const mod3 = cached.find(m => m.id === 'mod-3');
@@ -1037,26 +1037,26 @@ export class MockSupabaseEngine {
   }
 
   saveAcademyModules(modules: CourseModule[]): void {
-    this.setStorage('propnepal_academy_modules', modules);
+    this.setStorage('propnpl_academy_modules', modules);
   }
 
   // --- Premium Strategies ---
   getPremiumStrategies(): PremiumStrategy[] {
-    this.setStorage('propnepal_premium_strategies', initialPremiumStrategies);
+    this.setStorage('propnpl_premium_strategies', initialPremiumStrategies);
     return initialPremiumStrategies;
   }
 
   savePremiumStrategies(strategies: PremiumStrategy[]): void {
-    this.setStorage('propnepal_premium_strategies', strategies);
+    this.setStorage('propnpl_premium_strategies', strategies);
   }
 
   // --- Premium Access / eSewa Payment ---
   getPremiumAccessList(): PremiumAccess[] {
-    return this.getStorage<PremiumAccess[]>('propnepal_premium_access', []);
+    return this.getStorage<PremiumAccess[]>('propnpl_premium_access', []);
   }
 
   savePremiumAccessList(list: PremiumAccess[]): void {
-    this.setStorage('propnepal_premium_access', list);
+    this.setStorage('propnpl_premium_access', list);
   }
 
   requestPremiumAccess(username: string, esewaTransactionId: string): void {

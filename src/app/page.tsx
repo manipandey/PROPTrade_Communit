@@ -96,7 +96,7 @@ export default function Home() {
           setMarkets((prev) =>
             prev.map((m) => {
               let livePrice = m.priceValue;
-              let liveChange = m.changeValue;
+              const liveChange = m.changeValue;
               
               if (m.symbol === 'XAUUSD' && rates.XAU) {
                 livePrice = 1 / rates.XAU;
@@ -146,11 +146,12 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'light';
+    /* eslint-disable react-hooks/set-state-in-effect, @typescript-eslint/no-explicit-any */
+    const stored = (localStorage.getItem('propnpl_theme') as Theme) || 'light';
     document.documentElement.setAttribute('data-theme', stored);
     setTheme(stored);
 
-    const saved = localStorage.getItem('propnepal_watchlist');
+    const saved = localStorage.getItem('propnpl_watchlist');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -197,14 +198,14 @@ export default function Home() {
       next = [...watchlist, symbol];
     }
     setWatchlist(next);
-    localStorage.setItem('propnepal_watchlist', JSON.stringify(next));
+    localStorage.setItem('propnpl_watchlist', JSON.stringify(next));
   };
 
   const handleToggleTheme = () => {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('propnepal_theme', next);
+    localStorage.setItem('propnpl_theme', next);
   };
 
   const handleAuthSuccess = async () => {

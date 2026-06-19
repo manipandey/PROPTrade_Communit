@@ -80,7 +80,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         }
       }
 
-      const targetEmail = isDemoAccount ? `demo_${username.toLowerCase()}_${Date.now()}@propnepal.com` : email;
+      const targetEmail = isDemoAccount ? `demo_${username.toLowerCase()}_${Date.now()}@propnpl.com` : email;
       
       const result = await api.register(targetEmail, username, password, isDemoAccount);
 
@@ -175,7 +175,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
             <Sparkles className="h-6 w-6" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            {isSignUp ? 'Join PropNepal' : 'Welcome Back'}
+            {isSignUp ? 'Join propNPL' : 'Welcome Back'}
           </h2>
           <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             {isSignUp 

@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, GraduationCap, ArrowRight, CheckCircle2, Award, X, Lock, Crown, Clock, TrendingUp, Target, Gem, Send, Eye, ChevronRight } from 'lucide-react';
 import { db, CourseModule, Lesson, PremiumStrategy, PremiumAccess } from '@/lib/supabase';
+import { api } from '@/lib/api';
 
 interface QuizQuestion {
   question: string;
@@ -30,19 +31,27 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
   const [esewaTransId, setEsewaTransId] = useState('');
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
 
-  // Load modules dynamically from mock db
+  // Load modules dynamically from Supabase database
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setModules(db.getAcademyModules());
-    setStrategies(db.getPremiumStrategies());
-    if (currentUser?.loggedIn) {
-      setHasAccess(db.hasVerifiedAccess(currentUser.username));
-      setUserAccess(db.getUserAccessStatus(currentUser.username));
-    } else {
-      setHasAccess(false);
-      setUserAccess(undefined);
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
+    const loadAcademyData = async () => {
+      try {
+        const liveModules = await api.getAcademyModules();
+        setModules(liveModules);
+        setStrategies(db.getPremiumStrategies());
+        if (currentUser?.loggedIn) {
+          const verified = await api.hasVerifiedAccess(currentUser.username);
+          setHasAccess(verified);
+          const status = await api.getUserAccessStatus(currentUser.username);
+          setUserAccess(status);
+        } else {
+          setHasAccess(false);
+          setUserAccess(undefined);
+        }
+      } catch (e) {
+        console.error('Error fetching academy data:', e);
+      }
+    };
+    loadAcademyData();
   }, [currentUser]);
 
   // Quiz States
@@ -129,11 +138,12 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
     setQuizResult(null);
   };
 
-  const handleSubmitPayment = () => {
+  const handleSubmitPayment = async () => {
     if (!currentUser?.loggedIn || !esewaTransId.trim()) return;
-    db.requestPremiumAccess(currentUser.username, esewaTransId.trim());
+    await api.requestPremiumAccess(currentUser.username, esewaTransId.trim());
     setPaymentSubmitted(true);
-    setUserAccess(db.getUserAccessStatus(currentUser.username));
+    const status = await api.getUserAccessStatus(currentUser.username);
+    setUserAccess(status);
   };
 
   const assetColorMap: Record<string, string> = {
@@ -153,7 +163,7 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
           Learning <span className="text-brand-green">Hub</span>
         </h2>
         <p className="text-xs sm:text-sm text-text-secondary">
-          PropNepal Academy. Structured guidelines and educational tracks specifically designed to teach traders how to clear evaluations and scale funded accounts.
+          propNPL Academy. Structured guidelines and educational tracks specifically designed to teach traders how to clear evaluations and scale funded accounts.
         </p>
       </div>
 
@@ -321,7 +331,7 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                     </p>
 
                     <div className="rounded-lg bg-brand-green/5 border border-brand-green/20 p-4 text-xs text-text-secondary leading-relaxed space-y-1 shadow-[0_0_15px_rgba(34,197,94,0.02)]">
-                      <div className="font-bold text-brand-green uppercase tracking-wider text-[10px]">PropNepal Strategic Guide:</div>
+                      <div className="font-bold text-brand-green uppercase tracking-wider text-[10px]">propNPL Strategic Guide:</div>
                       <p>{quizResult.tip}</p>
                     </div>
 

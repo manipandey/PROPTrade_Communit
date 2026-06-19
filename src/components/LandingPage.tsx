@@ -747,7 +747,7 @@ export default function LandingPage({ theme, onToggleTheme, onOpenAuth, onEnterA
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.svg" className="h-9 w-9 object-contain" alt="PropNepal Logo" />
+            <img src="/logo-icon.svg" className="h-9 w-9 object-contain" alt="propNPL Logo" />
             <div>
               <span className="text-sm font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
                 Prop<span className="text-brand-green">Nepal</span>
@@ -1240,7 +1240,7 @@ export default function LandingPage({ theme, onToggleTheme, onOpenAuth, onEnterA
             </h2>
 
             <p className="text-sm leading-relaxed max-w-lg mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Journaling, learning, reviewing — these are the habits that separate consistently funded traders from everyone else. PropNepal gives you the tools to build those habits.
+              Journaling, learning, reviewing — these are the habits that separate consistently funded traders from everyone else. propNPL gives you the tools to build those habits.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -1267,13 +1267,13 @@ export default function LandingPage({ theme, onToggleTheme, onOpenAuth, onEnterA
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-icon.svg" className="h-7 w-7 object-contain" alt="PropNepal Logo" />
+              <img src="/logo-icon.svg" className="h-7 w-7 object-contain" alt="propNPL Logo" />
               <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
                 Prop<span className="text-brand-green">Nepal</span>
               </span>
             </div>
             <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              © 2026 PropNepal. Learn, Record, Connect.
+              © 2026 propNPL. Learn, Record, Connect.
             </div>
             <div className="flex items-center gap-5 text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
               {['Journal', 'Reviews', 'Roadmap', 'Tools', 'Academy'].map(l => (
