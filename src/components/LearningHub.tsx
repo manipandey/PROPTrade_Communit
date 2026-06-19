@@ -441,8 +441,8 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                   <span><strong className="text-text-primary">68-76%</strong> Win Rate</span>
                 </div>
               </div>
-              <div className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-5 py-2.5 text-yellow-400 font-black text-lg">
-                <span>Rs 1,500</span>
+              <div className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-500/20 rounded-xl px-5 py-2.5 text-yellow-400 font-black text-lg">
+                <span>Rs 5,000</span>
                 <span className="text-[9px] font-bold text-yellow-400/60 uppercase">/ 3 months</span>
               </div>
             </div>
@@ -502,10 +502,17 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                       />
                       {isLocked && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
-                          <div className="flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-lg border border-white/10">
-                            <Lock className="h-3.5 w-3.5 text-yellow-400" />
-                            <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Premium</span>
-                          </div>
+                          {strat.isComingSoon ? (
+                            <div className="flex items-center gap-2 bg-yellow-500/20 px-3 py-1.5 rounded-lg border border-yellow-500/30 text-yellow-400 font-extrabold uppercase tracking-widest text-[9px] shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>Coming Soon</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-lg border border-white/10">
+                              <Lock className="h-3.5 w-3.5 text-yellow-400" />
+                              <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Premium</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -545,7 +552,15 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                     </div>
 
                     {/* Action Button */}
-                    {hasAccess ? (
+                    {strat.isComingSoon ? (
+                      <button
+                        disabled
+                        className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-bg-secondary border border-border-theme/40 px-4 py-2.5 text-[10px] font-bold text-text-muted uppercase tracking-wider cursor-not-allowed"
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                        Coming Soon
+                      </button>
+                    ) : hasAccess ? (
                       <button
                         onClick={() => setSelectedStrategy(strat)}
                         className="w-full mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20 px-4 py-2.5 text-[10px] font-bold text-yellow-400 uppercase tracking-wider hover:from-yellow-500/20 hover:to-amber-500/20 transition-all"
@@ -585,21 +600,21 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                 <div className="flex gap-3 p-3 rounded-lg border border-border-theme bg-bg-secondary/40">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-400/10 text-yellow-400 font-black text-sm flex-shrink-0 border border-yellow-400/20">1</div>
                   <div>
-                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Pay via eSewa</div>
-                    <div className="text-[9px] text-text-muted mt-0.5">Send Rs 1,500 to our eSewa number</div>
+                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider font-sans">Pay via eSewa</div>
+                    <div className="text-[9px] text-text-muted mt-0.5">Send Rs 5,000 to our eSewa number</div>
                   </div>
                 </div>
                 <div className="flex gap-3 p-3 rounded-lg border border-border-theme bg-bg-secondary/40">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-400/10 text-yellow-400 font-black text-sm flex-shrink-0 border border-yellow-400/20">2</div>
                   <div>
-                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Submit Transaction ID</div>
+                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider font-sans">Submit Transaction ID</div>
                     <div className="text-[9px] text-text-muted mt-0.5">Enter your eSewa transaction ID here</div>
                   </div>
                 </div>
                 <div className="flex gap-3 p-3 rounded-lg border border-border-theme bg-bg-secondary/40">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-400/10 text-yellow-400 font-black text-sm flex-shrink-0 border border-yellow-400/20">3</div>
                   <div>
-                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Get Verified</div>
+                    <div className="text-[10px] font-bold text-text-primary uppercase tracking-wider font-sans">Get Verified</div>
                     <div className="text-[9px] text-text-muted mt-0.5">Admin verifies & unlocks 3-month access</div>
                   </div>
                 </div>
@@ -619,7 +634,7 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                   className="w-full rounded-lg bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-bold uppercase tracking-wider text-xs py-3 hover:from-yellow-400 hover:to-amber-400 transition-all flex items-center justify-center gap-2"
                 >
                   <Crown className="h-4 w-4" />
-                  Pay Rs 1,500 via eSewa
+                  Pay Rs 5,000 via eSewa
                 </button>
               )}
             </div>
@@ -658,7 +673,7 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                   <div className="rounded-xl bg-green-500/5 border border-green-500/20 p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Amount</span>
-                      <span className="text-lg font-black text-green-400">Rs 1,500</span>
+                      <span className="text-lg font-black text-green-400">Rs 5,000</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Duration</span>
@@ -682,7 +697,7 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                   <div className="space-y-2">
                     <div className="flex items-start gap-2 text-[11px] text-text-secondary">
                       <ChevronRight className="h-3.5 w-3.5 text-green-400 flex-shrink-0 mt-0.5" />
-                      <span>Open your eSewa app and send <strong className="text-text-primary">Rs 1,500</strong> to <strong className="text-green-400">9861292959</strong></span>
+                      <span>Open your eSewa app and send <strong className="text-text-primary">Rs 5,000</strong> to <strong className="text-green-400">9861292959</strong></span>
                     </div>
                     <div className="flex items-start gap-2 text-[11px] text-text-secondary">
                       <ChevronRight className="h-3.5 w-3.5 text-green-400 flex-shrink-0 mt-0.5" />

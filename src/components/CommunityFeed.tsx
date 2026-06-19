@@ -416,33 +416,34 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
     return result;
   }, [posts, selectedCategory, searchQuery, sortBy]);
 
-  if (!currentUser?.loggedIn) {
-    return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
-        <div className="rounded-2xl border border-border-theme bg-bg-card/85 p-8 text-center space-y-6 glass-panel shadow-[0_8px_32px_rgba(0,0,0,0.37)] backdrop-blur-md">
-          <div className="mx-auto w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center border border-brand-green/20">
-            <Lock className="h-8 w-8 text-brand-green" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-bold text-text-primary uppercase tracking-wider">Nepal&apos;s Trading Conversations</h3>
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Signup or login to access the full features of the community. Join active conversations, view and share technical analysis, ask trading questions, and view user posts.
-            </p>
-          </div>
-          <button
-            onClick={onOpenAuth}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green px-5 py-3.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent"
-          >
-            <User className="h-4 w-4" />
-            <span>Signup or Login</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+    <div className="relative min-h-[500px]">
+      {/* If guest, show the overlay centered */}
+      {!currentUser?.loggedIn && (
+        <div className="absolute inset-0 z-35 flex items-start justify-center p-4 pt-20" style={{ background: 'rgba(0,0,0,0.15)' }}>
+          <div className="w-full max-w-md rounded-2xl border border-border-theme bg-bg-card/95 p-8 text-center space-y-6 glass-panel shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-fade-in pointer-events-auto">
+            <div className="mx-auto w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center border border-brand-green/20">
+              <Lock className="h-8 w-8 text-brand-green" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-text-primary uppercase tracking-wider font-sans">Nepal&apos;s Trading Conversations</h3>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Signup or login to access the full features of the community. Join active conversations, view and share technical analysis, ask trading questions, and post threads.
+              </p>
+            </div>
+            <button
+              onClick={onOpenAuth}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green px-5 py-3.5 text-xs font-bold text-black uppercase tracking-wider hover:bg-brand-green/90 transition-all glow-accent cursor-pointer"
+            >
+              <User className="h-4 w-4" />
+              <span>Signup or Login</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Container (blurred if guest) */}
+      <div className={`mx-auto max-w-4xl px-4 py-8 space-y-6 transition-all duration-300 ${!currentUser?.loggedIn ? 'blur-[4px] pointer-events-none select-none' : ''}`}>
       
       {/* Category Pill Navigation */}
       <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-none">
@@ -1024,6 +1025,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

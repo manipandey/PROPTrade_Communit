@@ -114,6 +114,7 @@ export interface PremiumStrategy {
   imageUrl?: string;
   videoUrl?: string;
   createdAt: string;
+  isComingSoon?: boolean;
 }
 
 export interface PremiumAccess {
@@ -445,42 +446,31 @@ const initialModules: CourseModule[] = [
 const initialPremiumStrategies: PremiumStrategy[] = [
   {
     id: 'strat-1',
-    title: 'XAUUSD London Session Liquidity Sweep',
-    description: 'A high-probability gold scalping strategy targeting Asian session liquidity pools during London open. Designed for FTMO/FundedNext evaluation accounts.',
+    title: 'Session based liquidity hunt',
+    description: 'Advanced liquidity hunt strategy focusing on session liquidity sweeps and institutional order blocks. Designed for Funded accounts.',
     asset: 'XAUUSD',
     timeframe: 'M15',
-    winRate: '76%',
+    winRate: '75%',
     riskReward: '1:3',
-    previewText: 'This strategy exploits the predictable pattern of London session sweeping Asian highs/lows on Gold. Combined with FVG confirmations and order block entries, it consistently delivers 1:3+ R:R setups during the first 90 minutes of London open.',
-    content: 'FULL STRATEGY BREAKDOWN:\n\n1. PRE-SESSION ANALYSIS (6:00-7:30 AM GMT)\n• Mark Asian session high and low on M15 chart\n• Identify any FVG (Fair Value Gap) left by the Asian session\n• Note the prevailing daily bias from H4 structure\n\n2. ENTRY RULES\n• Wait for price to sweep Asian high/low (grab liquidity)\n• After the sweep, look for a displacement candle (strong rejection)\n• Enter on the next candle\'s retracement into the created FVG\n• Stop loss: 2-3 pips beyond the sweep wick\n\n3. TAKE PROFIT MANAGEMENT\n• TP1: Opposite Asian session level (1:2 R:R typically)\n• TP2: Previous day high/low (1:3+ R:R)\n• Move SL to breakeven after TP1 is hit\n\n4. RISK RULES\n• Max 0.5% risk per trade for evaluation accounts\n• Max 2 trades per session\n• No trading on NFP, FOMC, or CPI days\n\n5. EVALUATION ACCOUNT TIPS\n• This setup alone can clear Phase 1 profit targets in 8-12 trading days\n• Focus only on London session for consistency\n• Journal every trade with emotion tags',
+    previewText: 'Sweeping session liquidity is one of the most reliable institutional patterns. This strategy details entry confirmations and stop-loss placements based on session high/low sweeps.',
+    content: 'Coming Soon - Session based liquidity hunt strategy.',
     imageUrl: '/feed-images/trading-chart-gold.png',
-    createdAt: '2026-05-15T08:00:00Z'
+    createdAt: '2026-06-19T00:00:00Z',
+    isComingSoon: true
   },
   {
     id: 'strat-2',
-    title: 'NAS100 NY Open Breakout Sniper',
-    description: 'A momentum-based NAS100 strategy for the New York opening bell. Targets the first clean breakout with institutional confirmation via order flow.',
+    title: 'Volume profile Strategy',
+    description: 'Volume Profile strategy mapping high volume nodes (HVN), point of control (POC), and value areas to find institutional support/resistance.',
     asset: 'NAS100',
-    timeframe: 'M5',
-    winRate: '71%',
-    riskReward: '1:2.5',
-    previewText: 'The New York open on NAS100 is the most volatile and predictable window for breakout setups. This strategy waits for the initial fake-out, then enters on the true directional move with a tight stop and aggressive trailing take-profit system.',
-    content: 'FULL STRATEGY BREAKDOWN:\n\n1. PRE-MARKET ANALYSIS (1:00-2:00 PM GMT)\n• Identify the pre-market range (last 2 hours before NY open)\n• Mark the high and low of this consolidation zone\n• Check if there is a clear daily bias from the overnight session\n\n2. ENTRY RULES\n• Wait for the 9:30 AM ET candle (NY open)\n• Look for an initial fake breakout of the range (the \'judas swing\')\n• After the fake-out reverses, enter on the M5 body close back inside the range\n• Stop loss: Beyond the fake-out wick\n\n3. TAKE PROFIT MANAGEMENT\n• TP1: Opposite side of the range (1:1.5 R:R)\n• TP2: Previous day high/low extension (1:2.5 R:R)\n• Trail stop using M5 swing structure after TP1\n\n4. RISK MANAGEMENT\n• Max 0.75% risk per trade\n• Only 1 entry per session\n• Avoid trading during FOMC meeting days\n\n5. PROP FIRM NOTES\n• Works exceptionally well on equity-based drawdown accounts\n• Quick scalp nature prevents overnight holding violations\n• Average 3-5 setups per week',
-    imageUrl: '/feed-images/nepse-chart.png',
-    createdAt: '2026-05-20T10:00:00Z'
-  },
-  {
-    id: 'strat-3',
-    title: 'EURUSD H1 Swing — Smart Money Confluence',
-    description: 'A swing trading strategy for EURUSD combining weekly order blocks, daily FVGs, and H1 market structure shifts for high-conviction entries.',
-    asset: 'EURUSD',
     timeframe: 'H1',
-    winRate: '68%',
+    winRate: '72%',
     riskReward: '1:4',
-    previewText: 'This longer-term strategy focuses on confluence-based entries where weekly order blocks align with daily FVGs and H1 structure shifts. Ideal for traders who prefer fewer but higher quality setups with massive R:R potential.',
-    content: 'FULL STRATEGY BREAKDOWN:\n\n1. WEEKLY ANALYSIS (Sunday)\n• Identify the weekly order block (last up/down candle before a major move)\n• Mark weekly imbalances and liquidity pools\n• Determine the weekly bias (bullish/bearish)\n\n2. DAILY REFINEMENT\n• Look for daily FVGs that align with the weekly OB zone\n• Mark daily highs/lows that act as liquidity targets\n\n3. H1 ENTRY CRITERIA\n• Wait for price to enter the daily FVG + weekly OB confluence zone\n• Look for H1 Market Structure Shift (MSS) — break of the most recent swing\n• Enter on the H1 pullback after the MSS\n• Stop loss: Below the weekly OB low (typically 25-35 pips)\n\n4. TAKE PROFIT\n• TP1: Daily opposite liquidity level (1:2 R:R)\n• TP2: Weekly liquidity target (1:4 R:R)\n• Partial close at TP1, trail remainder\n\n5. RISK & POSITION MANAGEMENT\n• Max 1% risk per setup\n• Average hold time: 2-4 days\n• Max 2 concurrent positions\n• Check for high-impact news before entry\n\n6. PROP FIRM COMPATIBILITY\n• Use FTMO Swing account (allows weekend holding)\n• 1-2 winning trades per week is enough for evaluation targets\n• Extremely low trade count keeps emotional discipline high',
-    imageUrl: '/feed-images/payout-confirmation.png',
-    createdAt: '2026-06-01T14:00:00Z'
+    previewText: 'Trade with volume confirmation. Find dynamic institutional support and resistance zones using the Volume Profile indicator, Value Area High (VAH), and Value Area Low (VAL).',
+    content: 'Coming Soon - Volume profile Strategy.',
+    imageUrl: '/feed-images/nepse-chart.png',
+    createdAt: '2026-06-19T00:00:00Z',
+    isComingSoon: true
   }
 ];
 
@@ -1052,7 +1042,8 @@ export class MockSupabaseEngine {
 
   // --- Premium Strategies ---
   getPremiumStrategies(): PremiumStrategy[] {
-    return this.getStorage<PremiumStrategy[]>('propnepal_premium_strategies', initialPremiumStrategies);
+    this.setStorage('propnepal_premium_strategies', initialPremiumStrategies);
+    return initialPremiumStrategies;
   }
 
   savePremiumStrategies(strategies: PremiumStrategy[]): void {
