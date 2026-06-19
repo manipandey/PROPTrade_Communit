@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db } from '@/lib/supabase';
 import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
@@ -172,10 +171,8 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load user, theme, and watchlist on mount — syncing from external localStorage store
   useEffect(() => {
     const initApp = async () => {
-      /* eslint-disable react-hooks/set-state-in-effect */
       const stored = (localStorage.getItem('propnepal_theme') as Theme) || 'light';
       document.documentElement.setAttribute('data-theme', stored);
       setTheme(stored);
@@ -207,7 +204,6 @@ export default function Home() {
           // ignore
         }
       }
-      /* eslint-enable react-hooks/set-state-in-effect */
     };
     initApp();
   }, []);
@@ -448,7 +444,7 @@ export default function Home() {
             {/* ── TRADING TOOLS ── */}
             {activeTab === 'tools' && (
               <div className="animate-fade-in space-y-5">
-                <Tools theme={theme} defaultSubTab={activeSubTab as any} />
+                <Tools theme={theme} defaultSubTab={activeSubTab as 'calendar' | 'news' | 'margin' | 'lotSize' | 'chart'} />
                 <AdSlot variant="banner" className="mt-4" />
               </div>
             )}

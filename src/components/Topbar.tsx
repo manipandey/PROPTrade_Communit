@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Search, Bell, Settings, User, Key, CheckCircle2, Lock, Mail, Calendar, Shield } from 'lucide-react';
-import { db } from '@/lib/supabase';
 import { MarketItem } from '@/app/page';
 
 interface TopbarProps {
   theme?: 'dark' | 'light';
   markets: MarketItem[];
   watchlist: string[];
-  currentUser?: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean } | null;
+  currentUser?: { username: string; loggedIn: boolean; avatar: string; isDemo?: boolean; email?: string } | null;
 }
 
 const mapToTradingViewSymbol = (sym: string): string => {
@@ -234,7 +233,6 @@ export default function Topbar({ theme = 'dark', watchlist, currentUser }: Topba
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Email</div>
                   <div className="text-xs font-semibold text-text-primary">
-                    {/* @ts-ignore - currentUser might have email from session */}
                     {currentUser.email || `${currentUser.username.toLowerCase()}@example.com`}
                   </div>
                 </div>

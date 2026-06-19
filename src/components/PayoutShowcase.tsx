@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Award, Sparkles, Check, Upload, Heart, MessageSquare, X } from 'lucide-react';
+import { Sparkles, Check, Upload, Heart, MessageSquare, X } from 'lucide-react';
 import { db, Payout, Comment } from '@/lib/supabase';
 
 export default function PayoutShowcase() {
@@ -122,7 +122,7 @@ export default function PayoutShowcase() {
   const AnimatedCounter = ({ value }: { value: number }) => {
     const [count, setCount] = useState(0);
     useEffect(() => {
-      let start = 0;
+      const start = 0;
       const end = value;
       if (start === end) return;
       const duration = 1500;

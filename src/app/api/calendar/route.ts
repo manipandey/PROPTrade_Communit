@@ -18,8 +18,9 @@ export async function GET() {
 
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching calendar:', error);
-    return NextResponse.json({ error: 'Failed to fetch calendar data', details: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: 'Failed to fetch calendar data', details: message }, { status: 500 });
   }
 }

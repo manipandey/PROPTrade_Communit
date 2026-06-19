@@ -1,17 +1,17 @@
 // src/components/TraderProfiles.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Award, ShieldCheck, Heart, TrendingUp, CheckCircle, Brain, X } from 'lucide-react';
 import { db, TraderProfile } from '@/lib/supabase';
 
 export default function TraderProfiles() {
-  const [profiles, setProfiles] = useState<TraderProfile[]>([]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProfiles(db.getProfiles());
-  }, []);
+  const [profiles] = useState<TraderProfile[]>(() => {
+    if (typeof window !== 'undefined') {
+      return db.getProfiles();
+    }
+    return [];
+  });
   const [selectedProfile, setSelectedProfile] = useState<TraderProfile | null>(null);
   const [cheeredTraders, setCheeredTraders] = useState<Record<string, boolean>>({});
 

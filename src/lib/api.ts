@@ -1,5 +1,26 @@
 import { supabase } from './supabaseClient';
 
+export interface SupabaseComment {
+  id: string;
+  parent_id: string | null;
+  content: string;
+  created_at: string;
+  profiles: { username: string; avatar: string } | null;
+  comment_reactions: { reaction_type: string; user_id: string }[] | null;
+}
+
+export interface SupabasePost {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  image_url: string | null;
+  upvotes: number | null;
+  created_at: string;
+  profiles: { username: string; avatar: string } | null;
+  comments: SupabaseComment[] | null;
+}
+
 export const api = {
   // --- AUTH ---
   async login(email: string, password: string) {
@@ -15,7 +36,7 @@ export const api = {
   },
 
   async loginWithOAuth(provider: 'google' | 'github' | 'apple') {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: window.location.origin
@@ -80,7 +101,24 @@ export const api = {
     }));
   },
 
-  async saveJournal(userId: string, journal: any) {
+  async saveJournal(
+    userId: string,
+    journal: {
+      date: string;
+      asset: string;
+      direction: string;
+      lots: number;
+      entryPrice: number;
+      exitPrice: number;
+      pnl: number;
+      emotion: string;
+      setup: string;
+      session?: string;
+      notes?: string;
+      imageUrl?: string;
+      isPublic?: boolean;
+    }
+  ) {
     const dbPayload = {
       user_id: userId,
       date: journal.date,
@@ -122,7 +160,9 @@ export const api = {
       return [];
     }
     
-    return data.map((p: any) => ({
+    const postsData = (data as unknown) as SupabasePost[];
+    
+    return postsData.map((p) => ({
       id: p.id,
       title: p.title,
       content: p.content,
@@ -132,10 +172,10 @@ export const api = {
       createdAt: p.created_at,
       author: p.profiles?.username || 'Unknown',
       tags: ['General'],
-      comments: (p.comments || []).map((c: any) => {
+      comments: (p.comments || []).map((c) => {
         const reactions: Record<string, number> = { rocket: 0, bear: 0, whale: 0, rekt: 0, bag: 0, hot: 0 };
         const rawReactions = c.comment_reactions || [];
-        rawReactions.forEach((r: any) => {
+        rawReactions.forEach((r) => {
           if (reactions[r.reaction_type] !== undefined) {
             reactions[r.reaction_type]++;
           } else {
@@ -160,12 +200,21 @@ export const api = {
         bag: 0,
         hot: 0,
       },
-      userReactions: {},
-      userVoted: null
+      userReactions: {} as Record<string, boolean>,
+      userVoted: null as 'up' | 'down' | null
     }));
   },
 
-  async savePost(userId: string, post: any) {
+  async savePost(
+    userId: string,
+    post: {
+      title: string;
+      content: string;
+      category: string;
+      imageUrl?: string | null;
+      upvotes?: number;
+    }
+  ) {
     const dbPayload = {
       user_id: userId,
       title: post.title,
@@ -183,7 +232,7 @@ export const api = {
   },
 
   async saveComment(userId: string, postId: string, content: string, parentId?: string) {
-    const dbPayload: any = {
+    const dbPayload: { user_id: string; post_id: string; content: string; parent_id?: string } = {
       user_id: userId,
       post_id: postId,
       content: content

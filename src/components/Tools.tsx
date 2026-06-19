@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, FileText, Percent, BarChart2, Bell, AlertTriangle, Calculator } from 'lucide-react';
+import { Calendar, FileText, Percent, BarChart2, AlertTriangle, Calculator } from 'lucide-react';
 
 interface ToolsProps {
   theme: 'dark' | 'light';
@@ -35,19 +35,9 @@ interface RssItem {
   link: string;
 }
 
-interface CalendarEvent {
-  id: string;
-  time: string;
-  currency: string;
-  event: string;
-  impact: 'High' | 'Medium' | 'Low';
-  forecast: string;
-  previous: string;
-  actual: string;
-  day: 'today' | 'tomorrow' | 'week';
-}
 
-const INITIAL_EVENTS: CalendarEvent[] = [];
+
+
 
 const getNewsThumbnail = (title: string) => {
   const t = title.toLowerCase();
@@ -186,15 +176,16 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     if (subTab !== 'chart' || !chartContainerRef.current) return;
 
     let isMounted = true;
+    const container = chartContainerRef.current;
     
     // Clear previous widget
-    chartContainerRef.current.innerHTML = '';
+    container.innerHTML = '';
 
     const containerId = 'tradingview-advanced-chart-terminal';
     const widgetDiv = document.createElement('div');
     widgetDiv.id = containerId;
     widgetDiv.className = 'w-full h-full';
-    chartContainerRef.current.appendChild(widgetDiv);
+    container.appendChild(widgetDiv);
 
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/tv.js';
@@ -218,12 +209,12 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
       }
     };
 
-    chartContainerRef.current.appendChild(script);
+    container.appendChild(script);
 
     return () => {
       isMounted = false;
-      if (chartContainerRef.current) {
-        chartContainerRef.current.innerHTML = '';
+      if (container) {
+        container.innerHTML = '';
       }
     };
   }, [tvSymbol, theme, subTab]);

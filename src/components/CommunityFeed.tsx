@@ -3,8 +3,46 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Search, Flame, Clock, MessageSquare, User, Hash, Share2, PlusCircle, CheckCircle, ImageIcon, MapPin, X, Upload, Link } from 'lucide-react';
-import { db, Post, Comment } from '@/lib/supabase';
+import { db } from '@/lib/supabase';
 import { api } from '../lib/api';
+
+export interface FeedComment {
+  id: string;
+  parentId: string | null;
+  author: string;
+  content: string;
+  createdAt: string;
+  reactions?: Record<string, number>;
+  rawReactions?: {
+    reaction_type: string;
+    user_id: string;
+  }[];
+}
+
+export interface FeedPost {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  category: string;
+  tags: string[];
+  upvotes: number;
+  comments: FeedComment[];
+  createdAt: string;
+  imageUrl?: string;
+  reactions?: Record<string, number>;
+  userReactions?: Record<string, boolean>;
+  userVoted?: 'up' | 'down' | null;
+}
+
+export interface CurrentUser {
+  id?: string;
+  username: string;
+  loggedIn: boolean;
+  avatar: string;
+  email?: string;
+  isDemo?: boolean;
+}
 import AdSlot from './AdSlot';
 
 const REACTION_TYPES = [
@@ -17,11 +55,11 @@ const REACTION_TYPES = [
 ];
 
 interface CommentNodeProps {
-  comment: any;
-  allComments: any[];
+  comment: FeedComment;
+  allComments: FeedComment[];
   postId: string;
   depth: number;
-  currentUser: any;
+  currentUser: CurrentUser | null;
   replyingToCommentId: string | null;
   setReplyingToCommentId: (id: string | null) => void;
   replyContent: string;
@@ -60,7 +98,7 @@ const CommentThreadItem: React.FC<CommentNodeProps> = ({
       <div className="flex items-center gap-2 pt-1">
         {REACTION_TYPES.map((type) => {
           const count = comment.reactions?.[type.key] || 0;
-          const active = comment.rawReactions?.some((r: any) => r.user_id === currentUser?.id && r.reaction_type === type.key);
+          const active = comment.rawReactions?.some((r) => r.user_id === currentUser?.id && r.reaction_type === type.key);
           
           return (
             <button
@@ -141,12 +179,12 @@ interface CommunityFeedProps {
 }
 
 export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeedProps) {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
   
   useEffect(() => {
     const fetchPosts = async () => {
       const livePosts = await api.getPosts();
-      setPosts(livePosts);
+      setPosts(livePosts as FeedPost[]);
     };
     fetchPosts();
   }, []);
@@ -281,7 +319,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
     
     // Refresh feed
     const livePosts = await api.getPosts();
-    setPosts(livePosts);
+    setPosts(livePosts as FeedPost[]);
 
     // Reset Form
     setPostTitle('');
@@ -306,7 +344,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
 
     // Refresh feed
     const livePosts = await api.getPosts();
-    setPosts(livePosts);
+    setPosts(livePosts as FeedPost[]);
     
     setNewCommentContent('');
   };
@@ -322,7 +360,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
     await api.saveComment(currentUser.id, postId, replyContent, parentId);
     
     const livePosts = await api.getPosts();
-    setPosts(livePosts);
+    setPosts(livePosts as FeedPost[]);
     
     setReplyContent('');
     setReplyingToCommentId(null);
@@ -334,17 +372,17 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
       return;
     }
     
-    const post = posts.find((p: any) => p.id === postId);
+    const post = posts.find((p) => p.id === postId);
     if (!post) return;
-    const comment = post.comments.find((c: any) => c.id === commentId);
+    const comment = post.comments.find((c) => c.id === commentId);
     if (!comment) return;
     
-    const hasReacted = comment.rawReactions?.some((r: any) => r.user_id === currentUser.id && r.reaction_type === reactionKey);
+    const hasReacted = comment.rawReactions?.some((r) => r.user_id === currentUser.id && r.reaction_type === reactionKey);
 
     await api.reactToComment(currentUser.id, commentId, reactionKey, !hasReacted);
     
     const livePosts = await api.getPosts();
-    setPosts(livePosts);
+    setPosts(livePosts as FeedPost[]);
   };
 
   // Filter & Sort Posts
@@ -918,9 +956,9 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                         </div>
                       ) : (
                         post.comments
-                          .filter((comm: any) => !comm.parentId)
-                          .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                          .map((comm: any) => (
+                          .filter((comm) => !comm.parentId)
+                          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                          .map((comm) => (
                             <CommentThreadItem
                               key={comm.id}
                               comment={comm}

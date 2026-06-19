@@ -52,8 +52,10 @@ export default function RightPanel({ onNavigate, markets, watchlist, onToggleWat
   useEffect(() => {
     if (isEditing || !widgetContainerRef.current) return;
     
+    const container = widgetContainerRef.current;
+    
     // Clear previous widget
-    widgetContainerRef.current.innerHTML = '';
+    container.innerHTML = '';
 
     // Isolate the TradingView script inside an iframe to prevent "contentWindow is not available" errors
     const iframe = document.createElement('iframe');
@@ -63,7 +65,7 @@ export default function RightPanel({ onNavigate, markets, watchlist, onToggleWat
     iframe.style.borderRadius = '8px';
     iframe.style.overflow = 'hidden';
     
-    widgetContainerRef.current.appendChild(iframe);
+    container.appendChild(iframe);
 
     // Map watchlist symbols to TradingView titles/proNames
     const symbolsConfig = watchlist.map((sym) => {
@@ -123,8 +125,8 @@ export default function RightPanel({ onNavigate, markets, watchlist, onToggleWat
     }
 
     return () => {
-      if (widgetContainerRef.current) {
-        widgetContainerRef.current.innerHTML = '';
+      if (container) {
+        container.innerHTML = '';
       }
     };
   }, [watchlist, theme, isEditing]);

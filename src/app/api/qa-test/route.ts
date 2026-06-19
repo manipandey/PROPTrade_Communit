@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { api } from '@/lib/api';
 
 export async function GET() {
-  const results: any[] = [];
+  const results: { step: string; [key: string]: unknown }[] = [];
   try {
     // 1. Register a test user
     const username = 'QA_' + Date.now();
@@ -73,14 +73,15 @@ export async function GET() {
     }
     
     // Verify comment exists in the fetched post
-    const myPost = posts.find((p: any) => p.id === postId);
+    const myPost = posts.find((p) => p.id === postId);
     if (!myPost) {
        return NextResponse.json({ success: false, error: 'My post missing from getPosts', results });
     }
     results.push({ step: 'Fetch Posts Success', postFound: true, commentsFound: myPost.comments.length });
 
     return NextResponse.json({ success: true, message: 'All backend QA tests passed!', results });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message, results });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message, results });
   }
 }
