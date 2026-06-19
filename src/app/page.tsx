@@ -253,6 +253,8 @@ export default function Home() {
     return (
       <>
         <LandingPage
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
           onOpenAuth={() => setAuthOpen(true)}
           onEnterApp={() => setShowLanding(false)}
         />

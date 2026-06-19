@@ -7,12 +7,14 @@ import {
   ArrowRight, Zap, ChevronDown, Shield,
   GraduationCap, Map, Wrench, ChevronRight, Smile,
   Frown, Meh, MessageSquare, Users, Globe, Layers,
-  PieChart, Calculator, Lightbulb, Award
+  PieChart, Calculator, Lightbulb, Award, Sun, Moon
 } from 'lucide-react';
 import StreakSimulator from '@/components/StreakSimulator';
 
 
 interface LandingPageProps {
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
   onOpenAuth: () => void;
   onEnterApp: () => void;
 }
@@ -663,7 +665,7 @@ function SMCTrainer() {
 
 
 /* ════════════════════════════════════════ MAIN ════════════════════════════════════════ */
-export default function LandingPage({ onOpenAuth, onEnterApp }: LandingPageProps) {
+export default function LandingPage({ theme, onToggleTheme, onOpenAuth, onEnterApp }: LandingPageProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [heroLoaded, setHeroLoaded] = useState(false);
@@ -762,6 +764,18 @@ export default function LandingPage({ onOpenAuth, onEnterApp }: LandingPageProps
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={onToggleTheme}
+              className="p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer flex items-center justify-center"
+              style={{ color: 'var(--text-secondary)' }}
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-4 w-4 text-yellow-400 hover:scale-110 transition-transform" />
+              ) : (
+                <Moon className="h-4 w-4 text-indigo-400 hover:scale-110 transition-transform" />
+              )}
+            </button>
             <button onClick={onOpenAuth}
               className="text-xs font-bold px-4 py-2 rounded-lg transition-colors"
               style={{ color: 'var(--text-secondary)' }}
