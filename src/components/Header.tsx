@@ -36,7 +36,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
     { symbol: 'XAUUSD', priceValue: 2428.50, changeValue: 1.24 },
     { symbol: 'EURUSD', priceValue: 1.0832, changeValue: 0.08 },
     { symbol: 'US30 (Dow)', priceValue: 39820, changeValue: -0.15 },
-    { symbol: 'BTCUSD', priceValue: 67250, changeValue: 2.10 },
+    { symbol: 'USDJPY', priceValue: 156.82, changeValue: 0.12 },
     { symbol: 'NEPSE (Nepal)', priceValue: 2014.25, changeValue: 0.45 },
     { symbol: 'GBPUSD', priceValue: 1.2715, changeValue: -0.04 }
   ]);
@@ -66,19 +66,6 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
   useEffect(() => {
     const fetchLivePrices = async () => {
       try {
-        let cryptoData: BinanceTicker[] = [];
-        try {
-          const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT"]');
-          if (cryptoRes.ok) {
-            const data = await cryptoRes.json();
-            if (Array.isArray(data)) {
-              cryptoData = data;
-            }
-          }
-        } catch (e) {
-          console.warn('Could not fetch live crypto prices from Binance in header:', e);
-        }
-
         let forexData: ForexData | null = null;
         try {
           const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
@@ -97,18 +84,14 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
               let livePrice = item.priceValue;
               let liveChange = item.changeValue;
               
-              if (item.symbol === 'BTCUSD') {
-                const btc = cryptoData.find((it) => it.symbol === 'BTCUSDT');
-                if (btc) {
-                  livePrice = parseFloat(btc.lastPrice);
-                  liveChange = parseFloat(btc.priceChangePercent);
-                }
-              } else if (item.symbol === 'XAUUSD' && rates.XAU) {
+              if (item.symbol === 'XAUUSD' && rates.XAU) {
                 livePrice = 1 / rates.XAU;
               } else if (item.symbol === 'EURUSD' && rates.EUR) {
                 livePrice = 1 / rates.EUR;
               } else if (item.symbol === 'GBPUSD' && rates.GBP) {
                 livePrice = 1 / rates.GBP;
+              } else if (item.symbol === 'USDJPY' && rates.JPY) {
+                livePrice = rates.JPY;
               }
               
               return {
@@ -132,7 +115,7 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
   const navItems = [
     { id: 'home', label: 'Home' },
     { id: 'profiles', label: 'Top Traders' },
-    { id: 'payouts', label: 'Payout Showcase' },
+    { id: 'payouts', label: 'Performance Fees' },
     { id: 'journals', label: 'Trading Journals' },
     { id: 'reviews', label: 'Prop Firm Reviews' },
     { id: 'academy', label: 'Learning Hub' },

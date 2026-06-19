@@ -96,7 +96,7 @@ export default function PropFirmReviews() {
         <div className="space-y-1 text-left">
           <span className="font-bold text-text-primary uppercase tracking-wider text-[10px]">Nepal Payout Tips:</span>
           <p className="text-text-secondary">
-            For direct payment in NRS, **FundedNext** offers native eSewa transfer splits and local Nepal bank transfers, which bypasses crypto swap fees completely. For **FTMO**, the most optimized route is requesting payouts via Deel or Crypto (USDT), which can then be exchanged locally using verified wallets.
+            For direct payment in NPR, **FundedNext** offers native eSewa transfer splits and local Nepal bank transfers. For **FTMO**, the most optimized route is requesting payouts as Freelancing performance fees via Deel or RISE wallet, which can be withdrawn directly into your local Nepalese bank account.
           </p>
         </div>
       </div>

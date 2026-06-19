@@ -16,8 +16,6 @@ const mapToTradingViewSymbol = (sym: string): string => {
     'EURUSD': 'FX_IDC:EURUSD',
     'SPX500': 'FOREXCOM:SPXUSD',
     'US30': 'FOREXCOM:DJI',
-    'BTCUSD': 'BITSTAMP:BTCUSD',
-    'ETHUSD': 'BITSTAMP:ETHUSD',
     'GBPUSD': 'FX_IDC:GBPUSD',
     'USDJPY': 'FX_IDC:USDJPY',
     'USOIL': 'OANDA:BCOUSD'
@@ -36,7 +34,7 @@ export default function Topbar({ theme = 'dark', watchlist, currentUser }: Topba
   const [resetMessage, setResetMessage] = useState('');
   
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Payout Verified', message: 'Your eSewa payout of Rs. 15,000 has been verified.', icon: 'check' },
+    { id: 1, title: 'Performance Fee Verified', message: 'Your eSewa withdrawal of Rs. 15,000 has been verified.', icon: 'check' },
     { id: 2, title: 'New Market Alert', message: 'Gold (XAUUSD) reached $2400.', icon: 'bell' }
   ]);
 

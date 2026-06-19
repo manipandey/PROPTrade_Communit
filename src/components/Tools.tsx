@@ -44,7 +44,6 @@ const getNewsThumbnail = (title: string) => {
   if (t.includes('spacex') || t.includes('musk') || t.includes('space')) return 'https://images.unsplash.com/photo-1541185933-ef5d8ed016c2?w=600&auto=format&fit=crop&q=60';
   if (t.includes('gold') || t.includes('bullion')) return 'https://images.unsplash.com/photo-1618042164219-62c820f10723?w=600&auto=format&fit=crop&q=60';
   if (t.includes('oil') || t.includes('crude')) return 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=60';
-  if (t.includes('crypto') || t.includes('btc') || t.includes('bitcoin') || t.includes('eth') || t.includes('blockchain')) return 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=600&auto=format&fit=crop&q=60';
   if (t.includes('fed') || t.includes('reserve') || t.includes('inflation') || t.includes('rates') || t.includes('fomc') || t.includes('interest')) return 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=60';
   if (t.includes('bank') || t.includes('finance') || t.includes('stock') || t.includes('index') || t.includes('nasdaq')) return 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=600&auto=format&fit=crop&q=60';
   if (t.includes('auto') || t.includes('mercedes') || t.includes('vehicle') || t.includes('cars')) return 'https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600&auto=format&fit=crop&q=60';
@@ -124,7 +123,6 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
             const titleLower = item.title.toLowerCase();
             if (titleLower.includes('fed') || titleLower.includes('inflation') || titleLower.includes('rates') || titleLower.includes('ecb') || titleLower.includes('boe')) category = 'Macro / Central Banks';
             else if (titleLower.includes('gold') || titleLower.includes('oil') || titleLower.includes('silver') || titleLower.includes('commodity')) category = 'Commodities';
-            else if (titleLower.includes('crypto') || titleLower.includes('bitcoin') || titleLower.includes('eth')) category = 'Crypto';
             else if (titleLower.includes('stock') || titleLower.includes('spx') || titleLower.includes('nasdaq')) category = 'Equities';
             
             return {
@@ -225,7 +223,6 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
       EURUSD: '1.0850',
       GBPUSD: '1.2720',
       XAUUSD: '2350.00',
-      BTCUSD: '67500.00',
       US30: '39200.00'
     };
     if (prices[calcPair]) {
@@ -245,8 +242,6 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     let contractSize = 100000; // default for Forex
     if (calcPair === 'XAUUSD') {
       contractSize = 100; // 1 lot gold = 100 oz
-    } else if (calcPair === 'BTCUSD') {
-      contractSize = 1; // 1 lot btc = 1 coin
     } else if (calcPair === 'US30') {
       contractSize = 10; // indices multiplier
     }
@@ -288,9 +283,6 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
     } else if (lotPair === 'XAUUSD') {
       // SL is in USD/Points. 1 standard lot = 100 oz. $1 move = $100 risk per lot.
       lotSize = riskAmt / (stopLossNum * 100);
-    } else if (lotPair === 'BTCUSD') {
-      // 1 lot = 1 coin. $1 move = $1 risk.
-      lotSize = riskAmt / stopLossNum;
     } else if (lotPair === 'US30') {
       // 1 lot = 1 contract. $1 move = $1 risk.
       lotSize = riskAmt / stopLossNum;
@@ -503,7 +495,6 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
                       <option value="EURUSD">EURUSD (Euro / US Dollar)</option>
                       <option value="GBPUSD">GBPUSD (Pound / US Dollar)</option>
                       <option value="XAUUSD">XAUUSD (Gold / Spot US Dollar)</option>
-                      <option value="BTCUSD">BTCUSD (Bitcoin / USD)</option>
                       <option value="US30">US30 (Dow Jones 30 Index)</option>
                     </select>
                   </div>
@@ -572,8 +563,6 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
                     <span>Forex standard contract size: <strong>100,000 units</strong> per Lot.</span>
                   ) : calcPair === 'XAUUSD' ? (
                     <span>Precious Metals standard contract size: <strong>100 ounces</strong> per Lot.</span>
-                  ) : calcPair === 'BTCUSD' ? (
-                    <span>Crypto contract size: <strong>1 Coin</strong> per Lot.</span>
                   ) : (
                     <span>Equity Indices contract size: <strong>10 units</strong> per Lot contract.</span>
                   )}
@@ -651,14 +640,13 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
                       <option value="GBPUSD">GBPUSD (Forex)</option>
                       <option value="USDJPY">USDJPY (Forex)</option>
                       <option value="XAUUSD">XAUUSD (Gold)</option>
-                      <option value="BTCUSD">BTCUSD (Bitcoin)</option>
                       <option value="US30">US30 (Dow Jones)</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                      {lotPair === 'XAUUSD' || lotPair === 'BTCUSD' || lotPair === 'US30' ? 'Stop Loss (USD/Points)' : 'Stop Loss (Pips)'}
+                      {lotPair === 'XAUUSD' || lotPair === 'US30' ? 'Stop Loss (USD/Points)' : 'Stop Loss (Pips)'}
                     </label>
                     <input
                       id="lot-stop-loss"
@@ -687,7 +675,7 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
               <div>
                 <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Risk Analysis</h4>
                 <div className="mt-2.5 text-xs text-text-secondary leading-relaxed">
-                  Trading {lotPair} with a <strong>{lotStopLoss} {lotPair === 'XAUUSD' || lotPair === 'BTCUSD' || lotPair === 'US30' ? 'Points/USD' : 'Pips'}</strong> stop loss and risking <strong>{lotRiskPct}%</strong> of your <strong>${parseFloat(lotBalance).toLocaleString()}</strong> account balance.
+                  Trading {lotPair} with a <strong>{lotStopLoss} {lotPair === 'XAUUSD' || lotPair === 'US30' ? 'Points/USD' : 'Pips'}</strong> stop loss and risking <strong>{lotRiskPct}%</strong> of your <strong>${parseFloat(lotBalance).toLocaleString()}</strong> account balance.
                 </div>
               </div>
 
@@ -728,7 +716,6 @@ export default function Tools({ theme, defaultSubTab }: ToolsProps) {
                   <option value="FX:EURUSD">EURUSD (Euro / US Dollar)</option>
                   <option value="OANDA:XAUUSD">XAUUSD (Spot Gold / USD)</option>
                   <option value="FX:GBPUSD">GBPUSD (British Pound / USD)</option>
-                  <option value="BINANCE:BTCUSDT">BTCUSDT (Bitcoin Spot Binance)</option>
                   <option value="FOREXCOM:DJI">US30 (Dow Jones 30 Index)</option>
                 </select>
               </div>

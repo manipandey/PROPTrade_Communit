@@ -32,7 +32,7 @@ export default function TraderProfiles() {
           Top Funded <span className="text-brand-green">Traders</span>
         </h2>
         <p className="text-xs sm:text-sm text-text-secondary">
-          Learn from elite Nepalese prop traders. These individuals have proven consistency, cleared evaluations, and successfully processed multiple high-value payouts.
+          Learn from elite Nepalese prop traders. These individuals have proven consistency, cleared evaluations, and successfully processed multiple high-value performance fee withdrawals.
         </p>
       </div>
 
@@ -276,7 +276,7 @@ export default function TraderProfiles() {
                   <div className="flex justify-between items-center text-[9px] text-text-muted font-mono pt-2 border-t border-border-theme mt-2">
                     <span>EVALUATION START</span>
                     <span>MID POINT</span>
-                    <span>PAYOUT ACTIVE</span>
+                    <span>WITHDRAWAL ACTIVE</span>
                   </div>
                 </div>
               </div>

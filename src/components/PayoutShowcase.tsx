@@ -209,10 +209,10 @@ export default function PayoutShowcase() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 max-w-4xl mx-auto mb-8">
         <div className="space-y-1 sm:text-left text-center flex-1">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary uppercase font-sans">
-            Payout <span className="text-brand-green">Showcase</span>
+            Performance <span className="text-brand-green">Fees</span>
           </h2>
           <p className="text-xs sm:text-sm text-text-secondary">
-            The Wall of Fame. Upload your certificates from global funding providers.
+            The Wall of Fame. Upload your certificates of freelancing performance fees from global funding providers.
           </p>
         </div>
         <button
@@ -288,7 +288,7 @@ export default function PayoutShowcase() {
                     </div>
 
                     <div className="flex items-baseline justify-between border-t border-border-theme/40 pt-2.5">
-                      <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Payout Amount</span>
+                      <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Fee Amount</span>
                       <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-emerald-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]">
                         $<AnimatedCounter value={payout.amount} />
                       </span>
@@ -386,10 +386,10 @@ export default function PayoutShowcase() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-brand-green" /> Submit Payout Proof
+                  <Sparkles className="h-4 w-4 text-brand-green" /> Submit Performance Fee Proof
                 </h3>
                 <p className="text-[11px] text-text-secondary mt-1">
-                  Upload your certificate of payout provided by your prop firm.
+                  Upload your certificate of freelancing performance fees provided by your prop firm.
                 </p>
               </div>
 
@@ -545,7 +545,7 @@ export default function PayoutShowcase() {
                   {selectedTraderPayouts.slice(0, 2)}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-text-primary">Trader Payout Profile</h3>
+                  <h3 className="text-base font-bold text-text-primary">Trader Performance Fee Profile</h3>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <p className="text-xs text-brand-green font-semibold">u/{selectedTraderPayouts}</p>
                     {(() => {
@@ -584,7 +584,7 @@ export default function PayoutShowcase() {
                       <div className="text-base font-black text-text-primary font-mono">{totalPayoutsCount}</div>
                     </div>
                     <div className="bg-bg-secondary border border-border-theme rounded-xl p-3 text-center space-y-1">
-                      <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Verified Payout</div>
+                      <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Verified Fees</div>
                       <div className="text-base font-black text-brand-green font-mono">${verifiedAmount.toLocaleString()}</div>
                     </div>
                     <div className="bg-bg-secondary border border-border-theme rounded-xl p-3 text-center space-y-1">
@@ -595,7 +595,7 @@ export default function PayoutShowcase() {
 
                   {/* Payouts list */}
                   <div className="space-y-3">
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-text-muted">Payout Transaction History</h4>
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-text-muted">Fee Transaction History</h4>
                     {traderPayouts.length === 0 ? (
                       <div className="text-center py-6 text-xs text-text-muted italic bg-bg-secondary/40 border border-dashed border-border-theme rounded-xl">
                         No payout transactions logged.

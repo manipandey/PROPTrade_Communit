@@ -28,7 +28,7 @@ const NAV_ITEMS = [
   { id: 'tools',       label: 'Trading Tools',     icon: LineChart },
   { id: 'game',        label: 'Trading Arcade',    icon: Gamepad2 },
   { id: 'profiles',    label: 'Top Traders',       icon: Users },
-  { id: 'payouts',     label: 'Payout Showcase',   icon: Trophy },
+  { id: 'payouts',     label: 'Performance Fees',   icon: Trophy },
   { id: 'reviews',     label: 'Prop Firm Reviews', icon: Shield },
   { id: 'academy',     label: 'Learning Hub',      icon: GraduationCap },
   { id: 'admin',       label: 'Admin Panel',       icon: ShieldCheck }

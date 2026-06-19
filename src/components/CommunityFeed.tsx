@@ -244,7 +244,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
   const [newCommentContent, setNewCommentContent] = useState('');
   const [activeLightboxImage, setActiveLightboxImage] = useState<string | null>(null);
 
-  const categories = ['All', 'FTMO', 'FundedNext', 'Local Market', 'Payouts', 'Trading Journals', 'General'];
+  const categories = ['All', 'FTMO', 'FundedNext', 'Local Market', 'Performance Fees', 'Trading Journals', 'General'];
 
   // Handle Emoji Reacting
   const handleReact = (postId: string, reactionKey: string) => {

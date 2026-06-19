@@ -38,8 +38,6 @@ const ALL_AVAILABLE_MARKETS: MarketItem[] = [
   { name: 'EUR/USD',    symbol: 'EURUSD',   priceValue: 1.0842,    changeValue: 0.24,  icon: '💱', category: 'Forex' },
   { name: 'S&P 500',    symbol: 'SPX500',   priceValue: 5431.10,   changeValue: 0.45,  icon: '📊', category: 'Indices' },
   { name: 'US30 (Dow)',  symbol: 'US30',     priceValue: 39820.00,  changeValue: -0.08, icon: '🏢', category: 'Indices' },
-  { name: 'Bitcoin',    symbol: 'BTCUSD',   priceValue: 67250.00,  changeValue: 2.10,  icon: '🪙', category: 'Crypto' },
-  { name: 'Ethereum',   symbol: 'ETHUSD',   priceValue: 3512.40,   changeValue: 1.45,  icon: '💎', category: 'Crypto' },
   { name: 'GBP/USD',    symbol: 'GBPUSD',   priceValue: 1.2715,    changeValue: -0.04, icon: '💱', category: 'Forex' },
   { name: 'USD/JPY',    symbol: 'USDJPY',   priceValue: 156.82,    changeValue: 0.12,  icon: '💴', category: 'Forex' },
   { name: 'Crude Oil',  symbol: 'USOIL',    priceValue: 78.45,     changeValue: -1.20, icon: '🛢️', category: 'Commodities' },
@@ -73,7 +71,7 @@ export default function Home() {
     email?: string;
   } | null>(null);
   const [markets, setMarkets] = useState<MarketItem[]>(ALL_AVAILABLE_MARKETS);
-  const [watchlist, setWatchlist] = useState<string[]>(['NAS100', 'XAUUSD', 'EURUSD', 'BTCUSD']);
+  const [watchlist, setWatchlist] = useState<string[]>(['NAS100', 'XAUUSD', 'EURUSD', 'GBPUSD']);
   const [showLanding, setShowLanding] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -81,19 +79,6 @@ export default function Home() {
   useEffect(() => {
     const fetchLivePrices = async () => {
       try {
-        let cryptoData: BinanceTicker[] = [];
-        try {
-          const cryptoRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]');
-          if (cryptoRes.ok) {
-            const data = await cryptoRes.json();
-            if (Array.isArray(data)) {
-              cryptoData = data;
-            }
-          }
-        } catch (e) {
-          console.warn('Could not fetch live crypto prices from Binance:', e);
-        }
-
         let forexData: ForexData | null = null;
         try {
           const forexRes = await fetch('https://open.er-api.com/v6/latest/USD');
@@ -112,19 +97,7 @@ export default function Home() {
               let livePrice = m.priceValue;
               let liveChange = m.changeValue;
               
-              if (m.symbol === 'BTCUSD') {
-                const btc = cryptoData.find((item) => item.symbol === 'BTCUSDT');
-                if (btc) {
-                  livePrice = parseFloat(btc.lastPrice);
-                  liveChange = parseFloat(btc.priceChangePercent);
-                }
-              } else if (m.symbol === 'ETHUSD') {
-                const eth = cryptoData.find((item) => item.symbol === 'ETHUSDT');
-                if (eth) {
-                  livePrice = parseFloat(eth.lastPrice);
-                  liveChange = parseFloat(eth.priceChangePercent);
-                }
-              } else if (m.symbol === 'XAUUSD' && rates.XAU) {
+              if (m.symbol === 'XAUUSD' && rates.XAU) {
                 livePrice = 1 / rates.XAU;
               } else if (m.symbol === 'EURUSD' && rates.EUR) {
                 livePrice = 1 / rates.EUR;
@@ -405,15 +378,15 @@ export default function Home() {
               </div>
             )}
 
-            {/* ── PAYOUT SHOWCASE ── */}
+            {/* ── PERFORMANCE FEES SHOWCASE ── */}
             {activeTab === 'payouts' && (
               <div className="animate-fade-in space-y-5">
                 <div>
                   <h1 className="text-xl font-black" style={{ color: 'var(--text-primary)' }}>
-                    Payout Showcase
+                    Performance Fees
                   </h1>
                   <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    Verified real-time payouts processed to eSewa and Nepalese bank accounts
+                    Verified freelancing performance fees that can be withdrawn to a Nepali bank from the RISE wallet
                   </p>
                 </div>
                 <PayoutShowcase />

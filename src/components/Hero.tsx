@@ -13,7 +13,7 @@ interface HeroProps {
 }
 
 const QUICK_STATS = [
-  { icon: TrendingUp, label: 'Total Community Payouts', value: '$248,350+', color: 'var(--accent)' },
+  { icon: TrendingUp, label: 'Total Community Performance Fees', value: '$248,350+', color: 'var(--accent)' },
   { icon: Trophy,     label: 'Active Funded Traders',   value: '1,450+',   color: '#f59e0b' },
   { icon: BarChart2,  label: 'Avg Community Win Rate',  value: '61.2%',    color: 'var(--accent)' },
 ];

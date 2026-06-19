@@ -226,11 +226,11 @@ const initialPosts: Post[] = [
   },
   {
     id: 'post-3',
-    title: '🚀 Got my first payout approved on FundedNext! $1,240 payout split processed via eSewa!',
-    content: 'Stoked to share that my 80/20 split payout from FundedNext was processed today! I requested it yesterday and it arrived directly via eSewa in NRS. Big shoutout to this community for keeping me motivated during the evaluation phase! Keep pushing guys, it is real.',
+    title: '🚀 Got my first Freelancing performance fees approved on FundedNext! $1,240 split processed via eSewa!',
+    content: 'Stoked to share that my 80/20 split Freelancing performance fees from FundedNext was processed today! I requested it yesterday and it arrived directly via eSewa in NPR. Big shoutout to this community for keeping me motivated during the evaluation phase! Keep pushing guys, it is real.',
     author: 'BishalFX',
-    category: 'Payouts',
-    tags: ['FundedNext', 'PayoutShowcase', 'eSewa'],
+    category: 'Performance Fees',
+    tags: ['FundedNext', 'PerformanceFees', 'eSewa'],
     upvotes: 56,
     comments: [
       { id: 'c-4', author: 'PrabeshFX', content: 'Congratulations bro! Well deserved. What pair did you trade during the payout cycle?', createdAt: '2026-05-21T04:20:00Z' },
@@ -310,8 +310,8 @@ const initialReviews: Review[] = [
     dailyDrawdown: '5%',
     maxDrawdown: '10%',
     profitTarget: '10% (Phase 1) / 5% (Phase 2)',
-    refundFee: 'Yes (100% Refundable on First Payout)',
-    localSupport: 'Medium-High (Supports standard international payouts, Crypto, eSewa-to-crypto setups)',
+    refundFee: 'Yes (100% Refundable on First Performance Fee Withdrawal)',
+    localSupport: 'Medium-High (Supports Freelancing performance fees, Deel, RISE wallet to Nepali bank)',
     pros: ['Highly reputable, established in 2015', 'Raw spreads & low commissions', 'Very reliable payout processing'],
     cons: ['Slightly higher evaluation fee than competitors', 'Strict consistency checks on funding phase']
   },
@@ -335,7 +335,7 @@ const initialReviews: Review[] = [
     maxDrawdown: '6%',
     profitTarget: '6%',
     refundFee: 'Yes (Refundable)',
-    localSupport: 'Medium (Standard Crypto, Wire Transfers, Deel, Card)',
+    localSupport: 'Medium (Freelancing performance fees, Wire Transfers, Deel, Card)',
     pros: ['Very relaxed rules & low profit target (6%)', 'Immediate funding program available', 'Excellent growth/scaling program up to $4M'],
     cons: ['Tight drawdown limits (6% overall max)', 'Minimum active trading day requirements']
   }
@@ -357,7 +357,7 @@ const initialModules: CourseModule[] = [
       },
       {
         title: '2. NRB Prepaid Dollar Card & Payments',
-        content: 'In Nepal, making international purchases is restricted. To buy a prop firm challenge, you must navigate local payment channels.\n\nPrepaid Dollar Card Steps:\n1. Open a bank account at any Class A Commercial Bank in Nepal (e.g., Nabil Bank, Global IME, NIC Asia).\n2. Apply for a PAN Card (Permanent Account Number) at the nearest Inland Revenue Office (IRO).\n3. Submit your PAN Card, Citizenship/Passport, and bank application for a Nepal Rastra Bank (NRB) Prepaid Dollar Card. The annual spending limit is $500 USD.\n4. Load NPR into your account; the bank converts it to USD on the card for a small fee (~Rs 500 card fee).\n\nAlternative Payments:\n• Relatives Abroad: You can have a friend/relative abroad pay for your challenge via credit card or PayPal.\n• eSewa / Local Brokers: Some prop firms (e.g., FundedNext) support local payment gateways, allowing direct payments.\n• Crypto: Using cryptocurrency (USDT, BTC) is another popular method supported by modern prop firms.',
+        content: 'In Nepal, making international purchases is restricted. To buy a prop firm challenge, you must navigate local payment channels.\n\nPrepaid Dollar Card Steps:\n1. Open a bank account at any Class A Commercial Bank in Nepal (e.g., Nabil Bank, Global IME, NIC Asia).\n2. Apply for a PAN Card (Permanent Account Number) at the nearest Inland Revenue Office (IRO).\n3. Submit your PAN Card, Citizenship/Passport, and bank application for a Nepal Rastra Bank (NRB) Prepaid Dollar Card. The annual spending limit is $500 USD.\n4. Load NPR into your account; the bank converts it to USD on the card for a small fee (~Rs 500 card fee).\n\nAlternative Payments:\n• Relatives Abroad: You can have a friend/relative abroad pay for your challenge via credit card or PayPal.\n• eSewa / Local Brokers: Some prop firms (e.g., FundedNext) support local payment gateways, allowing direct payments.',
         mediaUrl: '/feed-images/nepal-dollar-card.png',
         mediaType: 'image'
       },
@@ -380,8 +380,8 @@ const initialModules: CourseModule[] = [
         mediaType: 'image'
       },
       {
-        title: '6. KYC Verification & NPR Payouts',
-        content: 'Once you pass your challenge or earn profits on a funded account, you can request withdrawals directly to Nepal.\n\nKYC (Know Your Customer) Verification:\n• Identity: Upload your Nepali Citizenship Card (colored scan, front and back) or Passport. Some firms require English translation if the text is strictly in Devanagari.\n• Address: Upload a bank statement showing your name and home address with a clear bank stamp, or a utility bill (electricity, water, internet) not older than 3 months.\n\nReceiving Payouts in Nepal:\n• Payout Portals: Most firms use Rise or Deel portals to manage contracts and payouts.\n• NPR Bank Transfer: You can withdraw directly from Rise/Deel to your local Nepalese bank account (NPR bank transfers) via SWIFT or local payout partners.\n• Crypto: Withdraw in USDT (TRC20 or ERC20) directly to your digital wallets.',
+        title: '6. KYC Verification & NPR Performance Fee Withdrawals',
+        content: 'Once you pass your challenge or earn profits on a funded account, you can request withdrawals of your freelancing performance fees directly to Nepal.\n\nKYC (Know Your Customer) Verification:\n• Identity: Upload your Nepali Citizenship Card (colored scan, front and back) or Passport. Some firms require English translation if the text is strictly in Devanagari.\n• Address: Upload a bank statement showing your name and home address with a clear bank stamp, or a utility bill (electricity, water, internet) not older than 3 months.\n\nReceiving Freelancing Performance Fees in Nepal:\n• Payout Portals: Most firms use RISE or Deel portals to manage contracts and payouts.\n• Nepali Bank Withdrawal: Freelancing performance fees can be withdrawn directly to your local Nepalese bank account (NPR bank transfers) from your RISE wallet or Deel portal via local payout partners.',
         mediaUrl: '/feed-images/payout-confirmation.png',
         mediaType: 'image'
       }

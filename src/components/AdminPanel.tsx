@@ -310,7 +310,7 @@ export default function AdminPanel() {
           <span>Admin <span className="text-brand-green">Dashboard</span></span>
         </h2>
         <p className="text-xs text-text-secondary max-w-2xl">
-          Centralized Simulation Control Panel. Manage dynamic ad spaces, review payout submissions, moderate feed posts, customize trader ranking directories, and update academy courses.
+          Centralized Simulation Control Panel. Manage dynamic ad spaces, review fee submissions, moderate feed posts, customize trader ranking directories, and update academy courses.
         </p>
       </div>
 
@@ -337,7 +337,7 @@ export default function AdminPanel() {
           }`}
         >
           <Award className="h-4 w-4" />
-          <span>Payout Verification ({pendingPayouts.length})</span>
+          <span>Fee Verification ({pendingPayouts.length})</span>
         </button>
 
         <button
@@ -574,19 +574,19 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* ── SUBTAB: PAYOUT VERIFICATION ── */}
+        {/* ── SUBTAB: FEE VERIFICATION ── */}
         {activeSubTab === 'payouts' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">Submitted Payout Proof Approvals</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary">Submitted Fee Proof Approvals</h3>
                 <p className="text-[10px] text-text-muted mt-0.5">Review, verify, or reject certificate screenshots submitted by Nepalese traders.</p>
               </div>
             </div>
 
             {pendingPayouts.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border-theme bg-bg-card p-12 text-center text-xs text-text-muted italic">
-                All payout submissions have been reviewed. No pending approvals.
+                All fee submissions have been reviewed. No pending approvals.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
