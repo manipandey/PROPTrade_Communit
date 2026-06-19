@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { api } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const email = 'manirajpandey@propnepal.com';

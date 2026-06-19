@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { api } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const results: { step: string; [key: string]: unknown }[] = [];
   try {
