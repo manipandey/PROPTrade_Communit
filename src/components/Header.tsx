@@ -166,10 +166,10 @@ export default function Header({ currentUser, onOpenAuth, onLogout, activeTab, s
           {/* Logo */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.svg" className="h-10 w-10 object-contain" alt="propNPL Logo" />
+            <img src="/logo-icon.svg" className="h-10 w-10 object-contain" alt="AlphaJournal Logo" />
             <div>
               <span className="text-lg font-black tracking-tight text-text-primary uppercase font-sans">
-                prop<span className="text-brand-green">NPL</span>
+                Alpha<span className="text-brand-green">Journal</span>
               </span>
               <div className="text-[9px] font-bold uppercase tracking-wider text-text-muted font-mono -mt-1">
                 Community Platform

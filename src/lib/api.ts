@@ -40,7 +40,7 @@ export const api = {
         is_demo: mockRes.isDemo || false
       };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('propnpl_mock_session', JSON.stringify(mockUser));
+        localStorage.setItem('alphajournal_mock_session', JSON.stringify(mockUser));
         mockAuthListeners.forEach(cb => cb(mockUser));
       }
       return { success: true, user: mockUser };
@@ -54,7 +54,7 @@ export const api = {
     if (data.user) {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('propnpl_mock_session');
+        localStorage.removeItem('alphajournal_mock_session');
       }
       return { success: true, user: { ...data.user, ...profile } };
     }
@@ -86,7 +86,7 @@ export const api = {
         is_demo: true
       };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('propnpl_mock_session', JSON.stringify(mockUser));
+        localStorage.setItem('alphajournal_mock_session', JSON.stringify(mockUser));
         mockAuthListeners.forEach(cb => cb(mockUser));
       }
       return { success: true, user: mockUser };
@@ -105,7 +105,7 @@ export const api = {
       ]);
       if (profileError) return { success: false, message: profileError.message };
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('propnpl_mock_session');
+        localStorage.removeItem('alphajournal_mock_session');
       }
       return { success: true, user: data.user };
     }
@@ -114,7 +114,7 @@ export const api = {
 
   async logout() {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('propnpl_mock_session');
+      localStorage.removeItem('alphajournal_mock_session');
       mockAuthListeners.forEach(cb => cb(null));
     }
     await supabase.auth.signOut();
@@ -122,7 +122,7 @@ export const api = {
 
   async getCurrentUser() {
     if (typeof window !== 'undefined') {
-      const mockSession = localStorage.getItem('propnpl_mock_session');
+      const mockSession = localStorage.getItem('alphajournal_mock_session');
       if (mockSession) {
         return JSON.parse(mockSession);
       }
@@ -166,14 +166,14 @@ export const api = {
     mockAuthListeners.push(callback);
     
     if (typeof window !== 'undefined') {
-      const mockSession = localStorage.getItem('propnpl_mock_session');
+      const mockSession = localStorage.getItem('alphajournal_mock_session');
       if (mockSession) {
         callback(JSON.parse(mockSession));
       }
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (typeof window !== 'undefined' && localStorage.getItem('propnpl_mock_session')) {
+      if (typeof window !== 'undefined' && localStorage.getItem('alphajournal_mock_session')) {
         return;
       }
 
@@ -771,7 +771,7 @@ export const api = {
         rating: f.rating || undefined,
         createdAt: f.created_at
       }));
-      const key = `propnpl_trade_feedback_${tradeId}`;
+      const key = `alphajournal_trade_feedback_${tradeId}`;
       if (typeof window !== 'undefined') {
         localStorage.setItem(key, JSON.stringify(mapped));
       }

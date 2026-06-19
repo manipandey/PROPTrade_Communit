@@ -50,8 +50,8 @@ export const checkPlanAlignment = (
     };
   }
 
-  const savedPlan = localStorage.getItem(`propnpl_plan_${username}_${tradeDate}`);
-  const savedChecklist = localStorage.getItem(`propnpl_checklist_${username}_${tradeDate}`);
+  const savedPlan = localStorage.getItem(`alphajournal_plan_${username}_${tradeDate}`);
+  const savedChecklist = localStorage.getItem(`alphajournal_checklist_${username}_${tradeDate}`);
 
   let plan = null;
   if (savedPlan) {
@@ -465,7 +465,7 @@ export default function TradingJournals({ currentUser, onOpenAuth }: TradingJour
       };
       setTradeFeedbacks((prev) => [...prev, formattedFeedback]);
       
-      const key = `propnpl_trade_feedback_${selectedTrade.id}`;
+      const key = `alphajournal_trade_feedback_${selectedTrade.id}`;
       const existing = db.getTradeFeedback(selectedTrade.id);
       localStorage.setItem(key, JSON.stringify([...existing, formattedFeedback]));
     }

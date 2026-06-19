@@ -163,7 +163,7 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
           Learning <span className="text-brand-green">Hub</span>
         </h2>
         <p className="text-xs sm:text-sm text-text-secondary">
-          propNPL Academy. Structured guidelines and educational tracks specifically designed to teach traders how to clear evaluations and scale funded accounts.
+          AlphaJournal Academy. Structured guidelines and educational tracks specifically designed to teach traders how to clear evaluations and scale funded accounts.
         </p>
       </div>
 
@@ -331,7 +331,7 @@ export default function LearningHub({ currentUser, onOpenAuth }: LearningHubProp
                     </p>
 
                     <div className="rounded-lg bg-brand-green/5 border border-brand-green/20 p-4 text-xs text-text-secondary leading-relaxed space-y-1 shadow-[0_0_15px_rgba(34,197,94,0.02)]">
-                      <div className="font-bold text-brand-green uppercase tracking-wider text-[10px]">propNPL Strategic Guide:</div>
+                      <div className="font-bold text-brand-green uppercase tracking-wider text-[10px]">AlphaJournal Strategic Guide:</div>
                       <p>{quizResult.tip}</p>
                     </div>
 

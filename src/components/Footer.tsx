@@ -18,7 +18,7 @@ export default function Footer() {
                 <Shield className="h-4.5 w-4.5 text-black stroke-[2.5]" />
               </div>
               <span className="text-sm font-black tracking-tight text-text-primary uppercase font-sans">
-                prop<span className="text-brand-green">NPL</span>
+                Alpha<span className="text-brand-green">Journal</span>
               </span>
             </div>
             <p className="text-text-muted text-[11px] leading-relaxed">
@@ -52,7 +52,7 @@ export default function Footer() {
           <div>
             <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-primary mb-3">Support & Network</h4>
             <ul className="space-y-2 text-text-muted text-[11px]">
-              <li><span>Email: support@propnpl.com</span></li>
+              <li><span>Email: support@alphajournal.com</span></li>
               <li><span>Kathmandu, Nepal</span></li>
               <li className="inline-flex items-center gap-1 bg-brand-green/5 border border-brand-green/10 text-brand-green rounded px-2.5 py-1 text-[10px] font-mono font-bold mt-1.5 uppercase tracking-wider">
                 <span className="h-1.5 w-1.5 rounded-full bg-brand-green pulse-indicator" />
@@ -68,7 +68,7 @@ export default function Footer() {
           <div className="space-y-1 text-left">
             <span className="font-bold text-text-secondary uppercase tracking-widest block text-[9px]">Financial & Evaluation Disclosure</span>
             <p>
-              propNPL is an educational community portal and trade journaling provider. propNPL does not offer direct trading challenges, financial brokerage services, or retail advisory accounts. Funded evaluations are simulated challenges offered by external firms where payouts represent performance fees. Trading financial instruments carries high risk. Adhere strictly to proper sizing parameters.
+              AlphaJournal is an educational community portal and trade journaling provider. AlphaJournal does not offer direct trading challenges, financial brokerage services, or retail advisory accounts. Funded evaluations are simulated challenges offered by external firms where payouts represent performance fees. Trading financial instruments carries high risk. Adhere strictly to proper sizing parameters.
             </p>
           </div>
         </div>
@@ -76,7 +76,7 @@ export default function Footer() {
         {/* Bottom copyright row */}
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between border-t border-border-theme pt-6 text-[10px] font-bold uppercase tracking-widest text-text-muted">
           <div>
-            &copy; {new Date().getFullYear()} propNPL. All rights reserved.
+            &copy; {new Date().getFullYear()} AlphaJournal. All rights reserved.
           </div>
           <div className="flex items-center space-x-1">
             <span>Made with</span>

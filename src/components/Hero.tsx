@@ -39,7 +39,7 @@ export default function Hero({ onBrowseFeed, onOpenJournal, onOpenAuth, isLogged
           <h1 className="text-3xl font-black leading-tight" style={{ color: 'var(--text-primary)' }}>
             Welcome,{' '}
             <span style={{ color: 'var(--accent)' }}>
-              {isLoggedIn && username ? username : 'propNPL Elite'}
+              {isLoggedIn && username ? username : 'AlphaJournal Elite'}
             </span>
           </h1>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>

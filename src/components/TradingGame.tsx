@@ -1299,7 +1299,7 @@ export default function TradingGame({ theme }: { theme: 'dark' | 'light' }) {
 
                 {/* Printable certificate */}
                 <div className="w-full max-w-md border-2 border-dashed border-brand-green/30 bg-bg-secondary/40 rounded-2xl p-6 space-y-4 text-center select-all">
-                  <span className="text-[8px] font-black uppercase text-brand-green tracking-widest block">propNPL Funded Certificate</span>
+                  <span className="text-[8px] font-black uppercase text-brand-green tracking-widest block">AlphaJournal Funded Certificate</span>
                   <h4 className="text-base font-bold text-text-primary">TRADER EVALUATION PASS</h4>
                   <div className="text-xs text-text-secondary font-mono">
                     VERIFICATION KEY: <span className="text-text-primary font-bold">{propVerificationHash}</span>

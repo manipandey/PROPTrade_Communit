@@ -147,11 +147,11 @@ export default function Home() {
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect, @typescript-eslint/no-explicit-any */
-    const stored = (localStorage.getItem('propnpl_theme') as Theme) || 'light';
+    const stored = (localStorage.getItem('alphajournal_theme') as Theme) || 'light';
     document.documentElement.setAttribute('data-theme', stored);
     setTheme(stored);
 
-    const saved = localStorage.getItem('propnpl_watchlist');
+    const saved = localStorage.getItem('alphajournal_watchlist');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -198,14 +198,14 @@ export default function Home() {
       next = [...watchlist, symbol];
     }
     setWatchlist(next);
-    localStorage.setItem('propnpl_watchlist', JSON.stringify(next));
+    localStorage.setItem('alphajournal_watchlist', JSON.stringify(next));
   };
 
   const handleToggleTheme = () => {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('propnpl_theme', next);
+    localStorage.setItem('alphajournal_theme', next);
   };
 
   const handleAuthSuccess = async () => {

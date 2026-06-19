@@ -29,7 +29,7 @@ export default function Roadmap() {
     },
     {
       quarter: 'Q4 2026',
-      title: 'propNPL CopyTrading Pool',
+      title: 'AlphaJournal CopyTrading Pool',
       status: 'planned',
       desc: 'Establish a decentralized matching engine allowing retail capital to follow and copy trades executed by verified top funded traders on our platform.',
       points: ['Localized matching pools', 'Strict smart-contract escrow split setups', 'Real-time copy-execution mirrors']

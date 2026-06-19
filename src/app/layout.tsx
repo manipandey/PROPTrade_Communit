@@ -9,15 +9,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "propNPL — Nepal's Premier Trading Community",
+  title: "AlphaJournal — Nepal's Premier Trading Community",
   description: "Connect with funded traders. Share payout proofs, log trading journals, compare prop firm reviews, and master evaluation strategies to access institutional capital.",
   keywords: ["trading journal", "prop trading", "Nepal", "FTMO", "FundedNext", "funded trader", "SMC", "Forex Nepal"],
   authors: [{ name: "Maniraj Pandey" }],
   openGraph: {
-    title: "propNPL — Nepal's Premier Trading Community",
+    title: "AlphaJournal — Nepal's Premier Trading Community",
     description: "Connect with funded traders. Share payout proofs, log trading journals, compare prop firm reviews, and master evaluation strategies.",
-    url: "https://propnpl.vercel.app",
-    siteName: "propNPL",
+    url: "https://alphajournal.vercel.app",
+    siteName: "AlphaJournal",
     images: [
       {
         url: "/og-image.jpg", // This would be the social sharing image
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "propNPL — Nepal's Premier Trading Community",
+    title: "AlphaJournal — Nepal's Premier Trading Community",
     description: "Connect with funded traders. Share payout proofs, log trading journals, and master evaluation strategies.",
   },
 };
@@ -57,7 +57,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var theme = localStorage.getItem('propnpl_theme') || 'light';
+                var theme = localStorage.getItem('alphajournal_theme') || 'light';
                 document.documentElement.setAttribute('data-theme', theme);
               } catch(e) {}
             `,

@@ -940,7 +940,7 @@ export default function CommunityFeed({ currentUser, onOpenAuth }: CommunityFeed
                         <input
                           type="text"
                           required
-                          placeholder={currentUser?.loggedIn ? "Write a helpful response..." : "Join propNPL to comment"}
+                          placeholder={currentUser?.loggedIn ? "Write a helpful response..." : "Join AlphaJournal to comment"}
                           disabled={!currentUser?.loggedIn}
                           value={newCommentContent}
                           onChange={(e) => setNewCommentContent(e.target.value)}

@@ -468,7 +468,7 @@ export default function AdminPanel() {
                       required
                       value={adAuthor}
                       onChange={(e) => setAdAuthor(e.target.value)}
-                      placeholder="e.g. Warren Buffett or propNPL Trading"
+                      placeholder="e.g. Warren Buffett or AlphaJournal Trading"
                       className="mt-1 w-full rounded-lg border border-border-theme bg-bg-input py-2 px-3 text-xs text-text-primary focus:border-brand-green focus:outline-none"
                     />
                   </div>
@@ -491,7 +491,7 @@ export default function AdminPanel() {
                         onChange={(e) => setAdUseLogo(e.target.checked)}
                         className="rounded border-border-theme bg-bg-input text-brand-green focus:ring-brand-green"
                       />
-                      <span className="text-[11px] font-bold text-text-secondary uppercase">🔰 Attach propNPL Logo</span>
+                      <span className="text-[11px] font-bold text-text-secondary uppercase">🔰 Attach AlphaJournal Logo</span>
                     </label>
                   </div>
 

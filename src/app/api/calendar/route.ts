@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const res = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; propNPLBot/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; AlphaJournalBot/1.0)',
         'Accept': 'application/json',
       },
       next: { revalidate: 60 } // Next.js fetch cache configuration
