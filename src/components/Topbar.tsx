@@ -33,10 +33,7 @@ export default function Topbar({ theme = 'dark', watchlist, currentUser }: Topba
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Performance Fee Verified', message: 'Your eSewa withdrawal of Rs. 15,000 has been verified.', icon: 'check' },
-    { id: 2, title: 'New Market Alert', message: 'Gold (XAUUSD) reached $2400.', icon: 'bell' }
-  ]);
+  const [notifications, setNotifications] = useState<{ id: number; title: string; message: string; icon: string }[]>([]);
 
   useEffect(() => {
     if (!containerRef.current) return;
