@@ -122,29 +122,47 @@ export default function PayoutShowcase() {
         imageUrl: formImage
       };
 
-      // Attempt to save to Supabase
-      const saved = await api.savePayout({
-        trader: newPayout.trader,
-        amount: newPayout.amount,
-        propFirm: newPayout.propFirm,
-        date: newPayout.date,
-        hash: newPayout.hash,
-        verified: newPayout.verified,
-        imageUrl: newPayout.imageUrl,
-        userId: currentUser?.loggedIn && !currentUser.id?.startsWith('mock-') ? currentUser.id : undefined
-      });
+      // Base64 images are too large for Supabase text columns (~1MB+ each).
+      // We send image_url as null to Supabase and keep the full base64 only in local state/localStorage.
+      const isBase64 = formImage.startsWith('data:');
+      const supabaseImageUrl = isBase64 ? null : formImage;
 
+      // Attempt to save to Supabase (without the base64 blob)
+      let saved = null;
+      try {
+        saved = await api.savePayout({
+          trader: newPayout.trader,
+          amount: newPayout.amount,
+          propFirm: newPayout.propFirm,
+          date: newPayout.date,
+          hash: newPayout.hash,
+          verified: newPayout.verified,
+          imageUrl: supabaseImageUrl ?? undefined,
+          userId: currentUser?.loggedIn && !currentUser.id?.startsWith('mock-') ? currentUser.id : undefined
+        });
+      } catch (saveErr) {
+        // Supabase save failed — proceed with local fallback
+        console.warn('Supabase savePayout error (will use local fallback):', saveErr);
+      }
+
+      // Always update local state with the full image (including base64)
       if (saved) {
-        const livePayouts = await api.getPayouts();
+        // Fetch fresh list from Supabase, then patch image from local base64
+        const livePayouts = await api.getPayouts().catch(() => null);
         if (livePayouts) {
-          setPayouts(livePayouts);
-          db.savePayouts(livePayouts);
+          // Inject the local base64 image into the newly saved record
+          const patched = livePayouts.map(p =>
+            p.hash === newPayout.hash ? { ...p, imageUrl: formImage } : p
+          );
+          setPayouts(patched);
+          db.savePayouts(patched);
         } else {
           const updated = [newPayout, ...payouts];
           setPayouts(updated);
           db.savePayouts(updated);
         }
       } else {
+        // Fully local fallback
         const updated = [newPayout, ...payouts];
         setPayouts(updated);
         db.savePayouts(updated);
@@ -160,8 +178,29 @@ export default function PayoutShowcase() {
         setIsUploadModalOpen(false);
       }, 3000);
     } catch (err) {
-      console.error(err);
-      alert('An error occurred while submitting your certificate. Please try again.');
+      console.error('Certificate submission error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      alert(`Submission failed: ${message}\n\nYour certificate has been saved locally and will show in the pending list.`);
+      // Even on error — save locally so data isn't lost
+      const traderName = currentUser?.loggedIn ? currentUser.username : (formTrader.trim() || 'GuestTrader');
+      const fallbackPayout: Payout = {
+        id: `p-${Date.now()}`,
+        trader: traderName.replace(/\s+/g, ''),
+        amount: parseFloat(formAmount) || 0,
+        propFirm: formFirm,
+        date: new Date().toISOString().split('T')[0],
+        hash: `TXN-${Math.floor(1000000 + Math.random() * 9000000)}-NP`,
+        verified: false,
+        likes: [],
+        comments: [],
+        imageUrl: formImage
+      };
+      const updated = [fallbackPayout, ...payouts];
+      setPayouts(updated);
+      db.savePayouts(updated);
+      setFormAmount('');
+      setFormImage('');
+      setFormTrader('');
     } finally {
       setIsSubmitting(false);
     }
